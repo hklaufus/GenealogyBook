@@ -1,7 +1,7 @@
 # GeneologyBook
 Creates a LaTeX book from a Gramps SQLite database.
 
-Gramps is Genealogical Research Software; for more information, please refer to the [Gramps Project website](https://gramps-project.org/)
+Gramps is Genealogical Research Software; for more information, please refer to the [Gramps Project website](https://gramps-project.org/).
 
 ## Folder structure
 The project consists of three folders:
