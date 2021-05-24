@@ -1,0 +1,9 @@
+book/*.tex
+book/*.aux
+book/*.log
+book/*.pdf
+book/*.gz
+book/*.out
+book/*.toc
+db/*.db
+source/__pycache__/
