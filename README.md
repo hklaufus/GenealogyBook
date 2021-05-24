@@ -8,5 +8,5 @@ The project consists of three folders:
 * source: The folder with the python code
 
 ## Usage
-`cd` to you project folder `GenealogyBook\source` and start python3 with `python`.
+`cd` to your project folder `GenealogyBook\source` and start python3 with `python`.
 Next `import hkGeneologyBook.py` and start with `hkGeneologyBook.Main()`
