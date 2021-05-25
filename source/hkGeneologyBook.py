@@ -169,7 +169,7 @@ def WriteMainDocument(pCursor, pDocumentPath='../book/'):
 
         #
         # Build a book consiting of parts for each generation.
-        # Each part will contain chapters for all persons in the Ahnetafel
+        # Each part will contain chapters for all persons in the Ahnentafel
         #
         vMultiGenerationList = vAhnentafel.GenerationList
 
