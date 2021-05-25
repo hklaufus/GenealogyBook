@@ -27,7 +27,8 @@ Next, each generation of the *Ahnentafel* is next described in a book *Part*.
 Each person in a generation of the *Ahnentafel* is then described in a *Chapter*. The chapter is written to a separate file and will be `included` in the main document. The name of the chapter files is set to the Gramps ID of that person (e.g. `I0001.tex`).
 
 ### Fields
-| Variable  Comment | Default value |
+| Variable | Comment | Default value |
+| :-- | :-- | :-- |
 | vBookAuthor | Name of the author | \<Author\> |
 | vBookTitle | Title of the LaTeX book | \<Title\> |
 | vBookFilename | Filename of he main LaTeX document | MyBook |
