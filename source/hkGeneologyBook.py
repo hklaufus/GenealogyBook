@@ -17,7 +17,7 @@ vBookTitle = '<Title>'
 vBookFilename = 'MyBook'
 vStartPersonId = 'I0000'
 # Filter is used only for children; parents will always be separately described
-vFilter = ['Klaufus', 'Oostermeijer']
+vFilter = ['Surname1', 'Surname2']
 
 
 def ProcessPerson(pPersonHandle, pCursor, pDocument, pDocumentPath, vDoneList):
