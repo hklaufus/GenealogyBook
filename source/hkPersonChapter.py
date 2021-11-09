@@ -66,23 +66,26 @@ class Person:
         for vEventRef in self.__EventRefList:
             vEventHandle = vEventRef[3]
             vEventInfo = DecodeEventData(vEventHandle, self.__Cursor)
+            
+            # 20211109: Added confition for role type
+            vRoleType = vEventRef[4][0]
+            print("vRoleType = ", vRoleType)
+            if(vRoleType == vRolePrimary) or (vRoleType == vRoleFamily):
+                # Create a dictionary from event data. Use event type as key, and
+                # rest of event as data
+                # Check whether event type already exists as key
+                if(vEventInfo[0] in self.__PersonEventInfoDict):
+                    # if so, append event info to the dictionary entry
+                    self.__PersonEventInfoDict[vEventInfo[0]].append(
+                        vEventInfo[1:])
+                else:
+                    self.__PersonEventInfoDict[vEventInfo[0]] = [
+                        vEventInfo[1:]]  # Otherwise create a new entry
 
-            # Create a dictionary from event data. Use event type as key, and
-            # rest of event as data
-            # Check whether event type already exists as key
-            if(vEventInfo[0] in self.__PersonEventInfoDict):
-                # if so, append event info to the dictionary entry
-                self.__PersonEventInfoDict[vEventInfo[0]].append(
-                    vEventInfo[1:])
-            else:
-                self.__PersonEventInfoDict[vEventInfo[0]] = [
-                    vEventInfo[1:]]  # Otherwise create a new entry
+                # Add event media to personal media list
+                self.__MediaList = self.__MediaList + vEventInfo[4]
 
-            # Add event media to personal media list
-            self.__MediaList = self.__MediaList + vEventInfo[4]
-
-        # TODO: This is a tag list NOT related to one person; this does not
-        # belong here
+        # TODO: This is a tag list NOT related to one person; this does not belong here
         self.__TagDictionary = GetTagDictionary(self.__Cursor)
 
         self.__SourceStatus = self.__GetSourceStatus()

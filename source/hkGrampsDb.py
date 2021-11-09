@@ -233,6 +233,32 @@ vGenderDict = {
     vGenderUnknown: "Unknown"
 }
 
+# https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/eventroletype.py
+vRoleUnknown = -1
+vRoleCustom = 0
+vRolePrimary = 1
+vRoleClergy = 2
+vRoleCelebrant = 3
+vRoleAide = 4
+vRoleBride = 5
+vRoleGroom = 6
+vRoleWitness = 7
+vRoleFamily = 8
+vRoleInformant = 9
+
+vRoleDict = {
+    vRoleUnknown: "Unknown",
+    vRoleCustom: "Custom",
+    vRolePrimary: "Primary",
+    vRoleClergy: "Clergy",
+    vRoleCelebrant: "Celebrant",
+    vRoleAide: "Aide",
+    vRoleBride: "Bride",
+    vRoleGroom: "Groom",
+    vRoleWitness: "Witness",
+    vRoleFamily: "Family"
+}
+
 
 def GetFamilyHandlesByParent(pParentHandle, pCursor):
     """

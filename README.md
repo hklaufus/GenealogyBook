@@ -13,7 +13,7 @@ The project consists of three folders:
 ## Usage
 ### Start programme
 To start, open a terminal window, `cd` to the project folder `...\GenealogyBook\source` and start python3 environment with `python`.
-Next `import hkGeneologyBook.py` and start with `hkGeneologyBook.Main()`
+Next `import hkGeneologyBook` and start with `hkGeneologyBook.Main()`
 
 ### Book
 The python scripts will create a LaTeX book, for which the file name of the main document can be set in `hkGenealogyBook.py`, and is by deafult set to `MyBook.tex`.
@@ -33,6 +33,13 @@ Each person in a generation of the *Ahnentafel* is then described in a *Chapter*
 | vBookTitle | Title of the LaTeX book | \<Title\> |
 | vBookFilename | Filename of the main LaTeX document | MyBook |
 | vStartPersonId | Subject of the family tree | I0000 |
+
+### Tags
+In Gramps, tag photo's and documents as follows:
+
+* Pictures tagged with `Portrait`will be used as portrait picture in the section //Life Sketch//.
+* Pictures tagged with `Photo` //and// `Publishable` will be included in section //Photos//.
+* Scans tagged with `Document` //and// `Publishable`  will be included in section //Documents//.
 
 ### Language
 The option for the language is set in the file `hkLanguage.py`; the translation strings are described in the *dictionary of dictionaries* named `gStrings`.
