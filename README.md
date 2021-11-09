@@ -37,9 +37,9 @@ Each person in a generation of the *Ahnentafel* is then described in a *Chapter*
 ### Tags
 In Gramps, tag photo's and documents as follows:
 
-* Pictures tagged with `Portrait`will be used as portrait picture in the section //Life Sketch//.
-* Pictures tagged with `Photo` //and// `Publishable` will be included in section //Photos//.
-* Scans tagged with `Document` //and// `Publishable`  will be included in section //Documents//.
+* Pictures tagged with `Portrait`will be used as portrait picture in the section *Life Sketch*.
+* Pictures tagged with `Photo` *and* `Publishable` will be included in section *Photos*.
+* Scans tagged with `Document` *and* `Publishable`  will be included in section *Documents*.
 
 ### Language
 The option for the language is set in the file `hkLanguage.py`; the translation strings are described in the *dictionary of dictionaries* named `gStrings`.
