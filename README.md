@@ -1,4 +1,4 @@
-# GeneologyBook
+# GenealogyBook
 These python scripts create a LaTeX book from a Gramps SQLite database.
 
 Gramps is Genealogical Research Software; for more information, please refer to the [Gramps Project website](https://gramps-project.org/).
