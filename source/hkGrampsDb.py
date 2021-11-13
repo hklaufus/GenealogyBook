@@ -1,7 +1,7 @@
 import sqlite3
 import pickle
 import calendar
-import os
+import pathlib
 
 # Constants
 vGrampsPersonTable = 'person'
@@ -910,18 +910,14 @@ def GetMediaData(pMediaHandle, pCursor):
     vBasePath = ""
 
     # Get base media path
-    pCursor.execute(
-        'SELECT value FROM metadata WHERE setting=?',
-        ['media-path'])
+    pCursor.execute('SELECT value FROM metadata WHERE setting=?', ['media-path'])
     vBlobData = pCursor.fetchone()
 
     if(vBlobData is not None):
         vBasePath = pickle.loads(vBlobData[0])
 
         # Get path for pMediaHandle
-        pCursor.execute(
-            'SELECT blob_data FROM media WHERE handle=?',
-            [pMediaHandle])
+        pCursor.execute('SELECT blob_data FROM media WHERE handle=?', [pMediaHandle])
         vRecord = pCursor.fetchone()
 
         if(vRecord is not None):
@@ -945,22 +941,14 @@ def GetMediaData(pMediaHandle, pCursor):
             vTagBase = vMediaData[11]
             vPrivate = vMediaData[12]
 
-            # TODO: Make general for Linux and Windows
-#			vMediaData[2] = vBasePath + "/" + vPath
             # Check whether path is relative or absolute
-            if(vPath[0] == '/' or vPath[1] == ':'):
-                # Absolute path (On Linux '/Folder/...'; on Windows
-                # 'C:\Folder\...'
-                vMediaData[2] = os.path.join(vBasePath, vPath)
-            else:
+            vPathObject = pathlib.Path(vPath)
+            if(not vPathObject.is_absolute()):
                 # Relative path, add base path
-                vMediaData[2] = os.path.join(vBasePath, vPath)
+                vPathObject = pathlib.Path.joinpath(pathlib.Path(vBasePath), vPathObject)
 
-            # For windows, replace backslash by forwardslash
-            vMediaData[2] = vMediaData[2].replace('\\', '/')
+            vMediaData[2] = str(vPathObject.as_posix())
 
-
-#	return vFullPath, vMime, vDescription, vTagBase
     return vMediaData
 
 

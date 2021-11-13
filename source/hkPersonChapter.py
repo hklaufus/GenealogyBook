@@ -47,17 +47,12 @@ class Person:
         self.__NoteBase = vPersonData[16]
 #		self.__NotesHandlesList = GetPersonNotesHandles(self.__PersonHandle, self.__Cursor)
 
-        self.__PartnerHandleList = GetPartnerHandles(
-            self.__PersonHandle, self.__Cursor)
-        self.__ChildrenHandlesList = GetChildrenHandlesByPerson(
-            self.__PersonHandle, self.__Cursor)
+        self.__PartnerHandleList = GetPartnerHandles(self.__PersonHandle, self.__Cursor)
+        self.__ChildrenHandlesList = GetChildrenHandlesByPerson(self.__PersonHandle, self.__Cursor)
 
-        self.__FatherHandle = GetFatherHandleByPerson(
-            self.__PersonHandle, self.__Cursor)
-        self.__MotherHandle = GetMotherHandleByPerson(
-            self.__PersonHandle, self.__Cursor)
-        self.__SiblingHandlesList = GetSiblingHandles_Old(
-            self.__PersonHandle, self.__Cursor)
+        self.__FatherHandle = GetFatherHandleByPerson(self.__PersonHandle, self.__Cursor)
+        self.__MotherHandle = GetMotherHandleByPerson(self.__PersonHandle, self.__Cursor)
+        self.__SiblingHandlesList = GetSiblingHandles_Old(self.__PersonHandle, self.__Cursor)
 
         # Create an event dictionary.
         # The key refers to the type of event (eg. Profession); the value contains a list of events belonging to this event type (eg. multiple professions within key Profession)
@@ -67,20 +62,17 @@ class Person:
             vEventHandle = vEventRef[3]
             vEventInfo = DecodeEventData(vEventHandle, self.__Cursor)
             
-            # 20211109: Added confition for role type
+            # 20211109: Added filter for role type
             vRoleType = vEventRef[4][0]
-            print("vRoleType = ", vRoleType)
             if(vRoleType == vRolePrimary) or (vRoleType == vRoleFamily):
                 # Create a dictionary from event data. Use event type as key, and
                 # rest of event as data
                 # Check whether event type already exists as key
                 if(vEventInfo[0] in self.__PersonEventInfoDict):
                     # if so, append event info to the dictionary entry
-                    self.__PersonEventInfoDict[vEventInfo[0]].append(
-                        vEventInfo[1:])
+                    self.__PersonEventInfoDict[vEventInfo[0]].append(vEventInfo[1:])
                 else:
-                    self.__PersonEventInfoDict[vEventInfo[0]] = [
-                        vEventInfo[1:]]  # Otherwise create a new entry
+                    self.__PersonEventInfoDict[vEventInfo[0]] = [vEventInfo[1:]]  # Otherwise create a new entry
 
                 # Add event media to personal media list
                 self.__MediaList = self.__MediaList + vEventInfo[4]
@@ -190,8 +182,7 @@ class Person:
             vTagHandleList = vMediaData[11]
 
             if((vMediaMime.lower() == 'image/jpeg') or (vMediaMime.lower() == 'image/png')):
-                if (cPublishable in GetTagList(vTagHandleList, self.__TagDictionary)) and (
-                        cPhoto in GetTagList(vTagHandleList, self.__TagDictionary)):
+                if (cPublishable in GetTagList(vTagHandleList, self.__TagDictionary)) and (cPhoto in GetTagList(vTagHandleList, self.__TagDictionary)):
                     vPhotoList.append(vMediaHandle)
 
         return vPhotoList
@@ -206,8 +197,7 @@ class Person:
             vTagHandleList = vMediaData[11]
 
             if((vMediaMime.lower() == 'image/jpeg') or (vMediaMime.lower() == 'image/png')):
-                if (cPublishable in GetTagList(vTagHandleList, self.__TagDictionary)) and (
-                        cDocument in GetTagList(vTagHandleList, self.__TagDictionary)):
+                if (cPublishable in GetTagList(vTagHandleList, self.__TagDictionary)) and (cDocument in GetTagList(vTagHandleList, self.__TagDictionary)):
                     vDocumentList.append(vMediaHandle)
 
         return vDocumentList
@@ -224,55 +214,29 @@ class Person:
             vTagHandleList = vNoteData[6]
             vType = vNoteData[4][0]
 
-            if not (
-                    cSource in GetTagList(
-                        vTagHandleList,
-                        self.__TagDictionary)) and not (
-                    vType == vNoteCitation):
+            if not (cSource in GetTagList(vTagHandleList, self.__TagDictionary)) and not (vType == vNoteCitation):
                 vNoteList.append(vNoteHandle)
 
         return vNoteList
 
     def __PictureSideBySideEqualHeight(self, pImageData_1, pImageData_2):
-        # See:
-        # https://tex.stackexchange.com/questions/244635/side-by-side-figures-adjusted-to-have-equal-height
+        # See: https://tex.stackexchange.com/questions/244635/side-by-side-figures-adjusted-to-have-equal-height
 
-        self.__Chapter.append(
-            pl.NoEscape(
-                r'\def\imgA{\includegraphics[scale=0.1]{' +
-                pImageData_1[2] +
-                r'}}'))  # Added scale to prevent overflow in scalerel package
-        self.__Chapter.append(
-            pl.NoEscape(
-                r'\def\imgB{\includegraphics[scale=0.1]{' + pImageData_2[2] + r'}}'))
-        self.__Chapter.append(
-            pl.NoEscape(r'\sbox\x{\scalerel{$\imgA$}{$\imgB$}}'))
+        self.__Chapter.append(pl.NoEscape(r'\def\imgA{\includegraphics[scale=0.1]{"' + pImageData_1[2] + r'"}}'))  # Added scale to prevent overflow in scalerel package
+        self.__Chapter.append(pl.NoEscape(r'\def\imgB{\includegraphics[scale=0.1]{"' + pImageData_2[2] + r'"}}'))
+        self.__Chapter.append(pl.NoEscape(r'\sbox\x{\scalerel{$\imgA$}{$\imgB$}}'))
         self.__Chapter.append(pl.NoEscape(r'\imgwidthA=\wd\x'))
-        self.__Chapter.append(
-            pl.NoEscape(r'\textwidthA=\dimexpr\textwidth-5ex'))
-        self.__Chapter.append(
-            pl.NoEscape(r'\FPdiv\scaleratio{\the\textwidthA}{\the\imgwidthA}'))
-        self.__Chapter.append(pl.NoEscape(
-            r'\setbox0=\hbox{\scalebox{\scaleratio}{\scalerel*{$\imgA$}{$\imgB$}}}'))
+        self.__Chapter.append(pl.NoEscape(r'\textwidthA=\dimexpr\textwidth-5ex'))
+        self.__Chapter.append(pl.NoEscape(r'\FPdiv\scaleratio{\the\textwidthA}{\the\imgwidthA}'))
+        self.__Chapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\scalerel*{$\imgA$}{$\imgB$}}}'))
         self.__Chapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
         self.__Chapter.append(pl.NoEscape(r'\box0'))
-        self.__Chapter.append(
-            pl.NoEscape(
-                r'\captionof{figure}{' +
-                pu.escape_latex(
-                    pImageData_1[4]) +
-                '}'))
+        self.__Chapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(pImageData_1[4]) + '}'))
         self.__Chapter.append(pl.NoEscape(r'\end{minipage}\kern3ex'))
-        self.__Chapter.append(
-            pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\imgB}}'))
+        self.__Chapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\imgB}}'))
         self.__Chapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
         self.__Chapter.append(pl.NoEscape(r'\box0'))
-        self.__Chapter.append(
-            pl.NoEscape(
-                r'\captionof{figure}{' +
-                pu.escape_latex(
-                    pImageData_2[4]) +
-                '}'))
+        self.__Chapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(pImageData_2[4]) + '}'))
         self.__Chapter.append(pl.NoEscape(r'\end{minipage}'))
         self.__Chapter.append(pl.NoEscape(r'\newline\newline'))
 
@@ -289,35 +253,16 @@ class Person:
             # Landscape
             self.__Chapter.append(pl.NoEscape(r'{'))
             self.__Chapter.append(pl.NoEscape(r'\centering'))
-            self.__Chapter.append(
-                pl.NoEscape(
-                    r'\includegraphics[width=0.95\textwidth]{' +
-                    pImageData[2] +
-                    r'}'))
-            self.__Chapter.append(
-                pl.NoEscape(
-                    r'\captionof{figure}{' +
-                    pu.escape_latex(
-                        pImageData[4]) +
-                    r'}'))
+            self.__Chapter.append(pl.NoEscape(r'\includegraphics[width=0.95\textwidth]{"' + pImageData[2] + r'"}'))
+            self.__Chapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex( pImageData[4]) + r'}'))
             self.__Chapter.append(pl.NoEscape(r'}'))
             self.__Chapter.append(pl.NoEscape(r'\vspace{1ex}'))
         else:
             # Portrait
-            self.__Chapter.append(
-                pl.NoEscape(r'\begin{wrapfigure}{r}{0.50\textwidth}'))
+            self.__Chapter.append(pl.NoEscape(r'\begin{wrapfigure}{r}{0.50\textwidth}'))
             self.__Chapter.append(pl.NoEscape(r'\centering'))
-            self.__Chapter.append(
-                pl.NoEscape(
-                    r'\includegraphics[width=0.45\textwidth]{' +
-                    pImageData[2] +
-                    r'}'))
-            self.__Chapter.append(
-                pl.NoEscape(
-                    r'\caption{' +
-                    pu.escape_latex(
-                        pImageData[4]) +
-                    r'}'))
+            self.__Chapter.append(pl.NoEscape(r'\includegraphics[width=0.45\textwidth]{"' + pImageData[2] + r'"}'))
+            self.__Chapter.append(pl.NoEscape(r'\caption{' + pu.escape_latex(pImageData[4]) + r'}'))
             self.__Chapter.append(pl.NoEscape(r'\end{wrapfigure}'))
 
         # Add note(s)
@@ -347,14 +292,10 @@ class Person:
                 vMediaDescription = vMediaData[4]
                 vTagHandleList = vMediaData[11]
 
-                if ('Portrait' in GetTagList(
-                        vTagHandleList, self.__TagDictionary)):
-                    self.__Chapter.append(
-                        pl.NoEscape(r'\begin{wrapfigure}{r}{0.40\textwidth}'))
+                if ('Portrait' in GetTagList(vTagHandleList, self.__TagDictionary)):
+                    self.__Chapter.append(pl.NoEscape(r'\begin{wrapfigure}{r}{0.40\textwidth}'))
                     self.__Chapter.append(pl.NoEscape(r'\centering'))
-                    self.__Chapter.append(
-                        pl.NoEscape(
-                            r'\includegraphics[width=0.38\textwidth]{' + vMediaPath + r'}'))
+                    self.__Chapter.append(pl.NoEscape(r'\includegraphics[width=0.38\textwidth]{"' + vMediaPath + r'"}'))
 #					self.__Chapter.append(pl.NoEscape(r'\caption{'+pu.escape_latex(vMediaDescription)+r'}'))
                     self.__Chapter.append(pl.NoEscape(r'\end{wrapfigure}'))
 
@@ -590,9 +531,7 @@ class Person:
                     self.__Chapter.append(
                         pl.NoEscape(r'\begin{wrapfigure}{r}{0.40\textwidth}'))
                     self.__Chapter.append(pl.NoEscape(r'\centering'))
-                    self.__Chapter.append(
-                        pl.NoEscape(
-                            r'\includegraphics[width=0.38\textwidth]{' + vMediaPath + r'}'))
+                    self.__Chapter.append(pl.NoEscape(r'\includegraphics[width=0.38\textwidth]{"' + vMediaPath + r'"}'))
 #					self.__Chapter.append(pl.NoEscape(r'\caption{'+pu.escape_latex(vMediaDescription)+r'}'))
                     self.__Chapter.append(pl.NoEscape(r'\end{wrapfigure}'))
 
@@ -1034,19 +973,12 @@ class Person:
                         vWidth, vHeight = vImage.size
                         if(vWidth > vHeight):
                             # landscape photo without notes, process now
-                            self.__Chapter.append(
-                                pl.NoEscape(r'\begin{figure}[h]'))
+                            self.__Chapter.append(pl.NoEscape(r'\begin{figure}[h]'))
                             with self.__Chapter.create(pl.MiniPage(width=r"\textwidth")) as vMiniPage:
                                 vMiniPage.append(pl.NoEscape(r'\centering'))
-                                vMiniPage.append(
-                                    pl.NoEscape(
-                                        r'\includegraphics[width=\textwidth]{' + vMediaData_1[2] + r'}'))
-                                vMiniPage.append(
-                                    pl.NoEscape(
-                                        r'\caption{' +
-                                        pu.escape_latex(
-                                            vMediaData_1[4]) +
-                                        r'}'))
+                                vMiniPage.append(pl.NoEscape(r'\includegraphics[width=\textwidth]{"' + vMediaData[2] + r'"}'))
+                                vMiniPage.append(pl.NoEscape(r'\caption{' + pu.escape_latex(vMediaData[4]) + r'}'))
+
                             self.__Chapter.append(pl.NoEscape(r'\end{figure}'))
 
                             # Done, remove from list
@@ -1055,7 +987,8 @@ class Person:
                 # process remainder photos in the list, i.e. all portrait
                 # photos without notes
                 vCounter = 0
-                # Use temporary lsit, so items can be removed while iterating
+
+                # Use temporary list, so items can be removed while iterating
                 vTempList = vFilteredPhotoList.copy()
                 for vMediaHandle in vTempList:
                     vMediaData = GetMediaData(vMediaHandle, self.__Cursor)
@@ -1064,8 +997,7 @@ class Person:
                         vMediaData_1 = vMediaData
                     else:
                         vMediaData_2 = vMediaData
-                        self.__PictureSideBySideEqualHeight(
-                            vMediaData_1, vMediaData_2)
+                        self.__PictureSideBySideEqualHeight(vMediaData_1, vMediaData_2)
 
                         # Done, remove media_1 and edia_2 from list
                         vFilteredPhotoList.remove(vMediaData_1[0])
@@ -1081,17 +1013,10 @@ class Person:
                     self.__Chapter.append(pl.NoEscape(r'\begin{figure}[h]'))
                     with self.__Chapter.create(pl.MiniPage(width=r"0.5\textwidth")) as vMiniPage:
                         vMiniPage.append(pl.NoEscape(r'\centering'))
-                        vMiniPage.append(
-                            pl.NoEscape(
-                                r'\includegraphics[width=0.9\textwidth]{' + vMediaData[2] + r'}'))
-                        vMiniPage.append(
-                            pl.NoEscape(
-                                r'\caption{' +
-                                pu.escape_latex(
-                                    vMediaData[4]) +
-                                r'}'))
-                    self.__Chapter.append(pl.NoEscape(r'\end{figure}'))
+                        vMiniPage.append(pl.NoEscape(r'\includegraphics[width=0.9\textwidth]{"' + vMediaData[2] + r'"}'))
+                        vMiniPage.append(pl.NoEscape(r'\caption{' + pu.escape_latex(vMediaData[4]) + r'}'))
 
+                    self.__Chapter.append(pl.NoEscape(r'\end{figure}'))
                 self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __WriteDocumentSection(self):
@@ -1108,8 +1033,8 @@ class Person:
                 for vMediaHandle in vTempList:
                     vMediaData = GetMediaData(vMediaHandle, self.__Cursor)
                     vNoteHandleList = self.__GetFilteredNoteList(vMediaData[8])
-                    # TODO: dit gaat mis als het om een note met tag 'source'
-                    # gaat
+
+                    # TODO: dit gaat mis als het om een note met tag 'source' gaat
                     if(len(vNoteHandleList) > 0):
                         # if document contains notes, then special treatment
                         #						self.__PictureWithNote(vMediaData)
@@ -1127,15 +1052,9 @@ class Person:
                                 pl.NoEscape(r'\begin{figure}[h]'))
                             with self.__Chapter.create(pl.MiniPage(width=r"\textwidth")) as vMiniPage:
                                 vMiniPage.append(pl.NoEscape(r'\centering'))
-                                vMiniPage.append(
-                                    pl.NoEscape(
-                                        r'\includegraphics[width=\textwidth]{' + vMediaData[2] + r'}'))
-                                vMiniPage.append(
-                                    pl.NoEscape(
-                                        r'\caption{' +
-                                        pu.escape_latex(
-                                            vMediaData[4]) +
-                                        r'}'))
+                                vMiniPage.append(pl.NoEscape(r'\includegraphics[width=\textwidth]{"' + vMediaData[2] + r'"}'))
+                                vMiniPage.append(pl.NoEscape(r'\caption{' + pu.escape_latex(vMediaData[4]) + r'}'))
+
                             self.__Chapter.append(pl.NoEscape(r'\end{figure}'))
 
                             # Done, remove from list
@@ -1156,7 +1075,7 @@ class Person:
                         self.__PictureSideBySideEqualHeight(
                             vMediaData_1, vMediaData_2)
 
-                        # Done, remove media_1 and edia_2 from list
+                        # Done, remove media_1 and media_2 from list
                         vFilteredDocumentList.remove(vMediaData_1[0])
                         vFilteredDocumentList.remove(vMediaData_2[0])
 
@@ -1171,17 +1090,10 @@ class Person:
                     self.__Chapter.append(pl.NoEscape(r'\begin{figure}[h]'))
                     with self.__Chapter.create(pl.MiniPage(width=r"0.5\textwidth")) as vMiniPage:
                         vMiniPage.append(pl.NoEscape(r'\centering'))
-                        vMiniPage.append(
-                            pl.NoEscape(
-                                r'\includegraphics[width=\textwidth]{' + vMediaData[2] + r'}'))
-                        vMiniPage.append(
-                            pl.NoEscape(
-                                r'\caption{' +
-                                pu.escape_latex(
-                                    vMediaData[4]) +
-                                r'}'))
-                    self.__Chapter.append(pl.NoEscape(r'\end{figure}'))
+                        vMiniPage.append(pl.NoEscape(r'\includegraphics[width=\textwidth]{"' + vMediaData[2] + r'"}'))
+                        vMiniPage.append(pl.NoEscape(r'\caption{' + pu.escape_latex(vMediaData[4]) + r'}'))
 
+                    self.__Chapter.append(pl.NoEscape(r'\end{figure}'))
                 self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
     def WritePersonChapter(self):
