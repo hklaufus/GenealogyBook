@@ -20,6 +20,8 @@ def ReadConfigXml(pFileName = 'config.xml'):
     vBookParameters['Title'] = '<Title>'
     vBookParameters['Filename'] = '<Filename>'
     vBookParameters['StartePersonId'] = 'I0000'
+    vBookParameters['Language'] = 'nl'
+    vBookParameters['Path'] = '../book/'
 
     # Filter is used only for children; parents will always be separately described
     vBookParameters['Filter'] = ['Surname1', 'Surname2']
@@ -30,6 +32,8 @@ def ReadConfigXml(pFileName = 'config.xml'):
     vBookParameters['Title'] = vDom.getElementsByTagName('Title')[0].childNodes[0].nodeValue
     vBookParameters['Filename'] = vDom.getElementsByTagName('Filename')[0].childNodes[0].nodeValue
     vBookParameters['StartPersonId'] = vDom.getElementsByTagName('StartPersonId')[0].childNodes[0].nodeValue
+    vBookParameters['Language'] = vDom.getElementsByTagName('Language')[0].childNodes[0].nodeValue
+    vBookParameters['Path'] = vDom.getElementsByTagName('Path')[0].childNodes[0].nodeValue
 
     #Debug
 #    print("vBookParameters: ", vBookParameters)
@@ -61,14 +65,7 @@ def ProcessPerson(pPersonHandle, pCursor, pDocument, pDocumentPath, vDoneList):
                 vProcessList = vProcessList + vPerson.ChildrenHandlesList
 
             # Create chapter in sub-document describing current person
-            pDocument.append(
-                pl.NoEscape(
-                    r'\include{' +
-                    vPerson.GrampsId +
-                    '} % ' +
-                    vPerson.GivenNames +
-                    ' ' +
-                    vPerson.Surname))
+            pDocument.append(pl.NoEscape(r'\include{' + vPerson.GrampsId + '} % ' + vPerson.GivenNames + ' ' + vPerson.Surname))
             vPerson.WritePersonChapter()
 
             # Process stack
@@ -83,7 +80,7 @@ def ProcessPerson(pPersonHandle, pCursor, pDocument, pDocumentPath, vDoneList):
             print("vPerson.GrampsId: ", vPerson.GrampsId)
 
 
-def WriteMainDocument(pCursor, pBookParameters, pDocumentPath='../book/'):
+def WriteMainDocument(pCursor, pBookParameters):
     # vGeometryOptions = {"tmargin": "1cm", "lmargin": "10cm"}
     vDocumentOptions = {'hidelinks', '10pt', 'a4paper', 'titlepage'}
     vDocument = pl.Document(documentclass='book', document_options=vDocumentOptions)
@@ -152,7 +149,7 @@ def WriteMainDocument(pCursor, pBookParameters, pDocumentPath='../book/'):
 
     if (vPersonHandle is not None):
         # Write the Ahnentafel of this person
-        vAhnentafel = hac.Ahnentafel(vPersonHandle, pCursor, pDocumentPath, True)
+        vAhnentafel = hac.Ahnentafel(vPersonHandle, pCursor, pBookParameters['Path'], True)
         vAhnentafel.CreateAhnentafelChapter()
         vDocument.append(pl.NoEscape(r'\include{Ahnentafel}'))
 
@@ -170,14 +167,14 @@ def WriteMainDocument(pCursor, pBookParameters, pDocumentPath='../book/'):
             # Create a new part for this generation
             vPart = hlt.Part(title=hlg.Translate('generation') + ' ' + str(vGenerationIndex), label=False)
             vPart = hlt.Part(title=' ', label=False)
-            vPart.generate_tex(filepath=pDocumentPath + 'Part_' + str(vGenerationIndex))
+            vPart.generate_tex(filepath=pBookParameters['Path'] + 'Part_' + str(vGenerationIndex))
 
             # Include the part to the document
             vDocument.append(pl.NoEscape(r'\include{Part_' + str(vGenerationIndex) + '} % Generation ' + str(vGenerationIndex)))
 
             # Create a detailed chapter for each person in this generation
             for vPersonHandle in vGenerationList:
-                vPerson = hpc.Person(vPersonHandle, pCursor)
+                vPerson = hpc.Person(vPersonHandle, pCursor, pBookParameters['Path'], pBookParameters['Language'])
                 vDocument.append(pl.NoEscape(r'\include{' + vPerson.GrampsId + '} % ' + vPerson.GivenNames + ' ' + vPerson.Surname))
                 vPerson.WritePersonChapter()
 
@@ -192,7 +189,7 @@ def WriteMainDocument(pCursor, pBookParameters, pDocumentPath='../book/'):
 #		vDoneList = []
 #		ProcessPerson(vPersonHandle, pCursor, vDocument, pDocumentPath, vDoneList)
 
-    vDocument.generate_tex(filepath=pDocumentPath + pBookParameters['Filename'])
+    vDocument.generate_tex(filepath=pBookParameters['Path'] + pBookParameters['Filename'])
 
 #	print("Number of persons processed: ", len(vDoneList))
 

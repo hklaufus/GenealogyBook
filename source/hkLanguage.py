@@ -1,5 +1,5 @@
 # Dictionary of dictionaries containing string to several languages
-gLanguage = 'nl'
+#gLanguage = 'nl'
 gStrings = {}
 
 # Constants for chapter labels
@@ -166,10 +166,45 @@ gStrings['and was buried in {0}.'] = {
     'en': "and was buried in {0}.",
     'nl': "en is begraven in {0}."}
 
+# Months
+gStrings['january'] = {'en':'January', 'nl':'januari'}
+gStrings['february'] = {'en':'February', 'nl':'februari'}
+gStrings['march'] = {'en':'March', 'nl':'maart'}
+gStrings['april'] = {'en':'April', 'nl':'april'}
+gStrings['may'] = {'en':'May', 'nl':'mei'}
+gStrings['june'] = {'en':'June', 'nl':'juni'}
+gStrings['july'] = {'en':'July', 'nl':'juli'}
+gStrings['august'] = {'en':'August', 'nl':'augustus'}
+gStrings['september'] = {'en':'September', 'nl':'september'}
+gStrings['october'] = {'en':'October', 'nl':'oktober'}
+gStrings['november'] = {'en':'November', 'nl':'november'}
+gStrings['december'] = {'en':'December', 'nl':'december'}
 
-def Translate(pString):
-    vReturnString = gStrings[pString.strip().lower()][gLanguage]
-    if(pString[0].isupper()):
-        vReturnString = vReturnString.capitalize()
+gStrings['jan'] = {'en':'Jan', 'nl':'jan'}
+gStrings['feb'] = {'en':'Feb', 'nl':'feb'}
+gStrings['mar'] = {'en':'Mar', 'nl':'mrt'}
+gStrings['apr'] = {'en':'Apr', 'nl':'apr'}
+gStrings['may'] = {'en':'May', 'nl':'mei'}
+gStrings['jun'] = {'en':'Jun', 'nl':'jun'}
+gStrings['jul'] = {'en':'Jul', 'nl':'jul'}
+gStrings['aug'] = {'en':'Aug', 'nl':'aug'}
+gStrings['sep'] = {'en':'Sep', 'nl':'sep'}
+gStrings['oct'] = {'en':'Oct', 'nl':'okt'}
+gStrings['nov'] = {'en':'Nov', 'nl':'nov'}
+gStrings['dec'] = {'en':'Dec', 'nl':'dec'}
+
+# Date ranges
+gStrings['between'] = {'en':'between', 'nl':'tussen'}
+gStrings['and'] = {'en':'en', 'nl':'en'}
+gStrings['from'] = {'en':'from', 'nl':'van'}
+gStrings['until'] = {'en':'until', 'nl':'tot'}
+
+def Translate(pString, pLanguage='nl'):
+    vReturnString = ''
+
+    if(len(pString)>0):
+        vReturnString = gStrings[pString.strip().lower()][pLanguage]
+        if(pString[0].isupper()):
+            vReturnString = vReturnString.capitalize()
 
     return vReturnString

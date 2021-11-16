@@ -27,10 +27,11 @@ cSource = 'Source'
 class Person:
     """A class to write a chapter about a person"""
 
-    def __init__(self, pPersonHandle, pCursor, pDocumentPath='../book/'):
+    def __init__(self, pPersonHandle, pCursor, pDocumentPath='../book/', pLanguage='nl'):
         self.__PersonHandle = pPersonHandle
         self.__Cursor = pCursor
         self.__DocumentPath = pDocumentPath
+        self.__language = pLanguage
 
         # Get basic person data
         vPersonData = DecodePersonData(self.__PersonHandle, self.__Cursor)
@@ -282,7 +283,7 @@ class Person:
     def __WriteLifeSketchSection(self):
         # Create section with Life Sketch
         self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with self.__Chapter.create(pl.Section(title=hlg.Translate('life sketch'), label=False)):
+        with self.__Chapter.create(pl.Section(title=hlg.Translate('life sketch', self.__language), label=False)):
             # Create a minipage for a picture
             for vMediaItem in self.__MediaList:
                 vMediaHandle = vMediaItem[4]
@@ -312,36 +313,31 @@ class Person:
 
             if(len(vLifeSketch) == 0):
                 vFullName = self.__GivenNames + ' ' + self.__Surname
-                vHeShe = hlg.Translate('He')
-                vHisHer = hlg.Translate('His')
+                vHeShe = hlg.Translate('He', self.__language)
+                vHisHer = hlg.Translate('His', self.__language)
                 if(self.__Gender == vGenderFemale):
-                    vHeShe = hlg.Translate('She')
-                    vHisHer = hlg.Translate('Her')
+                    vHeShe = hlg.Translate('She', self.__language)
+                    vHisHer = hlg.Translate('Her', self.__language)
 
-                vVitalEvents = vVitalEventsSet.intersection(
-                    self.__PersonEventInfoDict.keys())
+                vVitalEvents = vVitalEventsSet.intersection(self.__PersonEventInfoDict.keys())
 
                 # Geboorte
                 if(vEventBirth in vVitalEvents):  # Birth
-                    vString = hlg.Translate("{0} was born on {1}").format(
-                        pu.escape_latex(vFullName), self.__PersonEventInfoDict[vEventBirth][0][0])
+                    vString = hlg.Translate("{0} was born on {1}", self.__language).format(pu.escape_latex(vFullName), DateToText(self.__PersonEventInfoDict[vEventBirth][0][0], False))
                     vLifeSketch = vLifeSketch + vString
 
                     if((len(self.__PersonEventInfoDict[vEventBirth][0][1]) > 0) and (self.__PersonEventInfoDict[vEventBirth][0][1] != '-')):
-                        vString = hlg.Translate("in {0}").format(
-                            self.__PersonEventInfoDict[vEventBirth][0][1])
+                        vString = hlg.Translate("in {0}", self.__language).format(self.__PersonEventInfoDict[vEventBirth][0][1])
                         vLifeSketch = vLifeSketch + ' ' + vString
 
                     vLifeSketch = vLifeSketch + r". "
 
                 elif(vEventBaptism in vVitalEvents):  # Baptism
-                    vString = hlg.Translate("{0} was born about {1}").format(
-                        pu.escape_latex(vFullName), self.__PersonEventInfoDict[vEventBaptism][0][0])
+                    vString = hlg.Translate("{0} was born about {1}", self.__language).format(pu.escape_latex(vFullName), DateToText(self.__PersonEventInfoDict[vEventBaptism][0][0], False))
                     vLifeSketch = vLifeSketch + vString
 
                     if((len(self.__PersonEventInfoDict[vEventBaptism][0][1]) > 0) and (self.__PersonEventInfoDict[vEventBaptism][0][1] != '-')):
-                        vString = hlg.Translate("in {0}").format(
-                            self.__PersonEventInfoDict[vEventBaptism][0][1])
+                        vString = hlg.Translate("in {0}", self.__language).format(self.__PersonEventInfoDict[vEventBaptism][0][1])
                         vLifeSketch = vLifeSketch + ' ' + vString
 
                     vLifeSketch = vLifeSketch + r". "
@@ -350,8 +346,7 @@ class Person:
                 vUseName = self.__GivenNames
                 if(len(self.__CallName) > 0):
                     vUseName = self.__CallName
-                    vString = hlg.Translate("{0} call name was {1}.").format(
-                        vHisHer, pu.escape_latex(self.__CallName))
+                    vString = hlg.Translate("{0} call name was {1}.", self.__language).format(vHisHer, pu.escape_latex(self.__CallName))
                     vLifeSketch = vLifeSketch + vString
 
                 if(len(vLifeSketch) > 0):
@@ -364,8 +359,7 @@ class Person:
                 vHasSiblings = False
                 for vSiblingHandle in self.__SiblingHandlesList:
                     # TODO: Sort by birth date
-                    vSiblingData = DecodePersonData(
-                        vSiblingHandle, self.__Cursor)
+                    vSiblingData = DecodePersonData(vSiblingHandle, self.__Cursor)
                     if(vSiblingData[2] == 0):
                         vNumberSisters = vNumberSisters + 1
                         vHasSiblings = True
@@ -377,46 +371,37 @@ class Person:
 
                 if(vNumberSisters > 0):
                     if(vNumberSisters == 1):
-                        vString = hlg.Translate(
-                            "{0} had one sister").format(vUseName)
+                        vString = hlg.Translate("{0} had one sister", self.__language).format(vUseName)
                         vLifeSketch = vLifeSketch + vString
                     else:
-                        vString = hlg.Translate("{0} had {1} sisters").format(
-                            vUseName, vNumberSisters)
+                        vString = hlg.Translate("{0} had {1} sisters", self.__language).format(vUseName, vNumberSisters)
                         vLifeSketch = vLifeSketch + vString
 
                     if(vNumberBrothers > 0):
                         if(vNumberBrothers == 1):
-                            vLifeSketch = vLifeSketch + ' ' + \
-                                hlg.Translate("and one brother:") + ' '
+                            vLifeSketch = vLifeSketch + ' ' + hlg.Translate("and one brother:", self.__language) + ' '
                         else:
-                            vString = hlg.Translate(
-                                "and {0} brothers:").format(vNumberBrothers)
+                            vString = hlg.Translate("and {0} brothers:", self.__language).format(vNumberBrothers)
                             vLifeSketch = vLifeSketch + ' ' + vString + ' '
                     else:
                         vLifeSketch = vLifeSketch + ": "
 
                 elif(vNumberBrothers > 0):
                     if(vNumberBrothers == 1):
-                        vString = hlg.Translate(
-                            "{0} had one brother:").format(vUseName)
+                        vString = hlg.Translate("{0} had one brother:", self.__language).format(vUseName)
                         vLifeSketch = vLifeSketch + vString + ' '
                     else:
-                        vString = hlg.Translate("{0} had {1} brothers:").format(
-                            vUseName, vNumberBrothers)
+                        vString = hlg.Translate("{0} had {1} brothers:", self.__language).format(vUseName, vNumberBrothers)
                         vLifeSketch = vLifeSketch + vString + ' '
 
                 if(len(vSiblingNames) > 1):
                     for vSiblingName in vSiblingNames[:-1]:
-                        vLifeSketch = vLifeSketch + \
-                            pu.escape_latex(vSiblingName) + ", "
+                        vLifeSketch = vLifeSketch + pu.escape_latex(vSiblingName) + ", "
 
-                    vLifeSketch = vLifeSketch + \
-                        hlg.Translate("and") + ' ' + pu.escape_latex(vSiblingNames[-1]) + ". "
+                    vLifeSketch = vLifeSketch + hlg.Translate("and", self.__language) + ' ' + pu.escape_latex(vSiblingNames[-1]) + ". "
                     vLifeSketch = vLifeSketch + r"\newline\newline "
                 elif(len(vSiblingNames) == 1):
-                    vLifeSketch = vLifeSketch + \
-                        pu.escape_latex(vSiblingNames[-1]) + ". "
+                    vLifeSketch = vLifeSketch + pu.escape_latex(vSiblingNames[-1]) + ". "
                     vLifeSketch = vLifeSketch + r"\newline\newline "
 
                 # Partners and Children
@@ -432,28 +417,23 @@ class Person:
 
                     vChildNames.append(vChildData[3][1])
 
-                vSentenceStart = hlg.Translate(
-                    "Furthermore, {0} had").format(vHeShe.lower()) + ' '
+                vSentenceStart = hlg.Translate("Furthermore, {0} had", self.__language).format(vHeShe.lower()) + ' '
                 if(len(vLifeSketch) == 0):
-                    vSentenceStart = vFullName + hlg.Translate("had") + ' '
+                    vSentenceStart = vFullName + hlg.Translate("had", self.__language) + ' '
 
                 if(vNumberDaughters > 0):
                     vLifeSketch = vLifeSketch + vSentenceStart
                     if(vNumberDaughters == 1):
-                        vLifeSketch = vLifeSketch + \
-                            hlg.Translate("one daughter")
+                        vLifeSketch = vLifeSketch + hlg.Translate("one daughter", self.__language)
                     elif(vNumberDaughters > 1):
-                        vString = hlg.Translate(
-                            "{0} daughters").format(vNumberDaughters)
+                        vString = hlg.Translate("{0} daughters", self.__language).format(vNumberDaughters)
                         vLifeSketch = vLifeSketch + vString
 
                     if(vNumberSons > 0):
                         if(vNumberSons == 1):
-                            vLifeSketch = vLifeSketch + ' ' + \
-                                hlg.Translate("and one son:") + ' '
+                            vLifeSketch = vLifeSketch + ' ' + hlg.Translate("and one son:", self.__language) + ' '
                         else:
-                            vString = hlg.Translate(
-                                "and {0} sons:").format(vNumberSons)
+                            vString = hlg.Translate("and {0} sons:", self.__language).format(vNumberSons)
                             vLifeSketch = vLifeSketch + ' ' + vString + ' '
                     else:
                         vLifeSketch = vLifeSketch + ": "
@@ -462,10 +442,9 @@ class Person:
                     vLifeSketch = vLifeSketch + vSentenceStart
                     if(vNumberSons == 1):
                         vLifeSketch = vLifeSketch + \
-                            hlg.Translate("one son:") + ' '
+                            hlg.Translate("one son:", self.__language) + ' '
                     else:
-                        vString = hlg.Translate(
-                            "{0} sons:").format(vNumberSons)
+                        vString = hlg.Translate("{0} sons:", self.__language).format(vNumberSons)
                         vLifeSketch = vLifeSketch + vString + ' '
 
                 if(len(vChildNames) > 1):
@@ -473,8 +452,7 @@ class Person:
                         vLifeSketch = vLifeSketch + \
                             pu.escape_latex(vChildName) + ", "
 
-                    vLifeSketch = vLifeSketch + \
-                        hlg.Translate("and") + ' ' + pu.escape_latex(vChildNames[-1]) + ". "
+                    vLifeSketch = vLifeSketch + hlg.Translate("and", self.__language) + ' ' + pu.escape_latex(vChildNames[-1]) + ". "
                     vLifeSketch = vLifeSketch + r"\newline\newline "
                 elif(len(vChildNames) == 1):
                     vLifeSketch = vLifeSketch + \
@@ -487,25 +465,21 @@ class Person:
 
                 # Overlijden
                 if(vEventDeath in vVitalEvents):  # Death
-                    vString = hlg.Translate("{0} died on {1}").format(
-                        vHeShe, self.__PersonEventInfoDict[vEventDeath][0][0])
+                    vString = hlg.Translate("{0} died on {1}", self.__language).format(vHeShe, DateToText(self.__PersonEventInfoDict[vEventDeath][0][0], False))
                     vLifeSketch = vLifeSketch + vString
 
                     if((len(self.__PersonEventInfoDict[vEventDeath][0][1]) > 0) and (self.__PersonEventInfoDict[vEventDeath][0][1] != '-')):
-                        vString = hlg.Translate("in {0}.").format(
-                            self.__PersonEventInfoDict[vEventDeath][0][1])
+                        vString = hlg.Translate("in {0}.", self.__language).format(self.__PersonEventInfoDict[vEventDeath][0][1])
                         vLifeSketch = vLifeSketch + ' ' + vString
                     else:
                         vLifeSketch = vLifeSketch + ". "
 
                 elif(vEventBurial in vVitalEvents):  # Burial
-                    vString = hlg.Translate("{0} died about {1}").format(
-                        vHeShe, self.__PersonEventInfoDict[vEventBurial][0][0])
+                    vString = hlg.Translate("{0} died about {1}", self.__language).format(vHeShe, DateToText(self.__PersonEventInfoDict[vEventBurial][0][0], False))
                     vLifeSketch = vLifeSketch + vString
 
                     if((len(self.__PersonEventInfoDict[vEventBurial][0][1]) > 0) and (self.__PersonEventInfoDict[vEventBurial][0][1] != '-')):
-                        vString = hlg.Translate("and was buried in {0}.").format(
-                            self.__PersonEventInfoDict[vEventBurial][0][1])
+                        vString = hlg.Translate("and was buried in {0}.", self.__language).format(self.__PersonEventInfoDict[vEventBurial][0][1])
                         vLifeSketch = vLifeSketch + ' ' + vString + ' '
                     else:
                         vLifeSketch = vLifeSketch + ". "
@@ -513,274 +487,58 @@ class Person:
             self.__Chapter.append(pl.NoEscape(vLifeSketch))
             self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __WriteLifeSketchSection_Old(self):
-        # Create section with Life Sketch
-        self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with self.__Chapter.create(pl.Section(title=hlg.Translate('life sketch'), label=False)):
-            # Create a minipage for a picture
-            for vMediaItem in self.__MediaList:
-                vMediaHandle = vMediaItem[4]
-                vMediaData = GetMediaData(vMediaHandle, self.__Cursor)
-                vMediaPath = vMediaData[2]
-                vMediaMime = vMediaData[3]
-                vMediaDescription = vMediaData[4]
-                vTagHandleList = vMediaData[11]
-
-                if ('Portrait' in GetTagList(
-                        vTagHandleList, self.__TagDictionary)):
-                    self.__Chapter.append(
-                        pl.NoEscape(r'\begin{wrapfigure}{r}{0.40\textwidth}'))
-                    self.__Chapter.append(pl.NoEscape(r'\centering'))
-                    self.__Chapter.append(pl.NoEscape(r'\includegraphics[width=0.38\textwidth]{"' + vMediaPath + r'"}'))
-#					self.__Chapter.append(pl.NoEscape(r'\caption{'+pu.escape_latex(vMediaDescription)+r'}'))
-                    self.__Chapter.append(pl.NoEscape(r'\end{wrapfigure}'))
-
-            # Create a story line
-            vLifeSketch = ""
-
-            for vNote in self.__NoteBase:
-                vNoteHandle = vNote
-                vNoteData = DecodeNoteData(vNoteHandle, self.__Cursor)
-                vNoteText = vNoteData[2][0]
-                vNoteType = vNoteData[4][0]
-                if(vNoteType == vNotePerson):  # Person Note
-                    vLifeSketch = vLifeSketch + pu.escape_latex(vNoteText)
-
-            if(len(vLifeSketch) == 0):
-                vFullName = self.__GivenNames + ' ' + self.__Surname
-                vHeShe = 'He'
-                vHisHer = 'His'
-                if(self.__Gender == vGenderFemale):
-                    vHeShe = 'She'
-                    vHisHer = 'Her'
-
-                vVitalEvents = vVitalEventsSet.intersection(
-                    self.__PersonEventInfoDict.keys())
-
-                # Geboorte
-                if(vEventBirth in vVitalEvents):  # Birth
-                    vLifeSketch = vLifeSketch + \
-                        pu.escape_latex(vFullName) + " was born on " + r"\mbox{" + self.__PersonEventInfoDict[vEventBirth][0][0] + "}"
-                    if((len(self.__PersonEventInfoDict[vEventBirth][0][1]) > 0) and (self.__PersonEventInfoDict[vEventBirth][0][1] != '-')):
-                        vLifeSketch = vLifeSketch + " in " + \
-                            self.__PersonEventInfoDict[vEventBirth][0][1] + r". "
-                    else:
-                        vLifeSketch = vLifeSketch + r". "
-
-                elif(vEventBaptism in vVitalEvents):  # Baptism
-                    vLifeSketch = vLifeSketch + vFullName + " was born about " + \
-                        r"\mbox{" + self.__PersonEventInfoDict[vEventBaptism][0][0] + "}"
-                    if((len(self.__PersonEventInfoDict[vEventBaptism][0][1]) > 0) and (self.__PersonEventInfoDict[vEventBaptism][0][1] != '-')):
-                        vLifeSketch = vLifeSketch + " in " + \
-                            self.__PersonEventInfoDict[vEventBaptism][0][1] + ". "
-                    else:
-                        vLifeSketch = vLifeSketch + ". "
-
-                # Roepnaam
-                if(len(self.__CallName) > 0):
-                    vLifeSketch = vLifeSketch + vHisHer + " call name was " + \
-                        pu.escape_latex(self.__CallName) + ". "
-
-                if(len(vLifeSketch) > 0):
-                    vLifeSketch = vLifeSketch + r"\newline\newline "
-
-                # Sisters and brothers
-                vNumberSisters = 0
-                vNumberBrothers = 0
-                vSiblingNames = []
-                vHasSiblings = False
-                for vSiblingHandle in self.__SiblingHandlesList:
-                    # TODO: Sort by birth date
-                    vSiblingData = DecodePersonData(
-                        vSiblingHandle, self.__Cursor)
-                    if(vSiblingData[2] == 0):
-                        vNumberSisters = vNumberSisters + 1
-                        vHasSiblings = True
-                    elif(vSiblingData[2] == 1):
-                        vNumberBrothers = vNumberBrothers + 1
-                        vHasSiblings = True
-
-                    vSiblingNames.append(vSiblingData[3][1])
-
-                if(vNumberSisters > 0):
-                    if(vNumberSisters == 1):
-                        vLifeSketch = vLifeSketch + self.__GivenNames + " had one sister"
-                    else:
-                        vLifeSketch = vLifeSketch + self.__GivenNames + \
-                            " had " + str(vNumberSisters) + " sisters"
-
-                    if(vNumberBrothers > 0):
-                        if(vNumberBrothers == 1):
-                            vLifeSketch = vLifeSketch + " and one brother: "
-                        else:
-                            vLifeSketch = vLifeSketch + " and " + \
-                                str(vNumberBrothers) + " brothers: "
-                    else:
-                        vLifeSketch = vLifeSketch + ": "
-
-                elif(vNumberBrothers > 0):
-                    if(vNumberBrothers == 1):
-                        vLifeSketch = vLifeSketch + \
-                            pu.escape_latex(self.__GivenNames) + " had one brother: "
-                    else:
-                        vLifeSketch = vLifeSketch + \
-                            pu.escape_latex(self.__GivenNames) + " had " + str(vNumberBrothers) + " brothers: "
-
-                if(len(vSiblingNames) > 1):
-                    for vSiblingName in vSiblingNames[:-1]:
-                        vLifeSketch = vLifeSketch + \
-                            pu.escape_latex(vSiblingName) + ", "
-
-                    vLifeSketch = vLifeSketch + "and " + \
-                        pu.escape_latex(vSiblingNames[-1]) + ". "
-                    vLifeSketch = vLifeSketch + r"\newline\newline "
-                elif(len(vSiblingNames) == 1):
-                    vLifeSketch = vLifeSketch + \
-                        pu.escape_latex(vSiblingNames[-1]) + ". "
-                    vLifeSketch = vLifeSketch + r"\newline\newline "
-
-                # Partners and Children
-                vNumberDaughters = 0
-                vNumberSons = 0
-                vChildNames = []
-                for vChildHandle in self.__ChildrenHandlesList:
-                    vChildData = DecodePersonData(vChildHandle, self.__Cursor)
-                    if(vChildData[2] == 0):
-                        vNumberDaughters = vNumberDaughters + 1
-                    elif(vChildData[2] == 1):
-                        vNumberSons = vNumberSons + 1
-
-                    vChildNames.append(vChildData[3][1])
-
-                vSentenceStart = "Furthermore, " + vHeShe.lower()
-                if(len(vLifeSketch) == 0):
-                    vSentenceStart = vFullName
-
-                if(vNumberDaughters > 0):
-                    vLifeSketch = vLifeSketch + vSentenceStart
-                    if(vNumberDaughters == 1):
-                        vLifeSketch = vLifeSketch + " had one daughter"
-                    elif(vNumberDaughters > 1):
-                        vLifeSketch = vLifeSketch + " had " + \
-                            str(vNumberDaughters) + " daughters"
-
-                    if(vNumberSons > 0):
-                        if(vNumberSons == 1):
-                            vLifeSketch = vLifeSketch + " and one son: "
-                        else:
-                            vLifeSketch = vLifeSketch + " and " + \
-                                str(vNumberSons) + " sons: "
-                    else:
-                        vLifeSketch = vLifeSketch + ": "
-
-                elif(vNumberSons > 0):
-                    vLifeSketch = vLifeSketch + vSentenceStart
-                    if(vNumberSons == 1):
-                        vLifeSketch = vLifeSketch + " had one son: "
-                    else:
-                        vLifeSketch = vLifeSketch + " had " + \
-                            str(vNumberSons) + " sons: "
-
-                if(len(vChildNames) > 1):
-                    for vChildName in vChildNames[:-1]:
-                        vLifeSketch = vLifeSketch + \
-                            pu.escape_latex(vChildName) + ", "
-
-                    vLifeSketch = vLifeSketch + "and " + \
-                        pu.escape_latex(vChildNames[-1]) + ". "
-                    vLifeSketch = vLifeSketch + r"\newline\newline "
-                elif(len(vChildNames) == 1):
-                    vLifeSketch = vLifeSketch + \
-                        pu.escape_latex(vChildNames[-1]) + ". "
-                    vLifeSketch = vLifeSketch + r"\newline\newline "
-
-                # Overlijden
-                if(vEventDeath in vVitalEvents):  # Death
-                    vLifeSketch = vLifeSketch + vHeShe + " died on " + \
-                        r"\mbox{" + self.__PersonEventInfoDict[vEventDeath][0][0] + "}"
-                    if((len(self.__PersonEventInfoDict[vEventDeath][0][1]) > 0) and (self.__PersonEventInfoDict[vEventDeath][0][1] != '-')):
-                        vLifeSketch = vLifeSketch + " in " + \
-                            self.__PersonEventInfoDict[vEventDeath][0][1] + ". "
-                    else:
-                        vLifeSketch = vLifeSketch + ". "
-
-                elif(vEventBurial in vVitalEvents):  # Burial
-                    vLifeSketch = vLifeSketch + vHeShe + " died about " + \
-                        r"\mbox{" + self.__PersonEventInfoDict[vEventBurial][0][0] + "}"
-                    if((len(self.__PersonEventInfoDict[vEventBurial][0][1]) > 0) and (self.__PersonEventInfoDict[vEventBurial][0][1] != '-')):
-                        vLifeSketch = vLifeSketch + " and was buried in " + \
-                            self.__PersonEventInfoDict[vEventBurial][0][1] + ". "
-                    else:
-                        vLifeSketch = vLifeSketch + ". "
-
-            self.__Chapter.append(pl.NoEscape(vLifeSketch))
-
     def __WriteVitalInformationSection(self):
         # Create section with Vital Information
         self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with self.__Chapter.create(pl.Section(title=hlg.Translate('vital information'), label=False)):
+        with self.__Chapter.create(pl.Section(title=hlg.Translate('vital information', self.__language), label=False)):
             with self.__Chapter.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
                 if(len(self.__CallName) > 0):
-                    vTable.add_row(
-                        [hlg.Translate('call name') + ":", self.__CallName])
+                    vTable.add_row([hlg.Translate('call name', self.__language) + ":", self.__CallName])
 
                 if(self.__Gender in vGenderDict):
-                    vTable.add_row(
-                        [hlg.Translate('gender') + ":", hlg.Translate(vGenderDict[self.__Gender])])
+                    vTable.add_row([hlg.Translate('gender', self.__language) + ":", hlg.Translate(vGenderDict[self.__Gender], self.__language)])
 
                 for vEvent in self.__PersonEventInfoDict.keys():
                     if (vEvent in vVitalEventsSet):
                         vString_1 = "Date of " + vEventTypeDict[vEvent]
                         vString_2 = "Place of " + vEventTypeDict[vEvent]
 
-                        vTable.add_row(
-                            [hlg.Translate(vString_1) + ":", self.__PersonEventInfoDict[vEvent][0][0]])
-                        vTable.add_row(
-                            [hlg.Translate(vString_2) + ":", self.__PersonEventInfoDict[vEvent][0][1]])
+                        vTable.add_row([hlg.Translate(vString_1, self.__language) + ":", DateToText(self.__PersonEventInfoDict[vEvent][0][0], False)])
+                        vTable.add_row([hlg.Translate(vString_2, self.__language) + ":", self.__PersonEventInfoDict[vEvent][0][1]])
 
             self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __WriteParentalSubsection(self):
         # Add Family table
         self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with self.__Chapter.create(pl.Subsection(title=hlg.Translate('parental family'), label=False)):
+        with self.__Chapter.create(pl.Subsection(title=hlg.Translate('parental family', self.__language), label=False)):
             with self.__Chapter.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
                 vFatherName = 'Unknown'
                 if(self.__FatherHandle is not None):
-                    vFatherData = DecodePersonData(
-                        self.__FatherHandle, self.__Cursor)
-                    vFatherName = pl.NoEscape(
-                        hlt.GetPersonNameWithReference(
-                            vFatherData[3][1],
-                            vFatherData[3][0],
-                            vFatherData[1]))
-                vTable.add_row([hlg.Translate('father') + ":", vFatherName])
+                    vFatherData = DecodePersonData(self.__FatherHandle, self.__Cursor)
+                    vFatherName = pl.NoEscape(hlt.GetPersonNameWithReference(vFatherData[3][1], vFatherData[3][0], vFatherData[1]))
+
+                vTable.add_row([hlg.Translate('father', self.__language) + ":", vFatherName])
 
                 vMotherName = 'Unknown'
                 if(self.__MotherHandle is not None):
-                    vMotherData = DecodePersonData(
-                        self.__MotherHandle, self.__Cursor)
-                    vMotherName = pl.NoEscape(
-                        hlt.GetPersonNameWithReference(
-                            vMotherData[3][1],
-                            vMotherData[3][0],
-                            vMotherData[1]))
-                vTable.add_row([hlg.Translate('mother') + ":", vMotherName])
+                    vMotherData = DecodePersonData(self.__MotherHandle, self.__Cursor)
+                    vMotherName = pl.NoEscape(hlt.GetPersonNameWithReference(vMotherData[3][1], vMotherData[3][0], vMotherData[1]))
+
+                vTable.add_row([hlg.Translate('mother', self.__language) + ":", vMotherName])
 
                 for vSiblingHandle in self.__SiblingHandlesList:
-                    vSiblingData = DecodePersonData(
-                        vSiblingHandle, self.__Cursor)
+                    vSiblingData = DecodePersonData(vSiblingHandle, self.__Cursor)
                     if(vSiblingData[1] == self.__GrampsId):
-                        vSiblingType = hlg.Translate('self') + ":"
+                        vSiblingType = hlg.Translate('self', self.__language) + ":"
                     elif(vSiblingData[2] == 0):
-                        vSiblingType = hlg.Translate('sister') + ":"
+                        vSiblingType = hlg.Translate('sister', self.__language) + ":"
                     elif(vSiblingData[2] == 1):
-                        vSiblingType = hlg.Translate('brother') + ":"
+                        vSiblingType = hlg.Translate('brother', self.__language) + ":"
                     else:
-                        vSiblingType = hlg.Translate('unknown') + ":"
+                        vSiblingType = hlg.Translate('unknown', self.__language) + ":"
 
-                    vTable.add_row([vSiblingType, pl.NoEscape(hlt.GetPersonNameWithReference(
-                        vSiblingData[3][1], vSiblingData[3][0], vSiblingData[1]))])
+                    vTable.add_row([vSiblingType, pl.NoEscape(hlt.GetPersonNameWithReference(vSiblingData[3][1], vSiblingData[3][0], vSiblingData[1]))])
 
             self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
@@ -797,85 +555,66 @@ class Person:
                 self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
                 with self.__Chapter.create(pl.Subsection(title=pl.NoEscape(hlt.GetPersonNameWithReference(vPartnerGivenNames, vPartnerSurname, vPartnerGrampsId)), label=False)):
                     if(self.__Gender == 0):
-                        vFamilyHandle = GetFamilyHandleByFatherMother(
-                            vPartnerHandle, self.__PersonHandle, self.__Cursor)
+                        vFamilyHandle = GetFamilyHandleByFatherMother(vPartnerHandle, self.__PersonHandle, self.__Cursor)
                     else:
-                        vFamilyHandle = GetFamilyHandleByFatherMother(
-                            self.__PersonHandle, vPartnerHandle, self.__Cursor)
+                        vFamilyHandle = GetFamilyHandleByFatherMother(self.__PersonHandle, vPartnerHandle, self.__Cursor)
 
                     if(vFamilyHandle is not None):
                         vFamilyHandle = vFamilyHandle[0]
 
                         # Nieuw
-                        vFamilyInfo = DecodeFamilyData(
-                            vFamilyHandle, self.__Cursor)
+                        vFamilyInfo = DecodeFamilyData(vFamilyHandle, self.__Cursor)
                         vFamilyGrampsId = vFamilyInfo[0]
                         vFamilyEventRefList = vFamilyInfo[5]
 
                         vFamilyEventInfoDict = {}
                         for vFamilyEventRef in vFamilyEventRefList:
                             vFamilyEventHandle = vFamilyEventRef[3]
-                            vFamilyEventInfo = DecodeEventData(
-                                vFamilyEventHandle, self.__Cursor)
+                            vFamilyEventInfo = DecodeEventData(vFamilyEventHandle, self.__Cursor)
                             if(vFamilyEventInfo[0] in vFamilyEventInfoDict):
-                                vFamilyEventInfoDict[vFamilyEventInfo[0]].append(
-                                    vFamilyEventInfo[1:])
+                                vFamilyEventInfoDict[vFamilyEventInfo[0]].append(vFamilyEventInfo[1:])
                             else:
-                                vFamilyEventInfoDict[vFamilyEventInfo[0]] = [
-                                    vFamilyEventInfo[1:]]
+                                vFamilyEventInfoDict[vFamilyEventInfo[0]] = [vFamilyEventInfo[1:]]
 
                         # OUD
-                        vFamilyEvents = vFamilyEventsSet.intersection(
-                            vFamilyEventInfoDict.keys())
+                        vFamilyEvents = vFamilyEventsSet.intersection(vFamilyEventInfoDict.keys())
                         if(vFamilyEvents):
-                            with self.__Chapter.create(pl.Subsubsection(title=hlg.Translate('family events'), label=False)):
+                            with self.__Chapter.create(pl.Subsubsection(title=hlg.Translate('family events', self.__language), label=False)):
                                 with self.__Chapter.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
                                     for vEvent in vFamilyEvents:
-                                        vString_1 = "Date of " + \
-                                            vEventTypeDict[vEvent]
-                                        vString_2 = "Place of " + \
-                                            vEventTypeDict[vEvent]
-                                        vTable.add_row(
-                                            [hlg.Translate(vString_1) + ":", vFamilyEventInfoDict[vEvent][0][0]])
-                                        vTable.add_row(
-                                            [hlg.Translate(vString_2) + ":", vFamilyEventInfoDict[vEvent][0][1]])
+                                        vString_1 = "Date of " + vEventTypeDict[vEvent]
+                                        vString_2 = "Place of " + vEventTypeDict[vEvent]
+                                        vTable.add_row([hlg.Translate(vString_1, self.__language) + ":", DateToText(vFamilyEventInfoDict[vEvent][0][0], False)])
+                                        vTable.add_row([hlg.Translate(vString_2, self.__language) + ":", vFamilyEventInfoDict[vEvent][0][1]])
 
-                                self.__Chapter.append(
-                                    pl.NoEscape(r'\FloatBarrier'))
+                                self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
                         # Add subchapter for children
-                        vChildrenHandles = GetChildrenHandlesByFamily(
-                            vFamilyHandle, self.__Cursor)
+                        vChildrenHandles = GetChildrenHandlesByFamily(vFamilyHandle, self.__Cursor)
                         if(len(vChildrenHandles) > 0):
                             # If children exist, then create sub chapter and a
                             # table
-                            with self.__Chapter.create(pl.Subsubsection(title=hlg.Translate('children'), label=False)):
+                            with self.__Chapter.create(pl.Subsubsection(title=hlg.Translate('children', self.__language), label=False)):
                                 with self.__Chapter.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
                                     for vChildHandle in vChildrenHandles:
                                         # For each child create a separate row
                                         # in the table
-                                        vChildData = DecodePersonData(
-                                            vChildHandle, self.__Cursor)
+                                        vChildData = DecodePersonData(vChildHandle, self.__Cursor)
                                         if(vChildData[2] == 0):
-                                            vChildType = hlg.Translate(
-                                                'daughter') + ":"
+                                            vChildType = hlg.Translate('daughter', self.__language) + ":"
                                         elif(vChildData[2] == 1):
-                                            vChildType = hlg.Translate(
-                                                'son') + ":"
+                                            vChildType = hlg.Translate('son', self.__language) + ":"
                                         else:
-                                            vChildType = hlg.Translate(
-                                                'unknown') + ":"
+                                            vChildType = hlg.Translate('unknown', self.__language) + ":"
 
-                                        vTable.add_row([vChildType, pl.NoEscape(hlt.GetPersonNameWithReference(
-                                            vChildData[3][1], vChildData[3][0], vChildData[1]))])
+                                        vTable.add_row([vChildType, pl.NoEscape(hlt.GetPersonNameWithReference(vChildData[3][1], vChildData[3][0], vChildData[1]))])
 
-                                self.__Chapter.append(
-                                    pl.NoEscape(r'\FloatBarrier'))
+                                self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __WriteFamilySection(self):
         # Create section with Family Information
         self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with self.__Chapter.create(pl.Section(title=hlg.Translate('family'), label=False)):
+        with self.__Chapter.create(pl.Section(title=hlg.Translate('family', self.__language), label=False)):
             self.__WriteParentalSubsection()
             self.__WritePartnerSubsections()
 
@@ -885,11 +624,10 @@ class Person:
             self.__PersonEventInfoDict.keys())
         if(vEducationEvents):
             self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with self.__Chapter.create(pl.Section(title=hlg.Translate('education'), label=False)):
+            with self.__Chapter.create(pl.Section(title=hlg.Translate('education', self.__language), label=False)):
                 with self.__Chapter.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
                     # Header row
-                    vTable.add_row(
-                        [pu.bold(hlg.Translate('date')), pu.bold(hlg.Translate('course'))])
+                    vTable.add_row([pu.bold(hlg.Translate('date', self.__language)), pu.bold(hlg.Translate('course', self.__language))])
                     vTable.add_hline()
                     vTable.end_table_header()
 
@@ -897,8 +635,8 @@ class Person:
                         for vEducation in self.__PersonEventInfoDict[vEvent]:
                             if(len(vEducation[2]) == 0):
                                 vEducation[2] = '-'
-                            vTable.add_row([vEducation[0], pl.NoEscape(
-                                vEducation[2]) + pl.NoEscape(r'\newline ') + pu.escape_latex(vEducation[1])])
+
+                            vTable.add_row([DateToText(vEducation[0]), pl.NoEscape(vEducation[2]) + pl.NoEscape(r'\newline ') + pu.escape_latex(vEducation[1])])
 
                 self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
@@ -908,11 +646,11 @@ class Person:
             self.__PersonEventInfoDict.keys())
         if(vProfessionalEvents):
             self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with self.__Chapter.create(pl.Section(title=hlg.Translate('occupation'), label=False)):
+            with self.__Chapter.create(pl.Section(title=hlg.Translate('occupation', self.__language), label=False)):
                 with self.__Chapter.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
                     # Header row
                     vTable.add_row(
-                        [pu.bold(hlg.Translate('date')), pu.bold(hlg.Translate('profession'))])
+                        [pu.bold(hlg.Translate('date', self.__language)), pu.bold(hlg.Translate('profession', self.__language))])
                     vTable.add_hline()
                     vTable.end_table_header()
 
@@ -921,29 +659,26 @@ class Person:
                         for vProfession in self.__PersonEventInfoDict[vEvent]:
                             if(len(vProfession[2]) == 0):
                                 vProfession[2] = '-'
-                            vTable.add_row([vProfession[0], pu.escape_latex(
-                                vProfession[2]) + pl.NoEscape(r'\newline ') + pu.escape_latex(vProfession[1])])
+
+                            vTable.add_row([DateToText(vProfession[0]), pu.escape_latex(vProfession[2]) + pl.NoEscape(r'\newline ') + pu.escape_latex(vProfession[1])])
 
                 self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __WriteResidenceSection(self):
         # Create section with Residential Information
-        vResidentialEvents = vResidentialEventsSet.intersection(
-            self.__PersonEventInfoDict.keys())
+        vResidentialEvents = vResidentialEventsSet.intersection(self.__PersonEventInfoDict.keys())
         if(vResidentialEvents):
             self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with self.__Chapter.create(pl.Section(title=hlg.Translate('residences'), label=False)):
+            with self.__Chapter.create(pl.Section(title=hlg.Translate('residences', self.__language), label=False)):
                 with self.__Chapter.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
                     # Header row
-                    vTable.add_row(
-                        [pu.bold(hlg.Translate('date')), pu.bold(hlg.Translate('residence'))])
+                    vTable.add_row([pu.bold(hlg.Translate('date', self.__language)), pu.bold(hlg.Translate('residence', self.__language))])
                     vTable.add_hline()
                     vTable.end_table_header()
 
                     for vEvent in vResidentialEvents:
                         for vResidence in self.__PersonEventInfoDict[vEvent]:
-                            vTable.add_row(
-                                [vResidence[0], pu.escape_latex(vResidence[1])])
+                            vTable.add_row([DateToText(vResidence[0]), pu.escape_latex(vResidence[1])])
 
                 self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
@@ -955,7 +690,7 @@ class Person:
         vFilteredPhotoList = self.__GetFilteredPhotoList()
         if(len(vFilteredPhotoList) > 0):
             self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with self.__Chapter.create(pl.Section(title=hlg.Translate('photos'), label=False)):
+            with self.__Chapter.create(pl.Section(title=hlg.Translate('photos', self.__language), label=False)):
                 # Use temporary lsit, so items can be removed while iterating
                 vTempList = vFilteredPhotoList.copy()
                 for vMediaHandle in vTempList:
@@ -1027,7 +762,7 @@ class Person:
         vFilteredDocumentList = self.__GetFilteredDocumentList()
         if(len(vFilteredDocumentList) > 0):
             self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with self.__Chapter.create(pl.Section(title=hlg.Translate('documents'), label=False)):
+            with self.__Chapter.create(pl.Section(title=hlg.Translate('documents', self.__language), label=False)):
                 # Use temporary list, so items can be removed while iterating
                 vTempList = vFilteredDocumentList.copy()
                 for vMediaHandle in vTempList:

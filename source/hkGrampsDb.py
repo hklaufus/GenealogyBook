@@ -3,6 +3,9 @@ import pickle
 import calendar
 import pathlib
 
+# Niet zo chique hier...
+import hkLanguage as hkl
+
 # Constants
 vGrampsPersonTable = 'person'
 vGrampsFamilyTable = 'family'
@@ -77,6 +80,7 @@ vVitalEventsSet = {
     vEventBurial,
     vEventCremation,
     vEventWill}
+
 vFamilyEventsSet = {
     vEventMarriage,
     vEventMarriageSettlement,
@@ -88,9 +92,18 @@ vFamilyEventsSet = {
     vEventDivorceFiling,
     vEventAnnulment,
     vEventAlternateMarriage}
-vEducationEventsSet = {vEventDegree, vEventEducation, vEventGraduation}
-vProfessionalEventsSet = {vEventOccupation}  # , vEventRetirement}
-vResidentialEventsSet = {vEventProperty, vEventResidence}
+
+vEducationEventsSet = {
+    vEventDegree, 
+    vEventEducation, 
+    vEventGraduation}
+
+vProfessionalEventsSet = {
+    vEventOccupation}  # , vEventRetirement}
+
+vResidentialEventsSet = {
+    vEventProperty, 
+    vEventResidence}
 
 vEventTypeDict = {
     vEventUnknown: "Unknown",
@@ -561,8 +574,89 @@ def GetPersonHandleByGrampsId(pPersonId, pCursor):
 
     return vPersonHandle
 
+def DateToText(pDateList, pAbbreviated=True):
+    vModifier = 0
+    vModifierSet = {1, 2, 3}
+    vDateString = '-'
+
+    if(len(pDateList)==4):
+        vModifier = pDateList[0]
+
+        vDay1 = pDateList[1]
+        vMonth1 = pDateList[2]
+        vYear1 = pDateList[3]
+        
+        vMonthString1 = calendar.month_name[vMonth1]
+        if(pAbbreviated):
+            vMonthString1 = calendar.month_abbr[vMonth1]
+
+        vMonthString1 = hkl.Translate(vMonthString1)
+
+        if(vModifier in vModifierSet):
+            # Before, after, about
+            vDateString = vDateModifierDict[vModifier] + ' ' + ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1)
+        else:
+            vDateString = ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1)
+
+    elif(len(pDateList)==7):
+        vModifier = pDateList[0]
+
+        vDay1 = pDateList[1]
+        vMonth1 = pDateList[2]
+        vYear1 = pDateList[3]
+
+        vMonthString1 = calendar.month_name[vMonth1]
+        if(pAbbreviated):
+            vMonthString1 = calendar.month_abbr[vMonth1]
+
+        vMonthString1 = hkl.Translate(vMonthString1)
+
+        vDay2 = pDateList[4]
+        vMonth2 = pDateList[5]
+        vYear2 = pDateList[6]
+
+        vMonthString2 = calendar.month_name[vMonth2]
+        if(pAbbreviated):
+            vMonthString2 = calendar.month_abbr[vMonth2]
+
+        vMonthString2 = hkl.Translate(vMonthString2)
+
+        if(vModifier == 4):
+            # Range
+            vDateString = hkl.Translate('between') + ' ' + ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1) + ' ' + hkl.Translate('and') + ' ' + ((str(vDay2) + ' ') if vDay2!=0 else '') + vMonthString2 + ' ' + str(vYear2)
+        elif(vModifier == 5):
+            # Span
+            #vDateString = hkl.Translate('from') + ' ' + str(vDay1) + ' ' + vMonthString1 + ' ' + str(vYear1) + ' ' + hkl.Translate('until') + ' ' + str(vDay2) + ' ' + vMonthString2 + ' ' + str(vYear2)
+            vDateString = hkl.Translate('from') + ' ' + ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1) + ' ' + hkl.Translate('until') + ' ' + ((str(vDay2) + ' ') if vDay2!=0 else '') + vMonthString2 + ' ' + str(vYear2)
+#    else:
+#        print("ERROR in DateToText: length of pDateList undefined")
+#        vDateString = 'ERROR'
+
+    return vDateString
 
 def DecodeDateTuple(pDateTuple):
+    vDay = ''
+    vMonth = ''
+    vYear = ''
+    vDateList = []
+
+    if(pDateTuple is not None):
+        vModifier = pDateTuple[1]
+        vDate = pDateTuple[3]
+
+        if(len(vDate) == 4):
+            # Single date
+            [vDay, vMonth, vYear, _] = vDate
+            vDateList = [vModifier, vDay, vMonth, vYear]
+
+        elif(len(vDate) == 8):
+            # Dual date
+            [vDay1, vMonth1, vYear1, _, vDay2, vMonth2, vYear2, _] = vDate
+            vDateList = [vModifier, vDay1, vMonth1, vYear1, vDay2, vMonth2, vYear2]
+
+    return vDateList
+
+def DecodeDateTuple_Old(pDateTuple):
     vDay = ''
     vMonth = ''
     vYear = ''
@@ -622,23 +716,20 @@ def DecodeDateTuple(pDateTuple):
 
         if(vModifier in vModifierSet):
             # Before, after, about
-            vDateString = vDateModifierDict[vModifier] + \
-                ' ' + str(vDay) + ' ' + vMonth + ' ' + str(vYear)
+            vDateString = vDateModifierDict[vModifier] + ' ' + str(vDay) + ' ' + vMonth + ' ' + str(vYear)
 
         elif(vModifier == 4):
             # Range
-            vDateString = 'Between ' + \
-                vDateString.split('-')[0] + ' and ' + vDateString.split('-')[1]
+            vDateString = 'Between ' + vDateString.split('-')[0] + ' and ' + vDateString.split('-')[1]
 
         elif(vModifier == 5):
             # Span
             #			vDateString = 'From ' + vDateString.split('-')[0] + ' until ' +  vDateString.split('-')[1]
-            vDateString = vDateString.split(
-                '-')[0] + ' - ' + vDateString.split('-')[1]
+            vDateString = vDateString.split('-')[0] + ' - ' + vDateString.split('-')[1]
 
 #		else:
 #			# Unknown modifier
-#			print('ERROR in DecodeDataTuple: unknown modifier: ', vModifier, vDateModifierDict[vModifier])
+#			print('ERROR in DecodeDateTuple: unknown modifier: ', vModifier, vDateModifierDict[vModifier])
 #			print('pDateTuple: ', pDateTuple)
 
     return vDateString
@@ -679,9 +770,7 @@ def DecodeEventData(pEventHandle, pCursor):
     vDescription = ""
     vMediaList = []
 
-    pCursor.execute(
-        'SELECT blob_data FROM event WHERE handle=?',
-        [pEventHandle])
+    pCursor.execute('SELECT blob_data FROM event WHERE handle=?', [pEventHandle])
     vBlobData = pCursor.fetchone()
     if(vBlobData is not None):
         vEventData = pickle.loads(vBlobData[0])
