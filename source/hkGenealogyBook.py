@@ -12,7 +12,6 @@ import pylatex as pl
 import pylatex.utils as pu
 import pylatex.base_classes.containers as pbc
 
-import xml.dom.minidom as mdm
 
 def ReadConfigXml(pFileName = 'config.xml'):
     vBookParameters = {}

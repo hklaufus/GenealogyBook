@@ -69,6 +69,12 @@ gStrings['date of burial'] = {
 gStrings['place of burial'] = {
     'en': "Place of burial",
     'nl': "Plaats van begrafenis"}
+gStrings['date of cremation'] = {
+    'en': "Date of cremation",
+    'nl': "Datum van crematie"}
+gStrings['place of cremation'] = {
+    'en': "Place of cremation",
+    'nl': "Plaats van crematie"}
 gStrings['date of engagement'] = {
     'en': "Date of engagement",
     'nl': "Datum van verloving"}
@@ -81,7 +87,15 @@ gStrings['date of marriage license'] = {
 gStrings['place of marriage license'] = {
     'en': "Place of marriage license",
     'nl': "Plaats van huwelijksvergunning"}
-gStrings['date of marriage'] = {'en': "Date of marriage", 'nl': "Trouwdatum"}
+gStrings['date of marriage'] = {
+    'en': "Date of marriage", 
+    'nl': "Trouwdatum"}
+gStrings['date of alternate marriage'] = {
+    'en': "Date of alternate marriage", 
+    'nl': "Alternatieve trouwdatum"}
+gStrings['place of alternate marriage'] = {
+    'en': "Place of alternate marriage", 
+    'nl': "Alternatieve trouwplaats"}
 gStrings['place of marriage'] = {
     'en': "Place of marriage",
     'nl': "Trouwlokatie"}
