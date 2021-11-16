@@ -12,15 +12,11 @@ import pylatex.base_classes.containers as pbc
 class Ahnentafel:
     """A class to write a ahnentafel chapter"""
 
-    def __init__(
-            self,
-            pSubjectHandle,
-            pCursor,
-            pDocumentPath='../book/',
-            pSourceStatus=False):
+    def __init__(self, pSubjectHandle, pCursor, pDocumentPath='../book/', pSourceStatus=False):
         self.__PersonHandle = pSubjectHandle
         self.__Cursor = pCursor
         self.__DocumentPath = pDocumentPath
+
         # Adds the status of sources to the Ahnentafel
         self.__SourceStatus = pSourceStatus
 
@@ -42,8 +38,7 @@ class Ahnentafel:
         for vIndex in range(1, len(pBinaryTreeString)):
             vPreString = vPreString + r'\quad\quad'
 
-        vString = vPreString + ' ' + pBinaryTreeString + r'\quad\quad ' + \
-            pu.escape_latex(vPerson.GivenNames) + ' ' + pu.escape_latex(vPerson.Surname) + r'\newline'
+        vString = vPreString + ' ' + pBinaryTreeString + r'\quad\quad ' + pu.escape_latex(vPerson.GivenNames) + ' ' + pu.escape_latex(vPerson.Surname) + r'\newline'
         print(vString)
 
         self.__Chapter.append(pl.NoEscape(vString))
@@ -64,8 +59,7 @@ class Ahnentafel:
         """
         The Generation list consists of tuples (person_handle, binary_tree_string)
         """
-        vGenerationIndex = len(
-            pGenerationList[0][1]) + 1  # The generation index is determined using the length of the binary string
+        vGenerationIndex = len(pGenerationList[0][1]) + 1  # The generation index is determined using the length of the binary string
         vNextGenerationList = []
         vSection = None
 
@@ -77,14 +71,11 @@ class Ahnentafel:
                         with self.__Chapter.create(pl.Section(numbering=False, title=hlg.Translate('generation') + ' ' + str(vGenerationIndex), label=False)):
                             vGenerationStarted = True
                             if(self.__SourceStatus):
-                                self.__Chapter.append(pl.NoEscape(
-                                    r'\begin{longtabu}{p{\dimexpr.7\textwidth} p{\dimexpr.3\textwidth} | c | c | c |}%'))
+                                self.__Chapter.append(pl.NoEscape(r'\begin{longtabu}{p{\dimexpr.7\textwidth} p{\dimexpr.3\textwidth} | c | c | c |}%'))
                             else:
-                                self.__Chapter.append(
-                                    pl.NoEscape(r'\begin{longtabu}{p{\dimexpr.7\textwidth} p{\dimexpr.3\textwidth}}%'))
+                                self.__Chapter.append(pl.NoEscape(r'\begin{longtabu}{p{\dimexpr.7\textwidth} p{\dimexpr.3\textwidth}}%'))
 
-                    vPerson = hpc.Person(
-                        vPersonHandle, self.__Cursor, self.__DocumentPath)
+                    vPerson = hpc.Person(vPersonHandle, self.__Cursor, self.__DocumentPath)
                     vSourceStatus = vPerson.SourceStatus
 
                     vNewBinaryString = ''
@@ -100,36 +91,12 @@ class Ahnentafel:
                     if(self.__SourceStatus):
                         # Research help: Add the source status to the
                         # Ahnentafel
-                        self.__Chapter.append(
-                            pl.NoEscape(
-                                hlt.GetPersonNameWithReference(
-                                    vPerson.GivenNames,
-                                    vPerson.Surname,
-                                    vPerson.GrampsId) +
-                                r' & ' +
-                                vNewBinaryString +
-                                r' & ' +
-                                vSourceStatus['b'] +
-                                r' & ' +
-                                vSourceStatus['m'] +
-                                r' & ' +
-                                vSourceStatus['d'] +
-                                r'\\'))
+                        self.__Chapter.append(pl.NoEscape(hlt.GetPersonNameWithReference(vPerson.GivenNames, vPerson.Surname, vPerson.GrampsId) + r' & ' + vNewBinaryString + r' & ' + vSourceStatus['b'] + r' & ' + vSourceStatus['m'] + r' & ' + vSourceStatus['d'] + r'\\'))
                     else:
-                        self.__Chapter.append(
-                            pl.NoEscape(
-                                hlt.GetPersonNameWithReference(
-                                    vPerson.GivenNames,
-                                    vPerson.Surname,
-                                    vPerson.GrampsId) +
-                                r' & ' +
-                                vNewBinaryString +
-                                r'\\'))
+                        self.__Chapter.append(pl.NoEscape(hlt.GetPersonNameWithReference(vPerson.GivenNames, vPerson.Surname, vPerson.GrampsId) + r' & ' + vNewBinaryString + r'\\'))
 
-                    vNextGenerationList.append(
-                        (vPerson.FatherHandle, vNewBinaryString))
-                    vNextGenerationList.append(
-                        (vPerson.MotherHandle, vNewBinaryString))
+                    vNextGenerationList.append((vPerson.FatherHandle, vNewBinaryString))
+                    vNextGenerationList.append((vPerson.MotherHandle, vNewBinaryString))
 
             if(vGenerationStarted):
                 self.__Chapter.append(pl.NoEscape(r'\end{longtabu}%'))
@@ -140,50 +107,34 @@ class Ahnentafel:
 
     def __CreateGenerationList(self, pPersonHandle, pGenerationIndex):
         if (pPersonHandle is not None):
-            vPerson = hpc.Person(
-                pPersonHandle,
-                self.__Cursor,
-                self.__DocumentPath)
+            vPerson = hpc.Person(pPersonHandle, self.__Cursor, self.__DocumentPath)
 
             # Add this person to the objects generation list
             self.__GenerationList.append((pPersonHandle, pGenerationIndex))
 
             # Add siblings to the objects generation list
-            vSiblingHandleList = hgd.GetSiblingHandles_Old(
-                pPersonHandle, self.__Cursor)
+            vSiblingHandleList = hgd.GetSiblingHandles_Old(pPersonHandle, self.__Cursor)
             for vSiblingHandle in vSiblingHandleList:
                 if (vSiblingHandle is not None):
                     self.__GenerationList.append(
                         (vSiblingHandle, pGenerationIndex))
 
             # Process the parents
-            self.__CreateGenerationList(
-                vPerson.FatherHandle, pGenerationIndex + 1)
-            self.__CreateGenerationList(
-                vPerson.MotherHandle, pGenerationIndex + 1)
+            self.__CreateGenerationList(vPerson.FatherHandle, pGenerationIndex + 1)
+            self.__CreateGenerationList(vPerson.MotherHandle, pGenerationIndex + 1)
 
     def CreateAhnentafelChapter(self):
         """
         Writes the ahnentafel to a separate chapter in a subdocument
         """
 
-        vSubject = hpc.Person(
-            self.__PersonHandle,
-            self.__Cursor,
-            self.__DocumentPath)
+        vSubject = hpc.Person(self.__PersonHandle, self.__Cursor, self.__DocumentPath)
 
         # Display progress
         print("Writing the Ahnentafel...")
 
         # Create a new chapter for the active person
-        self.__Chapter = hlt.Chapter(
-            title=hlg.Translate('pedigree of') +
-            ' ' +
-            vSubject.GivenNames +
-            ' ' +
-            vSubject.Surname,
-            label=False)
+        self.__Chapter = hlt.Chapter(title=hlg.Translate('pedigree of') + ' ' + vSubject.GivenNames + ' ' + vSubject.Surname, label=False)
 #		self.__AddPerson(self.__PersonHandle, 'X')
         self.__AddGeneration([(self.__PersonHandle, '')])
-        self.__Chapter.generate_tex(
-            filepath=self.__DocumentPath + 'Ahnentafel')
+        self.__Chapter.generate_tex(filepath=self.__DocumentPath + 'Ahnentafel')
