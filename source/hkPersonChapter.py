@@ -96,14 +96,12 @@ class Person:
         self.__SiblingHandlesList = GetSiblingHandles_Old(self.__PersonHandle, self.__Cursor)
 
         self.__CreateEventDictionary()
-        self.__SortEventDictionary()
 
         # TODO: This is a tag list NOT related to one person; this does not belong here
         self.__TagDictionary = GetTagDictionary(self.__Cursor)
 
         self.__SourceStatus = self.__GetSourceStatus()
 
-    # 20211120: Moved creation of event dictionary to separate function
     def __CreateEventDictionary(self):
         # Create an event dictionary.
         # The key refers to the type of event (eg. Profession); the value contains a list of events belonging to this event type (eg. multiple professions within key Profession)
@@ -113,77 +111,21 @@ class Person:
             vEventHandle = vEventRef[3]
             vEventInfo = DecodeEventData(vEventHandle, self.__Cursor)
             
-            # 20211109: Added filter for role type
+            # Filter on role
             vRoleType = vEventRef[4][0]
             if(vRoleType == vRolePrimary) or (vRoleType == vRoleFamily):
-                # Create a dictionary from event data. Use event type as key, and
-                # rest of event as data
+                # Create a dictionary from event data. Use event type as key, and rest of event as data
+
                 # Check whether event type already exists as key
                 if(vEventInfo[0] in self.__PersonEventInfoDict):
                     # if so, append event info to the dictionary entry
                     self.__PersonEventInfoDict[vEventInfo[0]].append(vEventInfo[1:])
                 else:
-                    self.__PersonEventInfoDict[vEventInfo[0]] = [vEventInfo[1:]]  # Otherwise create a new entry
+                    # Otherwise create a new entry
+                    self.__PersonEventInfoDict[vEventInfo[0]] = [vEventInfo[1:]]
 
                 # Add event media to personal media list
                 self.__MediaList = self.__MediaList + vEventInfo[4]
-
-    # 20211120: Added new function for sorting events chronolically
-    def __SortEventDictionary(self):
-        # Sorts the events dictionary chronologically
-
-        def GetSortingKey(vTuple):
-            # Function to get sorting key
-            return vTuple[1]
-
-        for vEventType in self.__PersonEventInfoDict:
-            # Debug
-#            print("vEventType: ", vEventTypeDict[vEventType])
-
-            # Create temporary sorting list
-            vSortList = []
-
-            # Store index
-            vIndex = 0
-
-            # Run through all events
-            for vEventInfo in self.__PersonEventInfoDict[vEventType]:
-                vDateList = vEventInfo[0] # date is stored at index 0
-
-                # Debug
-#                print("vDateList: ", vDateList)
-
-                if(vDateList != '-'):
-                    vValue = "{0:0>4}{1:0>2}{2:0>2}".format(vDateList[3], vDateList[2], vDateList[1])
-                
-                    # Debug
-#                    print("vValue: ", vValue)
-
-                    # Add to  temporary sorting list
-                    vSortList.append([vIndex, vValue])
-
-                else:
-                    # Add to  temporary sorting list
-                    vSortList.append([vIndex, vDateList])
-
-                # Increase index for next loop
-                vIndex = vIndex+1
-
-            # Now sort list
-            vSortList.sort
-
-            vNewEventInfoList = []
-            for vItem in vSortList:
-                vIndex = vItem[0]
-
-                # Debug
-#                print("vIndex: ", vIndex)
-
-                vEventInfoList = self.__PersonEventInfoDict[vEventType]
-                vEventInfo = vEventInfoList[vIndex]
-                vNewEventInfoList.append(vEventInfo)
-
-            self.__PersonEventInfoDict[vEventType] = vNewEventInfoList
 
     def __GetSourceStatus(self):
         """ Checks whether scans ar avaiable for the events birth, marriage and death """
@@ -682,9 +624,15 @@ class Person:
 
     def __WriteEducationSection(self):
         # Create section with Education ***
-        vEducationEvents = vEducationEventsSet.intersection(
-            self.__PersonEventInfoDict.keys())
+        vEducationEvents = vEducationEventsSet.intersection(self.__PersonEventInfoDict.keys())
         if(vEducationEvents):
+            vEducationList = []
+            for vEvent in vEducationEvents:
+                vEducationList = vEducationList + self.__PersonEventInfoDict[vEvent]
+
+            vDateFunc = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
+            vEducationList.sort(key=vDateFunc)
+
             self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
             with self.__Chapter.create(pl.Section(title=hlg.Translate('education', self.__language), label=False)):
                 with self.__Chapter.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
@@ -693,36 +641,40 @@ class Person:
                     vTable.add_hline()
                     vTable.end_table_header()
 
-                    for vEvent in vEducationEvents:
-                        for vEducation in self.__PersonEventInfoDict[vEvent]:
-                            if(len(vEducation[2]) == 0):
-                                vEducation[2] = '-'
+                    # Add row for each event
+                    for vEducation in vEducationList:
+                        if(len(vEducation[2]) == 0):
+                            vEducation[2] = '-'
 
-                            vTable.add_row([DateToText(vEducation[0]), pl.NoEscape(vEducation[2]) + pl.NoEscape(r'\newline ') + pu.escape_latex(vEducation[1])])
+                        vTable.add_row([DateToText(vEducation[0]), pl.NoEscape(vEducation[2]) + pl.NoEscape(r'\newline ') + pu.escape_latex(vEducation[1])])
 
                 self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __WriteProfessionSection(self):
         # Create section with Working Experience ***
-        vProfessionalEvents = vProfessionalEventsSet.intersection(
-            self.__PersonEventInfoDict.keys())
+        vProfessionalEvents = vProfessionalEventsSet.intersection(self.__PersonEventInfoDict.keys())
         if(vProfessionalEvents):
+            vProfessionalList = []
+            for vEvent in vProfessionalEvents:
+                vProfessionalList = vProfessionalList + self.__PersonEventInfoDict[vEvent]
+
+            vDateFunc = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
+            vProfessionalList.sort(key=vDateFunc)
+
             self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
             with self.__Chapter.create(pl.Section(title=hlg.Translate('occupation', self.__language), label=False)):
                 with self.__Chapter.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
                     # Header row
-                    vTable.add_row(
-                        [pu.bold(hlg.Translate('date', self.__language)), pu.bold(hlg.Translate('profession', self.__language))])
+                    vTable.add_row([pu.bold(hlg.Translate('date', self.__language)), pu.bold(hlg.Translate('profession', self.__language))])
                     vTable.add_hline()
                     vTable.end_table_header()
 
                     # Add row for each event
-                    for vEvent in vProfessionalEvents:
-                        for vProfession in self.__PersonEventInfoDict[vEvent]:
-                            if(len(vProfession[2]) == 0):
-                                vProfession[2] = '-'
+                    for vProfession in vProfessionalList:
+                        if(len(vProfession[2]) == 0):
+                            vProfession[2] = '-'
 
-                            vTable.add_row([DateToText(vProfession[0]), pu.escape_latex(vProfession[2]) + pl.NoEscape(r'\newline ') + pu.escape_latex(vProfession[1])])
+                        vTable.add_row([DateToText(vProfession[0]), pu.escape_latex(vProfession[2]) + pl.NoEscape(r'\newline ') + pu.escape_latex(vProfession[1])])
 
                 self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
@@ -730,6 +682,13 @@ class Person:
         # Create section with Residential Information
         vResidentialEvents = vResidentialEventsSet.intersection(self.__PersonEventInfoDict.keys())
         if(vResidentialEvents):
+            vResidenceList = []
+            for vEvent in vResidentialEvents:
+                vResidenceList = vResidenceList + self.__PersonEventInfoDict[vEvent]
+
+            vDateFunc = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
+            vResidenceList.sort(key=vDateFunc)
+
             self.__Chapter.append(pl.NoEscape(r"\needspace{\minspace}"))
             with self.__Chapter.create(pl.Section(title=hlg.Translate('residences', self.__language), label=False)):
                 with self.__Chapter.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
@@ -738,9 +697,8 @@ class Person:
                     vTable.add_hline()
                     vTable.end_table_header()
 
-                    for vEvent in vResidentialEvents:
-                        for vResidence in self.__PersonEventInfoDict[vEvent]:
-                            vTable.add_row([DateToText(vResidence[0]), pu.escape_latex(vResidence[1])])
+                    for vResidence in vResidenceList:
+                        vTable.add_row([DateToText(vResidence[0]), pu.escape_latex(vResidence[1])])
 
                 self.__Chapter.append(pl.NoEscape(r'\FloatBarrier'))
 
