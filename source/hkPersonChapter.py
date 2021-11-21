@@ -27,62 +27,6 @@ cSource = 'Source'
 class Person:
     """A class to write a chapter about a person"""
 
-    def __init__(self, pPersonHandle, pCursor, pDocumentPath='../book/', pLanguage='nl'):
-        self.__PersonHandle = pPersonHandle
-        self.__Cursor = pCursor
-        self.__DocumentPath = pDocumentPath
-        self.__language = pLanguage
-
-        # Get basic person data
-        vPersonData = DecodePersonData(self.__PersonHandle, self.__Cursor)
-        self.__GrampsId = vPersonData[1]
-        self.__Gender = vPersonData[2]
-        self.__Surname = vPersonData[3][0]
-        self.__GivenNames = vPersonData[3][1]
-        self.__CallName = vPersonData[3][2]
-        self.__EventRefList = vPersonData[7]
-        self.__FamilyList = vPersonData[8]
-        self.__ParentFamilyList = vPersonData[9]
-        self.__MediaList = vPersonData[10]
-
-        self.__NoteBase = vPersonData[16]
-#		self.__NotesHandlesList = GetPersonNotesHandles(self.__PersonHandle, self.__Cursor)
-
-        self.__PartnerHandleList = GetPartnerHandles(self.__PersonHandle, self.__Cursor)
-        self.__ChildrenHandlesList = GetChildrenHandlesByPerson(self.__PersonHandle, self.__Cursor)
-
-        self.__FatherHandle = GetFatherHandleByPerson(self.__PersonHandle, self.__Cursor)
-        self.__MotherHandle = GetMotherHandleByPerson(self.__PersonHandle, self.__Cursor)
-        self.__SiblingHandlesList = GetSiblingHandles_Old(self.__PersonHandle, self.__Cursor)
-
-        # Create an event dictionary.
-        # The key refers to the type of event (eg. Profession); the value contains a list of events belonging to this event type (eg. multiple professions within key Profession)
-        # Key:[event info, event info 2, event info 3]
-        self.__PersonEventInfoDict = {}
-        for vEventRef in self.__EventRefList:
-            vEventHandle = vEventRef[3]
-            vEventInfo = DecodeEventData(vEventHandle, self.__Cursor)
-            
-            # 20211109: Added filter for role type
-            vRoleType = vEventRef[4][0]
-            if(vRoleType == vRolePrimary) or (vRoleType == vRoleFamily):
-                # Create a dictionary from event data. Use event type as key, and
-                # rest of event as data
-                # Check whether event type already exists as key
-                if(vEventInfo[0] in self.__PersonEventInfoDict):
-                    # if so, append event info to the dictionary entry
-                    self.__PersonEventInfoDict[vEventInfo[0]].append(vEventInfo[1:])
-                else:
-                    self.__PersonEventInfoDict[vEventInfo[0]] = [vEventInfo[1:]]  # Otherwise create a new entry
-
-                # Add event media to personal media list
-                self.__MediaList = self.__MediaList + vEventInfo[4]
-
-        # TODO: This is a tag list NOT related to one person; this does not belong here
-        self.__TagDictionary = GetTagDictionary(self.__Cursor)
-
-        self.__SourceStatus = self.__GetSourceStatus()
-
     @property
     def PersonHandle(self):
         return self.__PersonHandle
@@ -122,6 +66,124 @@ class Person:
     @property
     def SourceStatus(self):
         return self.__SourceStatus
+
+    def __init__(self, pPersonHandle, pCursor, pDocumentPath='../book/', pLanguage='nl'):
+        self.__PersonHandle = pPersonHandle
+        self.__Cursor = pCursor
+        self.__DocumentPath = pDocumentPath
+        self.__language = pLanguage
+
+        # Get basic person data
+        vPersonData = DecodePersonData(self.__PersonHandle, self.__Cursor)
+        self.__GrampsId = vPersonData[1]
+        self.__Gender = vPersonData[2]
+        self.__Surname = vPersonData[3][0]
+        self.__GivenNames = vPersonData[3][1]
+        self.__CallName = vPersonData[3][2]
+        self.__EventRefList = vPersonData[7]
+        self.__FamilyList = vPersonData[8]
+        self.__ParentFamilyList = vPersonData[9]
+        self.__MediaList = vPersonData[10]
+
+        self.__NoteBase = vPersonData[16]
+#		self.__NotesHandlesList = GetPersonNotesHandles(self.__PersonHandle, self.__Cursor)
+
+        self.__PartnerHandleList = GetPartnerHandles(self.__PersonHandle, self.__Cursor)
+        self.__ChildrenHandlesList = GetChildrenHandlesByPerson(self.__PersonHandle, self.__Cursor)
+
+        self.__FatherHandle = GetFatherHandleByPerson(self.__PersonHandle, self.__Cursor)
+        self.__MotherHandle = GetMotherHandleByPerson(self.__PersonHandle, self.__Cursor)
+        self.__SiblingHandlesList = GetSiblingHandles_Old(self.__PersonHandle, self.__Cursor)
+
+        self.__CreateEventDictionary()
+        self.__SortEventDictionary()
+
+        # TODO: This is a tag list NOT related to one person; this does not belong here
+        self.__TagDictionary = GetTagDictionary(self.__Cursor)
+
+        self.__SourceStatus = self.__GetSourceStatus()
+
+    # 20211120: Moved creation of event dictionary to separate function
+    def __CreateEventDictionary(self):
+        # Create an event dictionary.
+        # The key refers to the type of event (eg. Profession); the value contains a list of events belonging to this event type (eg. multiple professions within key Profession)
+        # Key:[event info, event info 2, event info 3]
+        self.__PersonEventInfoDict = {}
+        for vEventRef in self.__EventRefList:
+            vEventHandle = vEventRef[3]
+            vEventInfo = DecodeEventData(vEventHandle, self.__Cursor)
+            
+            # 20211109: Added filter for role type
+            vRoleType = vEventRef[4][0]
+            if(vRoleType == vRolePrimary) or (vRoleType == vRoleFamily):
+                # Create a dictionary from event data. Use event type as key, and
+                # rest of event as data
+                # Check whether event type already exists as key
+                if(vEventInfo[0] in self.__PersonEventInfoDict):
+                    # if so, append event info to the dictionary entry
+                    self.__PersonEventInfoDict[vEventInfo[0]].append(vEventInfo[1:])
+                else:
+                    self.__PersonEventInfoDict[vEventInfo[0]] = [vEventInfo[1:]]  # Otherwise create a new entry
+
+                # Add event media to personal media list
+                self.__MediaList = self.__MediaList + vEventInfo[4]
+
+    # 20211120: Added new function for sorting events chronolically
+    def __SortEventDictionary(self):
+        # Sorts the events dictionary chronologically
+
+        def GetSortingKey(vTuple):
+            # Function to get sorting key
+            return vTuple[1]
+
+        for vEventType in self.__PersonEventInfoDict:
+            # Debug
+#            print("vEventType: ", vEventTypeDict[vEventType])
+
+            # Create temporary sorting list
+            vSortList = []
+
+            # Store index
+            vIndex = 0
+
+            # Run through all events
+            for vEventInfo in self.__PersonEventInfoDict[vEventType]:
+                vDateList = vEventInfo[0] # date is stored at index 0
+
+                # Debug
+#                print("vDateList: ", vDateList)
+
+                if(vDateList != '-'):
+                    vValue = "{0:0>4}{1:0>2}{2:0>2}".format(vDateList[3], vDateList[2], vDateList[1])
+                
+                    # Debug
+#                    print("vValue: ", vValue)
+
+                    # Add to  temporary sorting list
+                    vSortList.append([vIndex, vValue])
+
+                else:
+                    # Add to  temporary sorting list
+                    vSortList.append([vIndex, vDateList])
+
+                # Increase index for next loop
+                vIndex = vIndex+1
+
+            # Now sort list
+            vSortList.sort
+
+            vNewEventInfoList = []
+            for vItem in vSortList:
+                vIndex = vItem[0]
+
+                # Debug
+#                print("vIndex: ", vIndex)
+
+                vEventInfoList = self.__PersonEventInfoDict[vEventType]
+                vEventInfo = vEventInfoList[vIndex]
+                vNewEventInfoList.append(vEventInfo)
+
+            self.__PersonEventInfoDict[vEventType] = vNewEventInfoList
 
     def __GetSourceStatus(self):
         """ Checks whether scans ar avaiable for the events birth, marriage and death """
