@@ -5,27 +5,17 @@ gStrings = {}
 # Constants for chapter labels
 gStrings['part'] = {'en': 'Part', 'nl': "Deel"}
 gStrings['chapter'] = {'en': 'Chapter', 'nl': "Hoofdstuk"}
-gStrings['table of contents'] = {
-    'en': "Table of Contents",
-    'nl': "Inhoudsopgave"}
-gStrings['list of figures'] = {
-    'en': "List of Figures",
-    'nl': "Lijst van figuren"}
+gStrings['table of contents'] = { 'en': "Table of Contents", 'nl': "Inhoudsopgave"}
+gStrings['list of figures'] = { 'en': "List of Figures", 'nl': "Lijst van figuren"}
 
 # Constant titles for parts, chapters, sections, etc.
 gStrings['pedigree of'] = {'en': "Pedigree of", 'nl': "Stamboom van"}
 gStrings['generation'] = {'en': "Generation", 'nl': "Generatie"}
 gStrings['life sketch'] = {'en': "Life Sketch", 'nl': "Levensloop"}
-gStrings['vital information'] = {
-    'en': "Vital Information",
-    'nl': "Vitale informatie"}
+gStrings['vital information'] = { 'en': "Vital Information", 'nl': "Vitale informatie"}
 gStrings['family'] = {'en': "Family", 'nl': "Familie"}
-gStrings['parental family'] = {
-    'en': "Parental family",
-    'nl': "Ouderlijk gezin"}
-gStrings['family events'] = {
-    'en': "Family events",
-    'nl': "Familie gebeurtenissen"}
+gStrings['parental family'] = { 'en': "Parental family", 'nl': "Ouderlijk gezin"}
+gStrings['family events'] = { 'en': "Family events", 'nl': "Familie gebeurtenissen"}
 gStrings['children'] = {'en': "Children", 'nl': "Kinderen"}
 gStrings['education'] = {'en': "Education", 'nl': "Opleidingen"}
 gStrings['occupation'] = {'en': "Occupation", 'nl': "Werk"}
@@ -40,71 +30,28 @@ gStrings['date of birth'] = {'en': "Date of birth", 'nl': "Geboortedatum"}
 gStrings['place of birth'] = {'en': "Place of birth", 'nl': "Geboorteplaats"}
 gStrings['date of baptism'] = {'en': "Date of baptism", 'nl': "Doopdatum"}
 gStrings['place of baptism'] = {'en': "Place of baptism", 'nl': "Doopplaats"}
-gStrings['date of christening'] = {
-    'en': "Date of christening",
-    'nl': "Doopdatum"}
-gStrings['place of christening'] = {
-    'en': "Place of christening",
-    'nl': "Doopplaats"}
-gStrings['date of adult christening'] = {
-    'en': "Date of adult christening", 'nl': "Doopdatum"}
-gStrings['place of adult christening'] = {
-    'en': "Place of adudlt christening",
-    'nl': "Doopplaats"}
-gStrings['date of confirmation'] = {
-    'en': "Date of confirmation",
-    'nl': "Datum van het vormsel"}
-gStrings['place of confirmation'] = {
-    'en': "Place of confirmation",
-    'nl': "Plaats van het vormsel"}
-gStrings['date of death'] = {
-    'en': "Date of death",
-    'nl': "Datum van overlijden"}
-gStrings['place of death'] = {
-    'en': "Place of death",
-    'nl': "Plaats van overlijden"}
-gStrings['date of burial'] = {
-    'en': "Date of burial",
-    'nl': "Datum van begrafenis"}
-gStrings['place of burial'] = {
-    'en': "Place of burial",
-    'nl': "Plaats van begrafenis"}
-gStrings['date of cremation'] = {
-    'en': "Date of cremation",
-    'nl': "Datum van crematie"}
-gStrings['place of cremation'] = {
-    'en': "Place of cremation",
-    'nl': "Plaats van crematie"}
-gStrings['date of engagement'] = {
-    'en': "Date of engagement",
-    'nl': "Datum van verloving"}
-gStrings['place of engagement'] = {
-    'en': "Place of engagement",
-    'nl': "Plaats van verloving"}
-gStrings['date of marriage license'] = {
-    'en': "Date of marriage license",
-    'nl': "Datum van huwelijksvergunning"}
-gStrings['place of marriage license'] = {
-    'en': "Place of marriage license",
-    'nl': "Plaats van huwelijksvergunning"}
-gStrings['date of marriage'] = {
-    'en': "Date of marriage", 
-    'nl': "Trouwdatum"}
-gStrings['date of alternate marriage'] = {
-    'en': "Date of alternate marriage", 
-    'nl': "Alternatieve trouwdatum"}
-gStrings['place of alternate marriage'] = {
-    'en': "Place of alternate marriage", 
-    'nl': "Alternatieve trouwplaats"}
-gStrings['place of marriage'] = {
-    'en': "Place of marriage",
-    'nl': "Trouwlokatie"}
-gStrings['date of emigration'] = {
-    'en': "Date of emigration",
-    'nl': "Emigratiedatum"}
-gStrings['place of emigration'] = {
-    'en': "Place of emigration",
-    'nl': "Emigratieplaats"}
+gStrings['date of christening'] = { 'en': "Date of christening", 'nl': "Doopdatum"}
+gStrings['place of christening'] = { 'en': "Place of christening", 'nl': "Doopplaats"}
+gStrings['date of adult christening'] = { 'en': "Date of adult christening", 'nl': "Doopdatum"}
+gStrings['place of adult christening'] = { 'en': "Place of adudlt christening", 'nl': "Doopplaats"}
+gStrings['date of confirmation'] = { 'en': "Date of confirmation", 'nl': "Datum van het vormsel"}
+gStrings['place of confirmation'] = { 'en': "Place of confirmation", 'nl': "Plaats van het vormsel"}
+gStrings['date of death'] = { 'en': "Date of death", 'nl': "Datum van overlijden"}
+gStrings['place of death'] = { 'en': "Place of death", 'nl': "Plaats van overlijden"}
+gStrings['date of burial'] = { 'en': "Date of burial", 'nl': "Datum van begrafenis"}
+gStrings['place of burial'] = { 'en': "Place of burial", 'nl': "Plaats van begrafenis"}
+gStrings['date of cremation'] = { 'en': "Date of cremation", 'nl': "Datum van crematie"}
+gStrings['place of cremation'] = { 'en': "Place of cremation", 'nl': "Plaats van crematie"}
+gStrings['date of engagement'] = { 'en': "Date of engagement", 'nl': "Datum van verloving"}
+gStrings['place of engagement'] = { 'en': "Place of engagement", 'nl': "Plaats van verloving"}
+gStrings['date of marriage license'] = { 'en': "Date of marriage license", 'nl': "Datum van huwelijksvergunning"}
+gStrings['place of marriage license'] = { 'en': "Place of marriage license", 'nl': "Plaats van huwelijksvergunning"}
+gStrings['date of marriage'] = { 'en': "Date of marriage", 'nl': "Trouwdatum"}
+gStrings['date of alternate marriage'] = { 'en': "Date of alternate marriage", 'nl': "Alternatieve trouwdatum"}
+gStrings['place of alternate marriage'] = { 'en': "Place of alternate marriage", 'nl': "Alternatieve trouwplaats"}
+gStrings['place of marriage'] = { 'en': "Place of marriage", 'nl': "Trouwlokatie"}
+gStrings['date of emigration'] = { 'en': "Date of emigration", 'nl': "Emigratiedatum"}
+gStrings['place of emigration'] = { 'en': "Place of emigration", 'nl': "Emigratieplaats"}
 
 gStrings['father'] = {'en': "Father", 'nl': "Vader"}
 gStrings['mother'] = {'en': "Mother", 'nl': "Moeder"}
@@ -128,40 +75,20 @@ gStrings['she'] = {'en': "She", 'nl': "Zij"}
 gStrings['his'] = {'en': "His", 'nl': "Zijn"}
 gStrings['her'] = {'en': "Her", 'nl': "Haar"}
 
-gStrings['{0} was born on {1}'] = {
-    'en': "{0} was born on {1}",
-    'nl': "{0} is geboren op {1}"}
-gStrings['{0} was born about {1}'] = {
-    'en': "{0} was born about {1}",
-    'nl': "{0} is geboren omtrent {1}"}
+gStrings['{0} was born on {1}'] = { 'en': "{0} was born on {1}", 'nl': "{0} is geboren op {1}"}
+gStrings['{0} was born about {1}'] = { 'en': "{0} was born about {1}", 'nl': "{0} is geboren omtrent {1}"}
 gStrings['in {0}'] = {'en': "in {0}", 'nl': "in {0}"}
 
-gStrings['{0} call name was {1}.'] = {
-    'en': "{0} call name was {1}.",
-    'nl': "{0} roepnaam was {1}."}
+gStrings['{0} call name was {1}.'] = { 'en': "{0} call name was {1}.", 'nl': "{0} roepnaam was {1}."}
 
-gStrings['{0} had one sister'] = {
-    'en': "{0} had one sister",
-    'nl': "{0} had een zus"}
-gStrings['{0} had {1} sisters'] = {
-    'en': "{0} had {1} sisters",
-    'nl': "{0} had {1} zussen"}
-gStrings['and one brother:'] = {
-    'en': "and one brother:",
-    'nl': "en een broer:"}
-gStrings['and {0} brothers:'] = {
-    'en': "and {0} brothers:",
-    'nl': "en {0} broers:"}
-gStrings['{0} had one brother:'] = {
-    'en': "{0} had one brother:",
-    'nl': "{0} had een broer:"}
-gStrings['{0} had {1} brothers:'] = {
-    'en': "{0} had {1} brothers:",
-    'nl': "{0} had {1} broers:"}
+gStrings['{0} had one sister'] = { 'en': "{0} had one sister", 'nl': "{0} had een zus"}
+gStrings['{0} had {1} sisters'] = { 'en': "{0} had {1} sisters", 'nl': "{0} had {1} zussen"}
+gStrings['and one brother:'] = { 'en': "and one brother:", 'nl': "en een broer:"}
+gStrings['and {0} brothers:'] = { 'en': "and {0} brothers:", 'nl': "en {0} broers:"}
+gStrings['{0} had one brother:'] = { 'en': "{0} had one brother:", 'nl': "{0} had een broer:"}
+gStrings['{0} had {1} brothers:'] = { 'en': "{0} had {1} brothers:", 'nl': "{0} had {1} broers:"}
 gStrings['and'] = {'en': "and", 'nl': "en"}
-gStrings['furthermore, {0} had'] = {
-    'en': "furthermore, {0} had",
-    'nl': "daarnaast had {0}"}
+gStrings['furthermore, {0} had'] = { 'en': "furthermore, {0} had", 'nl': "daarnaast had {0}"}
 gStrings['had'] = {'en': "had", 'nl': "had"}
 gStrings['one daughter'] = {'en': "one daughter", 'nl': "een dochter"}
 gStrings['{0} daughters'] = {'en': "{0} daughters", 'nl': "{0} dochters"}
@@ -169,16 +96,10 @@ gStrings['and one son:'] = {'en': "and one son:", 'nl': "en een zoon:"}
 gStrings['and {0} sons:'] = {'en': "and {0} sons:", 'nl': "en {0} zonen:"}
 gStrings['one son:'] = {'en': "one son:", 'nl': "een zoon:"}
 gStrings['{0} sons:'] = {'en': "{0} sons:", 'nl': "{0} zonen:"}
-gStrings['{0} died on {1}'] = {
-    'en': "{0} died on {1}",
-    'nl': "{0} is gestorven op {1}"}
+gStrings['{0} died on {1}'] = { 'en': "{0} died on {1}", 'nl': "{0} is gestorven op {1}"}
 gStrings['in {0}.'] = {'en': "in {0}.", 'nl': "in {0}."}
-gStrings['{0} died about {1}'] = {
-    'en': "{0} died about {1}",
-    'nl': "{0} is gestorven omtrent {1}"}
-gStrings['and was buried in {0}.'] = {
-    'en': "and was buried in {0}.",
-    'nl': "en is begraven in {0}."}
+gStrings['{0} died about {1}'] = { 'en': "{0} died about {1}", 'nl': "{0} is gestorven omtrent {1}"}
+gStrings['and was buried in {0}.'] = { 'en': "and was buried in {0}.", 'nl': "en is begraven in {0}."}
 
 # Months
 gStrings['january'] = {'en':'January', 'nl':'januari'}
@@ -208,6 +129,9 @@ gStrings['nov'] = {'en':'Nov', 'nl':'nov'}
 gStrings['dec'] = {'en':'Dec', 'nl':'dec'}
 
 # Date ranges
+gStrings['about'] = {'en':'about', 'nl':'omstreeks'}
+gStrings['before'] = {'en':'before', 'nl':'voo'}
+gStrings['after'] = {'en':'after', 'nl':'na'}
 gStrings['between'] = {'en':'between', 'nl':'tussen'}
 gStrings['and'] = {'en':'en', 'nl':'en'}
 gStrings['from'] = {'en':'from', 'nl':'van'}
@@ -217,7 +141,11 @@ def Translate(pString, pLanguage='nl'):
     vReturnString = ''
 
     if(len(pString)>0):
-        vReturnString = gStrings[pString.strip().lower()][pLanguage]
+        try:
+            vReturnString = gStrings[pString.strip().lower()][pLanguage]
+        except KeyError:
+            print('KEY ERROR in hkLanguage.Translate: ', pString)
+
         if(pString[0].isupper()):
             vReturnString = vReturnString.capitalize()
 

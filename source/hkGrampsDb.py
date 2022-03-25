@@ -1,10 +1,8 @@
 import sqlite3
 import pickle
-import calendar
 import pathlib
 
 # Niet zo chique hier...
-import hkLanguage as hkl
 
 # Constants
 vGrampsPersonTable = 'person'
@@ -272,6 +270,53 @@ vRoleDict = {
     vRoleFamily: "Family"
 }
 
+vPlaceTypeUnknown = -1
+vPlaceTypeCustom = 0
+vPlaceTypeCountry = 1
+vPlaceTypeState = 2
+vPlaceTypeCounty = 3
+vPlaceTypeCity = 4
+vPlaceTypeParish = 5
+vPlaceTypeLocalty = 6
+vPlaceTypeStreet = 7
+vPlaceTypeProvince = 8
+vPlaceTypeRegion = 9
+vPlaceTypeDepartment = 10
+vPlaceTypeNeighborhood = 11
+vPlaceTypeDistrict = 12
+vPlaceTypeBorough = 13
+vPlaceTypeMunicipality = 14
+vPlaceTypeTown = 15
+vPlaceTypeVillage = 16
+vPlaceTypeHamlet = 17
+vPlaceTypeFarm = 18
+vPlaceTypeBuilding = 19
+vPlaceTypeNumber = 20
+
+vPlaceTypeDict = {
+    vPlaceTypeUnknown: "Unknown",
+    vPlaceTypeCustom: "Custom",
+    vPlaceTypeCountry: "Country",
+    vPlaceTypeState: "State",
+    vPlaceTypeCounty: "County",
+    vPlaceTypeCity: "City",
+    vPlaceTypeParish: "Parish",
+    vPlaceTypeLocalty: "Localty",
+    vPlaceTypeStreet: "Street",
+    vPlaceTypeProvince: "Province",
+    vPlaceTypeRegion: "Region",
+    vPlaceTypeDepartment: "Department",
+    vPlaceTypeNeighborhood: "Neighborhood",
+    vPlaceTypeDistrict: "District",
+    vPlaceTypeBorough: "Borough",
+    vPlaceTypeMunicipality: "Municipality",
+    vPlaceTypeTown: "Town",
+    vPlaceTypeVillage: "Village",
+    vPlaceTypeHamlet: "Hamlet",
+    vPlaceTypeFarm: "Farm",
+    vPlaceTypeBuilding: "Building",
+    vPlaceTypeNumber: "Number"
+}
 
 def GetFamilyHandlesByParent(pParentHandle, pCursor):
     """
@@ -291,9 +336,7 @@ def GetAllFamilyHandles(pPersonHandle, pCursor):
     Retrieves all family handles of which person is the parent
     """
 
-    pCursor.execute(
-        'SELECT DISTINCT ref_handle FROM refence WHERE obj_handle=? AND ref_class="Family"',
-        [pPersonHandle])
+    pCursor.execute('SELECT DISTINCT ref_handle FROM reference WHERE obj_handle=? AND ref_class="Family"',[pPersonHandle])
     vFamilyHandles = pCursor.fetchall()
 
     return vFamilyHandles
@@ -304,9 +347,7 @@ def GetPartnerHandle(pPersonHandle, pFamilyHandle, pCursor):
     Retrieves one partner of person
     """
 
-    pCursor.execute(
-        'SELECT mother_handle FROM family WHERE father_handle=? AND handle=?', [
-            pPersonHandle, pFamilyHandle])
+    pCursor.execute('SELECT mother_handle FROM family WHERE father_handle=? AND handle=?', [pPersonHandle, pFamilyHandle])
     vPartnerHandle = pCursor.fetchone()
 
     # If zero length list is returned, pPersonHandle might be the mother
@@ -574,66 +615,6 @@ def GetPersonHandleByGrampsId(pPersonId, pCursor):
 
     return vPersonHandle
 
-def DateToText(pDateList, pAbbreviated=True):
-    vModifier = 0
-    vModifierSet = {1, 2, 3}
-    vDateString = '-'
-
-    if(len(pDateList)==4):
-        vModifier = pDateList[0]
-
-        vDay1 = pDateList[1]
-        vMonth1 = pDateList[2]
-        vYear1 = pDateList[3]
-        
-        vMonthString1 = calendar.month_name[vMonth1]
-        if(pAbbreviated):
-            vMonthString1 = calendar.month_abbr[vMonth1]
-
-        vMonthString1 = hkl.Translate(vMonthString1)
-
-        if(vModifier in vModifierSet):
-            # Before, after, about
-            vDateString = vDateModifierDict[vModifier] + ' ' + ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1)
-        else:
-            vDateString = ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1)
-
-    elif(len(pDateList)==7):
-        vModifier = pDateList[0]
-
-        vDay1 = pDateList[1]
-        vMonth1 = pDateList[2]
-        vYear1 = pDateList[3]
-
-        vMonthString1 = calendar.month_name[vMonth1]
-        if(pAbbreviated):
-            vMonthString1 = calendar.month_abbr[vMonth1]
-
-        vMonthString1 = hkl.Translate(vMonthString1)
-
-        vDay2 = pDateList[4]
-        vMonth2 = pDateList[5]
-        vYear2 = pDateList[6]
-
-        vMonthString2 = calendar.month_name[vMonth2]
-        if(pAbbreviated):
-            vMonthString2 = calendar.month_abbr[vMonth2]
-
-        vMonthString2 = hkl.Translate(vMonthString2)
-
-        if(vModifier == 4):
-            # Range
-            vDateString = hkl.Translate('between') + ' ' + ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1) + ' ' + hkl.Translate('and') + ' ' + ((str(vDay2) + ' ') if vDay2!=0 else '') + vMonthString2 + ' ' + str(vYear2)
-        elif(vModifier == 5):
-            # Span
-            #vDateString = hkl.Translate('from') + ' ' + str(vDay1) + ' ' + vMonthString1 + ' ' + str(vYear1) + ' ' + hkl.Translate('until') + ' ' + str(vDay2) + ' ' + vMonthString2 + ' ' + str(vYear2)
-            vDateString = hkl.Translate('from') + ' ' + ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1) + ' ' + hkl.Translate('until') + ' ' + ((str(vDay2) + ' ') if vDay2!=0 else '') + vMonthString2 + ' ' + str(vYear2)
-#    else:
-#        print("ERROR in DateToText: length of pDateList undefined")
-#        vDateString = 'ERROR'
-
-    return vDateString
-
 def DecodeDateTuple(pDateTuple):
     vDay = ''
     vMonth = ''
@@ -736,34 +717,45 @@ def DecodeDateTuple_Old(pDateTuple):
 
 
 def DecodePlaceData(pPlaceHandle, pCursor):
-    vPlace = ''
+    # See https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/place.py
+    vPlaceList = {}
 
     vPlaceHandle = pPlaceHandle
     while(len(vPlaceHandle) > 0):
-        pCursor.execute(
-            'SELECT enclosed_by, blob_data FROM place WHERE handle=?',
-            [vPlaceHandle])
+        pCursor.execute('SELECT enclosed_by, blob_data FROM place WHERE handle=?', [vPlaceHandle])
         vRecord = pCursor.fetchone()
         if(vRecord is not None):
             vPlaceHandle = vRecord[0]
             vBlobData = vRecord[1]
             vPlaceData = pickle.loads(vBlobData)
-            # See
-            # https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/place.py
-            vPlace = vPlace + ', ' + vPlaceData[6][0]
 
-    # Debug
-#	print('vPlace: ', vPlace)
+            if(len(vPlaceData[3])==0):
+                vLongitude = 0.
+            else:
+                vLongitude = float(vPlaceData[3])
 
-    vPlace = vPlace[2:].strip()  # Removes the leading ', ' and strips spaces
+            if(len(vPlaceData[4])==0):
+                vLatitude = 0.
+            else:
+                vLatitude  = float(vPlaceData[4])
 
-    if(len(vPlace) == 0):
-        vPlace = '-'
+            vName = vPlaceData[6][0]
+            vType = vPlaceTypeDict[vPlaceData[8][0]]
+            vCode = vPlaceData[9]
 
-    return vPlace
+            # Debug
+#            print('vName     : ', vName)
+#            print('vType     : ', vType)
+#            print('vCode     : ', vCode)
+#            print('vLatitude : ', vLatitude)
+#            print('vLongitude: ', vLongitude)
 
+            vPlaceList[vType] = [vName, (vLatitude, vLongitude), vCode]
+
+    return vPlaceList
 
 def DecodeEventData(pEventHandle, pCursor):
+    vGrampsId = ""
     vType = ""
     vDate = ""
     vPlace = ""
@@ -775,6 +767,7 @@ def DecodeEventData(pEventHandle, pCursor):
     if(vBlobData is not None):
         vEventData = pickle.loads(vBlobData[0])
 
+        vGrampsId = vEventData[1]
         vType = vEventData[2]
         if(vType is not None):
             # https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/eventtype.py
@@ -1013,9 +1006,6 @@ def GetMediaData(pMediaHandle, pCursor):
             vMediaData = pickle.loads(vRecord[0])
             vMediaData = list(vMediaData)
 
-            # Debug
-    #		print("vMediaData: ", vMediaData)
-
             vHandle = vMediaData[0]
             vGrampsId = vMediaData[1]
             vPath = vMediaData[2]
@@ -1029,6 +1019,10 @@ def GetMediaData(pMediaHandle, pCursor):
             vDataBase = vMediaData[10]
             vTagBase = vMediaData[11]
             vPrivate = vMediaData[12]
+
+            # Debug
+#            if(vGrampsId == "O0008"):
+#                print("vMediaData: ", vMediaData)
 
             # Check whether path is relative or absolute
             vPathObject = pathlib.Path(vPath)

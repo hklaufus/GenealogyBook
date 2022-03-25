@@ -106,10 +106,20 @@ def WriteMainDocument(pCursor, pBookParameters):
     # Packages to scale images
     vDocument.packages.append(pl.Package('scalerel'))
     vDocument.packages.append(pl.Package('fp'))
-    vDocument.packages.append(pl.Package('caption'))
+    vDocument.packages.append(pl.Package('caption')) # for figure captions outside a float environment
+
+    # Packages to trim images
+    vDocument.packages.append(pl.Package('adjustbox'))
 
     # Packages to ensure floats stay inside section
-    vDocument.packages.append(pl.Package('placeins'))
+    vDocument.packages.append(pl.Package('placeins')) # allows for \floatbarrier
+
+    # Packages for coloring text
+    vDocument.packages.append(pl.Package('xcolor'))
+
+    # Packages for TikZ
+    vDocument.packages.append(pl.Package('tikz'))
+
 
     #
     # Preamble
@@ -117,6 +127,10 @@ def WriteMainDocument(pCursor, pBookParameters):
     vDocument.preamble.append(pl.NoEscape(r'\makeatletter'))
     vDocument.preamble.append(pl.NoEscape(r'\newcommand{\personref}[2][I9999]{\@ifundefined{r@#1}{#2}{\hyperref[#1]{#2}$_{/\pageref{#1}/}$}}'))
     vDocument.preamble.append( pl.NoEscape(r'\newcommand{\minspace}{5\baselineskip}'))
+
+    # To get the integer part from a floating value
+    vDocument.preamble.append( pl.NoEscape(r'\newcommand{\intpart}[1]{\expandafter\int@part#1..\@nil}'))
+    vDocument.preamble.append( pl.NoEscape(r'\def\int@part#1.#2.#3\@nil{\if\relax#1\relax0\else#1\fi}'))
     vDocument.preamble.append(pl.NoEscape(r'\makeatother'))
 
     # Only show levels up to Chapter in Table of Contents
@@ -131,6 +145,10 @@ def WriteMainDocument(pCursor, pBookParameters):
     vDocument.preamble.append(pl.NoEscape(r'\newcount\imgwidthA'))
     vDocument.preamble.append(pl.NoEscape(r'\newcount\textwidthA'))
 
+    # Counters for filling up wrapfigure in hkPersonChapter
+    vDocument.preamble.append(pl.NoEscape(r'\newcounter{maxlines}')) 
+    vDocument.preamble.append(pl.NoEscape(r'\newcounter{mycounter}'))
+
     # Redefine labels fo chapters
     vDocument.preamble.append(pl.NoEscape(r'\renewcommand{\contentsname}{' + hlg.Translate('table of contents') + '}'))
     vDocument.preamble.append(pl.NoEscape(r'\renewcommand{\listfigurename}{' + hlg.Translate('list of figures') + '}'))
@@ -140,6 +158,21 @@ def WriteMainDocument(pCursor, pBookParameters):
     vDocument.preamble.append(pl.Command('title', pBookParameters['Title']))
     vDocument.preamble.append(pl.Command('author', pBookParameters['Author']))
     vDocument.preamble.append(pl.Command('date', pu.NoEscape(r'\today')))
+
+    # Define TikZ styles 20211227
+    vDocument.append(pu.NoEscape(r'\usetikzlibrary{arrows.meta, graphs}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{thick, black!50, text=black}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{>={Stealth[round]}}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{graphs/every graph/.style={edges=rounded corners}}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{point/.style={circle,inner sep=0pt,minimum size=5pt,fill=red}}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{terminal/.style={circle,minimum size=6mm,very thick,draw=black!50,top color=white,bottom color=black!20,font=\ttfamily}}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{date/.style={rectangle,rounded corners=3mm,minimum size=6mm,very thick,draw=green!50,top color=white,bottom color=green!50!black!20,font=\ttfamily}}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{self/.style={thick,double}}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{man/.style={rectangle,thick,draw=blue!50!black!50,top color=white, bottom color=blue!50!black!20,rounded corners=.8ex}}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{woman/.style={rectangle,thick,draw=red!50!black!50,top color=white,bottom color=red!50!black!20,rounded corners=.8ex}}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{left/.style={xshift=-2.5mm,anchor=east, minimum size=6mm}}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{right/.style={xshift=2.5mm,anchor=west, minimum size=6mm}}'))
+    vDocument.append(pu.NoEscape(r'\tikzset{vh path/.style={to path={|- (\tikztotarget)}}}'))
 
     vDocument.append(pu.NoEscape(r'\maketitle'))
     vDocument.append(pl.Command('tableofcontents'))
