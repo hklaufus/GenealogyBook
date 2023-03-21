@@ -5,5 +5,13 @@ book/*.pdf
 book/*.gz
 book/*.out
 book/*.toc
+book/*.bib
+book/*.bbl
+book/*.blg
+book/Figures/*
 db/*.db
+db/*.txt
 source/__pycache__/
+source/*.xml
+source/query_*
+source/*.log

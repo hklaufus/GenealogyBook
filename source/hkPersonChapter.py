@@ -1,6 +1,7 @@
 # Formatted using "python3-autopep8 --in-place --aggressive --aggressive *.py"
 
-import bbCountries as bbc
+import logging
+import os
 
 import hkLanguage as hlg
 import hkLatex as hlt
@@ -18,879 +19,943 @@ from PIL import Image
 # exceeds limit of .... pixels, could be decompression bomb DOS attack.
 Image.MAX_IMAGE_PIXELS = None
 
-import os
-
 # Constants
-cPublishable = 'Publishable'
-cDocument = 'Document'
-cPhoto = 'Photo'
-cSource = 'Source'
+c_publishable = 'Publishable'
+c_document = 'Document'
+c_photo = 'Photo'
+c_source = 'Source'
 
 
 class Person:
     """A class to write a chapter about a person"""
 
     @property
-    def PersonHandle(self):
-        return self.__PersonHandle
+    def person_handle(self):
+        return self.__person_handle
 
     @property
-    def DocumentPath(self):
-        return self.__DocumentPath
+    def document_path(self):
+        """
+
+        @rtype: Full path of the document
+        """
+        return self.__document_path
 
     @property
-    def GrampsId(self):
-        return self.__GrampsId
+    def gramps_id(self):
+        """
+
+        @rtype: id of the gramps database object
+        """
+        return self.__gramps_id
 
     @property
-    def Gender(self):
-        return self.__Gender
+    def gender(self):
+        """
+
+        @rtype: the gender of the person
+        """
+        return self.__gender
 
     @property
-    def GivenNames(self):
-        return self.__GivenNames
+    def given_names(self):
+        """
+
+        @rtype: All given names of the person
+        """
+        return self.__given_names
 
     @property
-    def Surname(self):
-        return self.__Surname
+    def surname(self):
+        """
+
+        @rtype: The surname of the person
+        """
+        return self.__surname
 
     @property
-    def FatherHandle(self):
-        return self.__FatherHandle
+    def father_handle(self):
+        """
+
+        @rtype: The Gramps ID of the father of the person
+        """
+        return self.__father_handle
 
     @property
-    def MotherHandle(self):
-        return self.__MotherHandle
+    def mother_handle(self):
+        """
+
+        @rtype: Then Gramps ID of the mother of the person
+        """
+        return self.__mother_handle
 
     @property
-    def ChildrenHandlesList(self):
-        return self.__ChildrenHandlesList
+    def children_handles_list(self):
+        """
+
+        @rtype: A list with the Gramps IDs of the children of the person
+        """
+        return self.__children_handles_list
 
     @property
-    def SourceStatus(self):
-        return self.__SourceStatus
+    def source_status(self):
+        return self.__source_status
 
-    def __init__(self, pPersonHandle, pCursor, pDocumentPath='../book/', pLanguage='nl'):
-        self.__PersonHandle = pPersonHandle
-        self.__Cursor = pCursor
-        self.__DocumentPath = pDocumentPath
-        self.__language = pLanguage
+    def __init__(self, person_handle, db_cursor, document_path='../book/', language='nl'):
+        self.__person_handle = person_handle
+        self.__cursor = db_cursor
+        self.__document_path = document_path
+        self.__language = language
 
         # Get basic person data
-        vPersonData = DecodePersonData(self.__PersonHandle, self.__Cursor)
-        self.__GrampsId = vPersonData[1]
-        self.__Gender = vPersonData[2]
-        self.__Surname = vPersonData[3][0]
-        self.__GivenNames = vPersonData[3][1]
-        self.__CallName = vPersonData[3][2]
-        self.__EventRefList = vPersonData[7]
-        self.__FamilyList = vPersonData[8]
-        self.__ParentFamilyList = vPersonData[9]
-        self.__MediaList = vPersonData[10]
+        v_person_data = decode_person_data(self.__person_handle, self.__cursor)
+        self.__gramps_id = v_person_data[1]
+        self.__gender = v_person_data[2]
+        self.__surname = v_person_data[3][0]
+        self.__given_names = v_person_data[3][1]
+        self.__call_name = v_person_data[3][2]
+        self.__event_ref_list = v_person_data[7]
+        self.__family_list = v_person_data[8]
+        self.__parent_family_list = v_person_data[9]
+        self.__media_list = v_person_data[10]
 
-        self.__NoteBase = vPersonData[16]
-#		self.__NotesHandlesList = GetPersonNotesHandles(self.__PersonHandle, self.__Cursor)
+        self.__note_base = v_person_data[16]
+        # self.__notes_handles_list = GetPersonNotesHandles(self.__person_handle, self.__cursor)
 
-        self.__PartnerHandleList = GetPartnerHandles(self.__PersonHandle, self.__Cursor)
-        self.__ChildrenHandlesList = GetChildrenHandlesByPerson(self.__PersonHandle, self.__Cursor)
+        self.__partner_handle_list = get_partner_handles(self.__person_handle, self.__cursor)
+        self.__children_handles_list = get_children_handles_by_person(self.__person_handle, self.__cursor)
 
-        self.__FatherHandle = GetFatherHandleByPerson(self.__PersonHandle, self.__Cursor)
-        self.__MotherHandle = GetMotherHandleByPerson(self.__PersonHandle, self.__Cursor)
-        self.__SiblingHandlesList = hsf.SortPersonListByBirth(GetSiblingHandles_Old(self.__PersonHandle, self.__Cursor), self.__Cursor)
+        self.__father_handle = get_father_handle_by_person(self.__person_handle, self.__cursor)
+        self.__mother_handle = get_mother_handle_by_person(self.__person_handle, self.__cursor)
+        self.__sibling_handles_list = hsf.sort_person_list_by_birth(get_sibling_handles_old(self.__person_handle, self.__cursor), self.__cursor)
 
-        self.__CreateEventDictionary()
+        self.__create_person_event_dictionary()
+        self.__create_family_event_dictionary()
 
         # TODO: This is a tag list NOT related to one person; this does not belong here
-        self.__TagDictionary = GetTagDictionary(self.__Cursor)
+        self.__tag_dictionary = get_tag_dictionary(self.__cursor)
 
-        self.__SourceStatus = self.__GetSourceStatus()
+        self.__source_status = self.__get_source_status()
 
-    def __CreateEventDictionary(self):
+    def __create_person_event_dictionary(self):
         # Create an event dictionary.
-        # The key refers to the type of event (eg. Profession); the value contains a list of events belonging to this event type (eg. multiple professions within key Profession)
+        # The key refers to the type of event (e.g. Profession); the value contains a list of events belonging to this event type (e.g. multiple professions within key Profession)
         # Key:[event info, event info 2, event info 3]
         self.__PersonEventInfoDict = {}
-        for vEventRef in self.__EventRefList:
-            vEventHandle = vEventRef[3]
-            vEventInfo = DecodeEventData(vEventHandle, self.__Cursor)
+        for v_event_ref in self.__event_ref_list:
+            v_event_handle = v_event_ref[3]
+            v_event_info = decode_event_data(v_event_handle, self.__cursor)
             
             # Filter on role
-            vRoleType = vEventRef[4][0]
-            if(vRoleType == vRolePrimary) or (vRoleType == vRoleFamily):
+            v_role_type = v_event_ref[4][0]
+            if(v_role_type == c_role_primary) or (v_role_type == c_role_family):
                 # Create a dictionary from event data. Use event type as key, and rest of event as data
 
                 # Check whether event type already exists as key
-                if(vEventInfo[0] in self.__PersonEventInfoDict):
+                if v_event_info[0] in self.__PersonEventInfoDict:
                     # if so, append event info to the dictionary entry
-                    self.__PersonEventInfoDict[vEventInfo[0]].append(vEventInfo[1:])
+                    self.__PersonEventInfoDict[v_event_info[0]].append(v_event_info[1:])
                 else:
                     # Otherwise create a new entry
-                    self.__PersonEventInfoDict[vEventInfo[0]] = [vEventInfo[1:]]
+                    self.__PersonEventInfoDict[v_event_info[0]] = [v_event_info[1:]]
 
                 # Add event media to personal media list
-                self.__MediaList = self.__MediaList + vEventInfo[4]
+                self.__media_list = self.__media_list + v_event_info[4]
 
-    def __GetSourceStatus(self):
-        """ Checks whether scans are avaiable for the events birth, marriage and death """
+    def __create_family_event_dictionary(self):
+        # Create an event dictionary.
+        # The key refers to the type of event (e.g. Profession); the value contains a list of events belonging to this event type (e.g. multiple professions within key Profession)
+        # Key:[event info, event info 2, event info 3]
+        self.__FamilyEventInfoDict = {}
+        for v_family_handle in self.__family_list:
+            v_family_data = decode_family_data(v_family_handle, self.__cursor)
+            v_family_events = v_family_data[5]
+            self.__media_list = self.__media_list + v_family_data[6]  # Add family media to personal media list
 
-        vSourceStatus = {'b': '', 'm': '', 'd': ''}  # birth, marriage, death
+            for v_event_ref in v_family_events:
+                v_event_handle = v_event_ref[3]
+                v_event_info = decode_event_data(v_event_handle, self.__cursor)
+                
+                # Filter on role
+                v_role_type = v_event_ref[4][0]
+                if(v_role_type == c_role_primary) or (v_role_type == c_role_family):
+                    # Create a dictionary from event data. Use event type as key, and rest of event as data
+
+                    # Check whether event type already exists as key
+                    if v_event_info[0] in self.__FamilyEventInfoDict:
+                        # if so, append event info to the dictionary entry
+                        self.__FamilyEventInfoDict[v_event_info[0]].append(v_event_info[1:])
+                    else:
+                        # Otherwise create a new entry
+                        self.__FamilyEventInfoDict[v_event_info[0]] = [v_event_info[1:]]
+
+                    # Add event media to personal media list
+                    self.__media_list = self.__media_list + v_event_info[4]
+
+    def __get_source_status(self):
+        """ Checks whether scans are available for the events birth, marriage and death """
+
+        v_source_status = {'b': '', 'm': '', 'd': ''}  # birth, marriage, death
 
         # Birth / baptism
-        vMediaList = []
-        if(vEventBirth in self.__PersonEventInfoDict):  # Birth
-            vEventInfo = self.__PersonEventInfoDict[vEventBirth]
-            vMediaList.extend(vEventInfo[0][3])
+        v_media_list = []
+        if c_event_birth in self.__PersonEventInfoDict:  # Birth
+            v_event_info = self.__PersonEventInfoDict[c_event_birth]
+            v_media_list.extend(v_event_info[0][3])
 
-        if(vEventBaptism in self.__PersonEventInfoDict):  # Baptism
-            vEventInfo = self.__PersonEventInfoDict[vEventBaptism]
-            vMediaList.extend(vEventInfo[0][3])
+        if c_event_baptism in self.__PersonEventInfoDict:  # Baptism
+            v_event_info = self.__PersonEventInfoDict[c_event_baptism]
+            v_media_list.extend(v_event_info[0][3])
 
-        if(len(vMediaList) > 0):
-            vSourceStatus['b'] = 'b'
+        if len(v_media_list) > 0:
+            v_source_status['b'] = 'b'
 
         # Marriage
-        vMediaList = []
-        for vFamilyHandle in self.__FamilyList:
-            vFamilyInfo = DecodeFamilyData(vFamilyHandle, self.__Cursor)
-            vEventRefList = vFamilyInfo[5]
+        for v_family_handle in self.__family_list:
+            v_family_info = decode_family_data(v_family_handle, self.__cursor)
+            v_event_ref_list = v_family_info[5]
 
-            for vEvent in vEventRefList:
-                vEventHandle = vEvent[3]
-                vEventInfo = DecodeEventData(vEventHandle, self.__Cursor)
-                vType = vEventInfo[0]
-                vMediaList = vEventInfo[4]
+            for v_event in v_event_ref_list:
+                v_event_handle = v_event[3]
+                v_event_info = decode_event_data(v_event_handle, self.__cursor)
+                v_type = v_event_info[0]
+                v_media_list = v_event_info[4]
 
                 # 1 = Marriage, 2 = Marriage Settlement, 3 = Marriage License, 4 = Marriage Contract
-                if((vType == vEventMarriage or vType == vEventMarriageSettlement or vType == vEventMarriageLicense or vType == vEventMarriageContract) and (len(vMediaList) > 0)):
-                    vSourceStatus['m'] = 'm'
+                if (v_type == c_event_marriage or v_type == c_event_marriage_settlement or v_type == c_event_marriage_license or v_type == c_event_marriage_contract) and (len(v_media_list) > 0):
+                    v_source_status['m'] = 'm'
 
         # Death / Burial
-        vMediaList = []
-        if(vEventDeath in self.__PersonEventInfoDict):  # Death
-            vEventInfo = self.__PersonEventInfoDict[vEventDeath]
-            vMediaList.extend(vEventInfo[0][3])
+        v_media_list = []
+        if c_event_death in self.__PersonEventInfoDict:  # Death
+            v_event_info = self.__PersonEventInfoDict[c_event_death]
+            v_media_list.extend(v_event_info[0][3])
 
-        if(vEventBurial in self.__PersonEventInfoDict): # Burial
-            vEventInfo = self.__PersonEventInfoDict[vEventBurial]
-            vMediaList.extend(vEventInfo[0][3])
+        if c_event_burial in self.__PersonEventInfoDict:  # Burial
+            v_event_info = self.__PersonEventInfoDict[c_event_burial]
+            v_media_list.extend(v_event_info[0][3])
 
-        if(len(vMediaList) > 0):
-            vSourceStatus['d'] = 'd'
+        if len(v_media_list) > 0:
+            v_source_status['d'] = 'd'
 
-        return vSourceStatus
+        return v_source_status
 
-    def __PictureWithNote(self, pLevel, pImagePath, pImageTitle, pImageNoteHandles):
-        self.__DocumentWithNote(pLevel, pImagePath, pImageTitle, pImageNoteHandles)
+    def __picture_with_note(self, p_level, p_image_path, p_image_title, p_image_note_handles, p_image_rect=None, p_position='i'):
+        # Latex Debug
+        p_level.append(pl.NoEscape("% hkPersonChapter.Person.__picture_with_note"))
 
-    def __DocumentWithNote(self, pLevel, pImagePath, pImageTitle, pImageNoteHandles, pImageRect = None):
+        self.__document_with_note(p_level, p_image_path, p_image_title, p_image_note_handles, p_image_rect, p_position)
+
+    def __document_with_note(self, p_level, p_image_path, p_image_title, p_image_note_handles, p_image_rect=None, p_position='i'):
         # Add note(s)
-        vNoteText = ''
-        for vNoteHandle in pImageNoteHandles:
-            vNoteData = DecodeNoteData(vNoteHandle, self.__Cursor)
-            vTempText = vNoteData[2][0]
+        v_note_text = ''
+        for v_note_handle in p_image_note_handles:
+            v_note_data = decode_note_data(v_note_handle, self.__cursor)
+            v_note_text = v_note_data[2][0]
 
-            # Check whether the note concerns a web address
-            if(vTempText[:4] == "http"):
-                # ..it does, first find '//'..
-                vPos = vTempText.find('//')
+            v_pos_1 = v_note_text.find("http")
+            if v_pos_1 >= 0:  # 202303113
+                # Check whether the note contains a web address
+                # ...it does, first find '//'..
+                v_pos_2 = v_note_text.find('//')
 
-                # ..from that position find the next '/'
-                vPos = vTempText.find('/', vPos+2)
+                # ...from that position find the next '/'
+                v_pos_2 = v_note_text.find('/', v_pos_2+2)
 
-                # ..and create a link..
-                vNoteText = vNoteText + r'Link to source: \href{' + vTempText + '}{' + vTempText[:vPos-1] + r'}' + r'\par '
+                # ...find the end of the web address
+                v_pos_3 = v_pos_2
+                while (v_pos_3 < len(v_note_text)) and (v_note_text[v_pos_3] != ' '):
+                    v_pos_3 = v_pos_3 + 1
+
+                v_full_web_address = v_note_text[v_pos_1:v_pos_3]
+                v_short_web_address = "<WebLink>"  # v_note_text[v_pos_1:v_pos_2]
+
+                # Debug logging
+                logging.debug("v_full_web_address: %s", v_full_web_address)
+                logging.debug("v_short_web_address: %s", v_short_web_address)
+
+                if v_pos_1 == 0:
+                    # ...and create a link to the source...
+                    v_note_text = r'Link to source: \href{' + v_full_web_address + '}{' + v_short_web_address + r'}' + r'\par '
+                else:
+                    # ...and create a link in the note...
+                    v_note_text = v_note_text.replace(v_full_web_address, r'\href{' + v_full_web_address + '}{' + v_short_web_address + r'}' + r'\par ')
             else:
-                vNoteText = vNoteText + vTempText + r' \par '
-#            vTagHandleList = vNoteData[6]
+                v_note_text = v_note_text + r' \par '
+#            vTagHandleList = v_note_data[6]
 
         # Check on portait vs landscape
-        vImage = Image.open(pImagePath, mode='r')
-        vWidth, vHeight = vImage.size
+        v_image = Image.open(p_image_path, mode='r')
+        v_width, v_height = v_image.size
+        if p_image_rect is not None:
+            v_width = v_width * (p_image_rect[2] - p_image_rect[0]) / 100
+            v_height = v_height * (p_image_rect[3] - p_image_rect[1]) / 100
 
-        # HIER: Work in progress
-#        if(pImageRect is not None):
-#            vWidth = vWidth * (pImageRect[2] - pImageRect[0])/100
-#            vHeight = vHeight * (pImageRect[3] - pImageRect[1])/100
+        # Start a minipage
+        p_level.append(pl.NoEscape(r'\begin{minipage}{\textwidth}'))
 
-        if(vWidth > vHeight):
+        # Create the figure
+        if v_width > v_height:
             # Landscape
-            with pLevel.create(hlt.Figure()) as vFigure:
-                vFigure.add_image(filename=pImagePath)
-                vFigure.add_caption(pu.escape_latex(pImageTitle))
+            hsf.wrap_figure(p_level, p_filename=p_image_path, p_caption=p_image_title, p_position=p_position, p_width=r'0.70\textwidth', p_text=v_note_text, p_zoom_rect=p_image_rect)
         else:
             # Portrait
-            hsf.WrapFigure(pLevel, pFilename=pImagePath, pCaption=pImageTitle, pWidth=r'0.50\textwidth', pText=vNoteText)
+            hsf.wrap_figure(p_level, p_filename=p_image_path, p_caption=p_image_title, p_position=p_position, p_width=r'0.50\textwidth', p_text=v_note_text, p_zoom_rect=p_image_rect)
 
-    def __GetFilteredPhotoList(self):
-        vPhotoList = []
+        # End the minipage
+        p_level.append(pl.NoEscape(r'\end{minipage}'))
+        p_level.append(pl.NoEscape(r'\vfill'))
 
-        for vMediaItem in self.__MediaList:
-            vMediaHandle = vMediaItem[4]
-            vMediaData = GetMediaData(vMediaHandle, self.__Cursor)
-            vMediaMime = vMediaData[3]
-            vTagHandleList = vMediaData[11]
+    def __get_filtered_photo_list(self):
+        v_photo_list = []
 
-            if((vMediaMime.lower() == 'image/jpeg') or (vMediaMime.lower() == 'image/png')):
-                if (cPublishable in GetTagList(vTagHandleList, self.__TagDictionary)) and (cPhoto in GetTagList(vTagHandleList, self.__TagDictionary)):
-                    vPhotoList.append(vMediaHandle)
+        for vMediaItem in self.__media_list:
+            v_media_handle = vMediaItem[4]
+            v_media_rect = vMediaItem[5]  # corner1 and corner 2 in Media Reference Editor in Gramps
+            v_media_data = get_media_data(v_media_handle, self.__cursor)
+            v_media_mime = v_media_data[3]
+            v_tag_handle_list = v_media_data[11]
 
-        return vPhotoList
+            if (v_media_mime.lower() == 'image/jpeg') or (v_media_mime.lower() == 'image/png'):
+                if (c_publishable in get_tag_list(v_tag_handle_list, self.__tag_dictionary)) and (c_photo in get_tag_list(v_tag_handle_list, self.__tag_dictionary)):
+                    # v_photo_list.append(v_media_handle) # 20220328
+                    v_photo_list.append([v_media_handle, v_media_rect])
 
-    def __GetFilteredDocumentList(self):
-        vDocumentList = []
+        return v_photo_list
 
-        for vMediaItem in self.__MediaList:
-            vMediaHandle = vMediaItem[4]
-            vMediaRect   = vMediaItem[5] # corner1 and corner 2 in Media Reference Editor in Gramps
-            vMediaData = GetMediaData(vMediaHandle, self.__Cursor)
-            vMediaMime = vMediaData[3]
-            vTagHandleList = vMediaData[11]
+    def __get_filtered_document_list(self):
+        v_document_list = []
 
-            if((vMediaMime.lower() == 'image/jpeg') or (vMediaMime.lower() == 'image/png')):
-                if (cPublishable in GetTagList(vTagHandleList, self.__TagDictionary)) and (cDocument in GetTagList(vTagHandleList, self.__TagDictionary)):
-                    vDocumentList.append([vMediaHandle, vMediaRect])
+        for vMediaItem in self.__media_list:
+            v_media_handle = vMediaItem[4]
+            v_media_rect = vMediaItem[5]  # corner1 and corner 2 in Media Reference Editor in Gramps
+            v_media_data = get_media_data(v_media_handle, self.__cursor)
+            v_media_mime = v_media_data[3]
+            v_tag_handle_list = v_media_data[11]
 
-        return vDocumentList
+            if (v_media_mime.lower() == 'image/jpeg') or (v_media_mime.lower() == 'image/png'):
+                if (c_publishable in get_tag_list(v_tag_handle_list, self.__tag_dictionary)) and (c_document in get_tag_list(v_tag_handle_list, self.__tag_dictionary)):
+                    v_document_list.append([v_media_handle, v_media_rect])
 
-    def __GetFilteredDocumentList_Old(self):
-        vDocumentList = []
+        return v_document_list
 
-        for vMediaItem in self.__MediaList:
-            vMediaHandle = vMediaItem[4]
-            vMediaData = GetMediaData(vMediaHandle, self.__Cursor)
-            vMediaMime = vMediaData[3]
-            vTagHandleList = vMediaData[11]
-
-            if((vMediaMime.lower() == 'image/jpeg') or (vMediaMime.lower() == 'image/png')):
-                if (cPublishable in GetTagList(vTagHandleList, self.__TagDictionary)) and (cDocument in GetTagList(vTagHandleList, self.__TagDictionary)):
-                    vDocumentList.append(vMediaHandle)
-
-        return vDocumentList
-
-    def __GetFilteredNoteList(self, pNoteHandleList):
+    def __get_filtered_note_list(self, p_note_handle_list):
         """
-        Removes all notes from pNoteHandleList that are of type 'Citation' or that are tagged 'Source'
+        Removes all notes from p_note_handle_list that are of type 'Citation' or that are tagged 'Source'
         """
 
-        vNoteList = []
+        v_note_list = []
 
-        for vNoteHandle in pNoteHandleList:
-            vNoteData = DecodeNoteData(vNoteHandle, self.__Cursor)
-            vTagHandleList = vNoteData[6]
-            vType = vNoteData[4][0]
+        for v_note_handle in p_note_handle_list:
+            v_note_data = decode_note_data(v_note_handle, self.__cursor)
+            v_tag_handle_list = v_note_data[6]
+            v_type = v_note_data[4][0]
 
-            if not (cSource in GetTagList(vTagHandleList, self.__TagDictionary)) and not (vType == vNoteCitation):
-                vNoteList.append(vNoteHandle)
+            if not (c_source in get_tag_list(v_tag_handle_list, self.__tag_dictionary)) and not (v_type == c_note_citation):
+                v_note_list.append(v_note_handle)
 
-        return vNoteList
+        return v_note_list
 
-    def __WriteLifeSketchSection(self, pLevel):
+    def __write_life_sketch_section(self, p_level):
         # Create section with Life Sketch
-        pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
 
-        with hlt.CreateSubLevel(pLevel=pLevel, pTitle=hlg.Translate('life sketch', self.__language), pLabel=False) as vSubLevel:
+        with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('life sketch', self.__language), pLabel=False) as v_sub_level:
             # Create a story line
-            vLifeSketch = ""
+            v_life_sketch = ""
 
             # Check whether lifestories already exist in the notes
-            for vNote in self.__NoteBase:
-                vNoteHandle = vNote
-                vNoteData = DecodeNoteData(vNoteHandle, self.__Cursor)
-                vNoteText = vNoteData[2][0]
-                vNoteType = vNoteData[4][0]
-                if(vNoteType == vNotePerson):  # Person Note
-                    vLifeSketch = vLifeSketch + pu.escape_latex(vNoteText)
+            for v_note in self.__note_base:
+                v_note_handle = v_note
+                v_note_data = decode_note_data(v_note_handle, self.__cursor)
+                v_note_text = v_note_data[2][0]
+                v_note_type = v_note_data[4][0]
+                if v_note_type == c_note_person:  # Person Note
+                    v_life_sketch = v_life_sketch + pu.escape_latex(v_note_text)
 
             # If no specific life stories were found, then write one
-            if(len(vLifeSketch) == 0): 
-                vFullName = self.__GivenNames + ' ' + self.__Surname
-                vHeShe = hlg.Translate('He', self.__language)
-                vHisHer = hlg.Translate('His', self.__language)
-                if(self.__Gender == vGenderFemale):
-                    vHeShe = hlg.Translate('She', self.__language)
-                    vHisHer = hlg.Translate('Her', self.__language)
+            if len(v_life_sketch) == 0:
+                v_full_name = self.__given_names + ' ' + self.__surname
+                v_he_she = hlg.translate('He', self.__language)
+                v_his_her = hlg.translate('His', self.__language)
+                v_brother_sister = hlg.translate('Brother', self.__language)
+                v_father_mother = hlg.translate('Father', self.__language)
+                if self.__gender == c_gender_female:
+                    v_he_she = hlg.translate('She', self.__language)
+                    v_his_her = hlg.translate('Her', self.__language)
+                    v_brother_sister = hlg.translate('Sister', self.__language)
+                    v_father_mother = hlg.translate('Mother', self.__language)
 
-                vVitalEvents = vVitalEventsSet.intersection(self.__PersonEventInfoDict.keys())
+                v_vital_events = c_vital_events_set.intersection(self.__PersonEventInfoDict.keys())
 
                 # Geboorte
-                if(vEventBirth in vVitalEvents):  # Birth
-                    vString = hlg.Translate("{0} was born on {1}", self.__language).format(pu.escape_latex(vFullName), hsf.DateToText(self.__PersonEventInfoDict[vEventBirth][0][0], False))
-                    vLifeSketch = vLifeSketch + vString
+                if c_event_birth in v_vital_events:  # Birth
+                    v_string = hlg.translate("{0} was born on {1}", self.__language).format(pu.escape_latex(v_full_name), hsf.date_to_text(self.__PersonEventInfoDict[c_event_birth][0][0], False))
+                    v_life_sketch = v_life_sketch + v_string
 
-                    if((len(self.__PersonEventInfoDict[vEventBirth][0][1]) > 0) and (self.__PersonEventInfoDict[vEventBirth][0][1] != '-')):
-                        vString = hlg.Translate("in {0}", self.__language).format(hsf.PlaceToText(self.__PersonEventInfoDict[vEventBirth][0][1]))
-                        vLifeSketch = vLifeSketch + ' ' + vString
+                    if (len(self.__PersonEventInfoDict[c_event_birth][0][1]) > 0) and (self.__PersonEventInfoDict[c_event_birth][0][1] != '-'):
+                        v_string = hlg.translate("in {0}", self.__language).format(hsf.place_to_text(self.__PersonEventInfoDict[c_event_birth][0][1]))
+                        v_life_sketch = v_life_sketch + ' ' + v_string
 
-                    vLifeSketch = vLifeSketch + r". "
+                    v_life_sketch = v_life_sketch + r". "
 
-                elif(vEventBaptism in vVitalEvents):  # Baptism
-                    vString = hlg.Translate("{0} was born about {1}", self.__language).format(pu.escape_latex(vFullName), hsf.DateToText(self.__PersonEventInfoDict[vEventBaptism][0][0], False))
-                    vLifeSketch = vLifeSketch + vString
+                elif c_event_baptism in v_vital_events:  # Baptism
+                    v_string = hlg.translate("{0} was born about {1}", self.__language).format(pu.escape_latex(v_full_name), hsf.date_to_text(self.__PersonEventInfoDict[c_event_baptism][0][0], False))
+                    v_life_sketch = v_life_sketch + v_string
 
-                    if((len(self.__PersonEventInfoDict[vEventBaptism][0][1]) > 0) and (self.__PersonEventInfoDict[vEventBaptism][0][1] != '-')):
-                        vString = hlg.Translate("in {0}", self.__language).format(hsf.PlaceToText(self.__PersonEventInfoDict[vEventBaptism][0][1]))
-                        vLifeSketch = vLifeSketch + ' ' + vString
+                    if (len(self.__PersonEventInfoDict[c_event_baptism][0][1]) > 0) and (self.__PersonEventInfoDict[c_event_baptism][0][1] != '-'):
+                        v_string = hlg.translate("in {0}", self.__language).format(hsf.place_to_text(self.__PersonEventInfoDict[c_event_baptism][0][1]))
+                        v_life_sketch = v_life_sketch + ' ' + v_string
 
-                    vLifeSketch = vLifeSketch + r". "
+                    v_life_sketch = v_life_sketch + r". "
 
                 # Roepnaam
-                vUseName = self.__GivenNames
-                if(len(self.__CallName) > 0):
-                    vUseName = self.__CallName
-                    vString = hlg.Translate("{0} call name was {1}.", self.__language).format(vHisHer, pu.escape_latex(self.__CallName))
-                    vLifeSketch = vLifeSketch + vString
+                v_use_name = self.__given_names
+                if len(self.__call_name) > 0:
+                    v_use_name = self.__call_name
+                    v_string = hlg.translate("{0} call name was {1}.", self.__language).format(v_his_her, pu.escape_latex(self.__call_name))
+                    v_life_sketch = v_life_sketch + v_string
 
-                if(len(vLifeSketch) > 0):
-                    vLifeSketch = vLifeSketch + r"\par "
+                if len(v_life_sketch) > 0:
+                    v_life_sketch = v_life_sketch + r"\par "
 
                 # Sisters and brothers
-                vNumberSisters = 0
-                vNumberBrothers = 0
-                vSiblingNames = []
-                vHasSiblings = False
-                for vSiblingHandle in self.__SiblingHandlesList:
-                    vSiblingData = DecodePersonData(vSiblingHandle, self.__Cursor)
-                    if(vSiblingData[2] == 0):
-                        vNumberSisters = vNumberSisters + 1
-                        vHasSiblings = True
-                    elif(vSiblingData[2] == 1):
-                        vNumberBrothers = vNumberBrothers + 1
-                        vHasSiblings = True
+                v_number_sisters = 0
+                v_number_brothers = 0
+                v_sibling_names = []
+                for v_sibling_handle in self.__sibling_handles_list:
+                    v_sibling_data = decode_person_data(v_sibling_handle, self.__cursor)
+                    if v_sibling_data[2] == 0:
+                        v_number_sisters = v_number_sisters + 1
+                    elif v_sibling_data[2] == 1:
+                        v_number_brothers = v_number_brothers + 1
 
-                    vSiblingNames.append(vSiblingData[3][1])
+                    v_sibling_names.append(v_sibling_data[3][1])
 
-                if(vNumberSisters > 0):
-                    if(vNumberSisters == 1):
-                        vString = hlg.Translate("{0} had one sister", self.__language).format(vUseName)
-                        vLifeSketch = vLifeSketch + vString
-                    else:
-                        vString = hlg.Translate("{0} had {1} sisters", self.__language).format(vUseName, vNumberSisters)
-                        vLifeSketch = vLifeSketch + vString
+                if v_number_sisters + v_number_brothers > 0:
+                    v_string = ''
+                    if v_number_sisters == 1 and v_number_brothers == 0:
+                        v_string = hlg.translate("{0} had one sister:", self.__language).format(v_use_name)
 
-                    if(vNumberBrothers > 0):
-                        if(vNumberBrothers == 1):
-                            vLifeSketch = vLifeSketch + ' ' + hlg.Translate("and one brother:", self.__language) + ' '
-                        else:
-                            vString = hlg.Translate("and {0} brothers:", self.__language).format(vNumberBrothers)
-                            vLifeSketch = vLifeSketch + ' ' + vString + ' '
-                    else:
-                        vLifeSketch = vLifeSketch + ": "
+                    if v_number_sisters > 1 and v_number_brothers == 0:
+                        v_string = hlg.translate("{0} had {1} sisters:", self.__language).format(v_use_name, v_number_sisters)
 
-                elif(vNumberBrothers > 0):
-                    if(vNumberBrothers == 1):
-                        vString = hlg.Translate("{0} had one brother:", self.__language).format(vUseName)
-                        vLifeSketch = vLifeSketch + vString + ' '
-                    else:
-                        vString = hlg.Translate("{0} had {1} brothers:", self.__language).format(vUseName, vNumberBrothers)
-                        vLifeSketch = vLifeSketch + vString + ' '
+                    if v_number_sisters == 0 and v_number_brothers == 1:
+                        v_string = hlg.translate("{0} had one brother:", self.__language).format(v_use_name)
 
-                if(len(vSiblingNames) > 1):
-                    for vSiblingName in vSiblingNames[:-1]:
-                        vLifeSketch = vLifeSketch + pu.escape_latex(vSiblingName) + ", "
+                    if v_number_sisters == 0 and v_number_brothers > 1:
+                        v_string = hlg.translate("{0} had {1} brothers:", self.__language).format(v_use_name, v_number_brothers)
 
-                    vLifeSketch = vLifeSketch + hlg.Translate("and", self.__language) + ' ' + pu.escape_latex(vSiblingNames[-1]) + ". "
-                    vLifeSketch = vLifeSketch + r"\par "
-                elif(len(vSiblingNames) == 1):
-                    vLifeSketch = vLifeSketch + pu.escape_latex(vSiblingNames[-1]) + ". "
-                    vLifeSketch = vLifeSketch + r"\par "
+                    if v_number_sisters > 0 and v_number_brothers > 0:
+                        v_string = hlg.translate("{0} was {1} of", self.__language).format(v_use_name, v_brother_sister.lower())
+
+                    v_life_sketch = v_life_sketch + v_string + ' '
+
+                    if len(v_sibling_names) > 1:
+                        for vSiblingName in v_sibling_names[:-1]:
+                            v_life_sketch = v_life_sketch + pu.escape_latex(vSiblingName) + ", "
+
+                        v_life_sketch = v_life_sketch + hlg.translate("and", self.__language) + ' ' + pu.escape_latex(v_sibling_names[-1]) + ". "
+                        v_life_sketch = v_life_sketch + r"\par "
+                    elif len(v_sibling_names) == 1:
+                        v_life_sketch = v_life_sketch + pu.escape_latex(v_sibling_names[-1]) + ". "
+                        v_life_sketch = v_life_sketch + r"\par "
 
                 # Partners and Children
-                vNumberDaughters = 0
-                vNumberSons = 0
-                vChildNames = []
-                for vChildHandle in self.__ChildrenHandlesList:
-                    vChildData = DecodePersonData(vChildHandle, self.__Cursor)
-                    if(vChildData[2] == 0):
-                        vNumberDaughters = vNumberDaughters + 1
-                    elif(vChildData[2] == 1):
-                        vNumberSons = vNumberSons + 1
+                v_number_daughters = 0
+                v_number_sons = 0
+                v_child_names = []
+                for v_child_handle in self.__children_handles_list:
+                    v_child_data = decode_person_data(v_child_handle, self.__cursor)
+                    if v_child_data[2] == 0:
+                        v_number_daughters = v_number_daughters + 1
+                    elif v_child_data[2] == 1:
+                        v_number_sons = v_number_sons + 1
 
-                    vChildNames.append(vChildData[3][1])
+                    v_child_names.append(v_child_data[3][1])
 
-                vSentenceStart = hlg.Translate("Furthermore, {0} had", self.__language).format(vHeShe.lower()) + ' '
-                if(len(vLifeSketch) == 0):
-                    vSentenceStart = vFullName + hlg.Translate("had", self.__language) + ' '
+                if v_number_daughters + v_number_sons > 0:
+                    v_string = ''
+                    if v_number_daughters == 1 and v_number_sons == 0:
+                        v_string = hlg.translate("{0} had one daughter:", self.__language).format(v_full_name)
+                        if len(v_life_sketch) > 0:
+                            v_string = hlg.translate("Furthermore, {0} had one daughter:", self.__language).format(v_use_name)
 
-                if(vNumberDaughters > 0):
-                    vLifeSketch = vLifeSketch + vSentenceStart
-                    if(vNumberDaughters == 1):
-                        vLifeSketch = vLifeSketch + hlg.Translate("one daughter", self.__language)
-                    elif(vNumberDaughters > 1):
-                        vString = hlg.Translate("{0} daughters", self.__language).format(vNumberDaughters)
-                        vLifeSketch = vLifeSketch + vString
+                    if v_number_daughters > 1 and v_number_sons == 0:
+                        v_string = hlg.translate("{0} had {1} daughters:", self.__language).format(v_full_name, v_number_daughters)
+                        if len(v_life_sketch) > 0:
+                            v_string = hlg.translate("Furthermore, {0} had {1} daughters:", self.__language).format(v_use_name, v_number_daughters)
 
-                    if(vNumberSons > 0):
-                        if(vNumberSons == 1):
-                            vLifeSketch = vLifeSketch + ' ' + hlg.Translate("and one son:", self.__language) + ' '
-                        else:
-                            vString = hlg.Translate("and {0} sons:", self.__language).format(vNumberSons)
-                            vLifeSketch = vLifeSketch + ' ' + vString + ' '
-                    else:
-                        vLifeSketch = vLifeSketch + ": "
+                    if v_number_daughters == 0 and v_number_sons == 1:
+                        v_string = hlg.translate("{0} had one son:", self.__language).format(v_full_name)
+                        if len(v_life_sketch) > 0:
+                            v_string = hlg.translate("Furthermore, {0} had one son:", self.__language).format(v_use_name)
 
-                elif(vNumberSons > 0):
-                    vLifeSketch = vLifeSketch + vSentenceStart
-                    if(vNumberSons == 1):
-                        vLifeSketch = vLifeSketch + hlg.Translate("one son:", self.__language) + ' '
-                    else:
-                        vString = hlg.Translate("{0} sons:", self.__language).format(vNumberSons)
-                        vLifeSketch = vLifeSketch + vString + ' '
+                    if v_number_daughters == 0 and v_number_sons > 1:
+                        v_string = hlg.translate("{0} had {1} sons:", self.__language).format(v_full_name, v_number_sons)
+                        if len(v_life_sketch) > 0:
+                            v_string = hlg.translate("Furthermore, {0} had {1} sons:", self.__language).format(v_use_name, v_number_sons)
 
-                if(len(vChildNames) > 1):
-                    for vChildName in vChildNames[:-1]:
-                        vLifeSketch = vLifeSketch + pu.escape_latex(vChildName) + ", "
+                    if v_number_daughters > 0 and v_number_sons > 0:
+                        v_string = hlg.translate("{0} was {1} of", self.__language).format(v_full_name, v_father_mother.lower())
+                        if len(v_life_sketch) > 0:
+                            v_string = hlg.translate("Furthermore, {0} was {1} of", self.__language).format(v_use_name, v_father_mother.lower())
 
-                    vLifeSketch = vLifeSketch + hlg.Translate("and", self.__language) + ' ' + pu.escape_latex(vChildNames[-1]) + ". "
-                    vLifeSketch = vLifeSketch + r"\par "
-                elif(len(vChildNames) == 1):
-                    vLifeSketch = vLifeSketch + pu.escape_latex(vChildNames[-1]) + ". "
-                    vLifeSketch = vLifeSketch + r"\par "
+                    v_life_sketch = v_life_sketch + v_string + ' '
 
+                    if len(v_child_names) > 1:
+                        for v_child_name in v_child_names[:-1]:
+                            v_life_sketch = v_life_sketch + pu.escape_latex(v_child_name) + ", "
+
+                        v_life_sketch = v_life_sketch + hlg.translate("and", self.__language) + ' ' + pu.escape_latex(v_child_names[-1]) + ". "
+                        v_life_sketch = v_life_sketch + r"\par "
+                    elif len(v_child_names) == 1:
+                        v_life_sketch = v_life_sketch + pu.escape_latex(v_child_names[-1]) + ". "
+                        v_life_sketch = v_life_sketch + r"\par "
 
                 # Overlijden
-                if(vEventDeath in vVitalEvents):  # Death
-                    vString = hlg.Translate("{0} died on {1}", self.__language).format(vHeShe, hsf.DateToText(self.__PersonEventInfoDict[vEventDeath][0][0], False))
-                    vLifeSketch = vLifeSketch + vString
+                if c_event_death in v_vital_events:  # Death
+                    v_string = hlg.translate("{0} died on {1}", self.__language).format(v_he_she, hsf.date_to_text(self.__PersonEventInfoDict[c_event_death][0][0], False))
+                    v_life_sketch = v_life_sketch + v_string
 
-                    if((len(self.__PersonEventInfoDict[vEventDeath][0][1]) > 0) and (self.__PersonEventInfoDict[vEventDeath][0][1] != '-')):
-                        vString = hlg.Translate("in {0}.", self.__language).format(hsf.PlaceToText(self.__PersonEventInfoDict[vEventDeath][0][1]))
-                        vLifeSketch = vLifeSketch + ' ' + vString
+                    if (len(self.__PersonEventInfoDict[c_event_death][0][1]) > 0) and (self.__PersonEventInfoDict[c_event_death][0][1] != '-'):
+                        v_string = hlg.translate("in {0}.", self.__language).format(hsf.place_to_text(self.__PersonEventInfoDict[c_event_death][0][1]))
+                        v_life_sketch = v_life_sketch + ' ' + v_string
                     else:
-                        vLifeSketch = vLifeSketch + ". "
+                        v_life_sketch = v_life_sketch + ". "
 
-                elif(vEventBurial in vVitalEvents):  # Burial
-                    vString = hlg.Translate("{0} died about {1}", self.__language).format(vHeShe, hsf.DateToText(self.__PersonEventInfoDict[vEventBurial][0][0], False))
-                    vLifeSketch = vLifeSketch + vString
+                elif c_event_burial in v_vital_events:  # Burial
+                    v_string = hlg.translate("{0} died about {1}", self.__language).format(v_he_she, hsf.date_to_text(self.__PersonEventInfoDict[c_event_burial][0][0], False))
+                    v_life_sketch = v_life_sketch + v_string
 
-                    if((len(self.__PersonEventInfoDict[vEventBurial][0][1]) > 0) and (self.__PersonEventInfoDict[vEventBurial][0][1] != '-')):
-                        vString = hlg.Translate("and was buried in {0}.", self.__language).format(hsf.PlaceToText(self.__PersonEventInfoDict[vEventBurial][0][1]))
-                        vLifeSketch = vLifeSketch + ' ' + vString + ' '
+                    if (len(self.__PersonEventInfoDict[c_event_burial][0][1]) > 0) and (self.__PersonEventInfoDict[c_event_burial][0][1] != '-'):
+                        v_string = hlg.translate("and was buried in {0}.", self.__language).format(hsf.place_to_text(self.__PersonEventInfoDict[c_event_burial][0][1]))
+                        v_life_sketch = v_life_sketch + ' ' + v_string + ' '
                     else:
-                        vLifeSketch = vLifeSketch + ". "
+                        v_life_sketch = v_life_sketch + ". "
 
-            vLifeSketch = vLifeSketch.replace(r"\n\n","\par") # Replace double newline characters with \par
-            vLifeSketch = vLifeSketch.replace(r"\newline%\newline","\par") # Replace double newline characters with \par
+            v_life_sketch = v_life_sketch.replace(r"\n\n", r"\par")  # Replace double newline characters with \par
+            v_life_sketch = v_life_sketch.replace(r"\newline%\newline", r"par")  # Replace double newline characters with \par
 
-            vPortraitFound = False
-            for vMediaItem in self.__MediaList:
-                vMediaHandle = vMediaItem[4]
-                vMediaData = GetMediaData(vMediaHandle, self.__Cursor)
-                vMediaPath = vMediaData[2]
-                vMediaMime = vMediaData[3]
-                vMediaDescription = vMediaData[4]
-                vTagHandleList = vMediaData[11]
+            v_portrait_found = False
+            for v_media_item in self.__media_list:
+                v_media_handle = v_media_item[4]
+                v_media_data = get_media_data(v_media_handle, self.__cursor)
+                v_media_path = v_media_data[2]
+                # v_media_mime = v_media_data[3]
+                # v_media_description = v_media_data[4]
+                v_tag_handle_list = v_media_data[11]
 
-                if ('Portrait' in GetTagList(vTagHandleList, self.__TagDictionary)):
-                    vPortraitFound = True
-                    hsf.WrapFigure(vSubLevel, pFilename=vMediaPath, pWidth=r'0.35\textwidth', pText=vLifeSketch)
+                if 'Portrait' in get_tag_list(v_tag_handle_list, self.__tag_dictionary):
+                    v_portrait_found = True
+                    hsf.wrap_figure(v_sub_level, p_filename=v_media_path, p_width=r'0.35\textwidth', p_text=v_life_sketch)
 
-            if(not vPortraitFound):
-                vSubLevel.append(pl.NoEscape(vLifeSketch))
+            if not v_portrait_found:
+                v_sub_level.append(pl.NoEscape(v_life_sketch))
 
-        vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+        v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-
-    def __WriteVitalInformationSection(self, pLevel):
+    def __write_vital_information_section(self, p_level):
         # Create section with Vital Information
-        pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with hlt.CreateSubLevel(pLevel=pLevel, pTitle=hlg.Translate('vital information', self.__language), pLabel=False) as vSubLevel:
-            with vSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
-                if(len(self.__CallName) > 0):
-                    vTable.add_row([hlg.Translate('call name', self.__language) + ":", self.__CallName])
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('vital information', self.__language), pLabel=False) as v_sub_level:
+            with v_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
+                if len(self.__call_name) > 0:
+                    v_table.add_row([hlg.translate('call name', self.__language) + ":", self.__call_name])
 
-                if(self.__Gender in vGenderDict):
-                    vTable.add_row([hlg.Translate('gender', self.__language) + ":", hlg.Translate(vGenderDict[self.__Gender], self.__language)])
+                if self.__gender in c_gender_dict:
+                    v_table.add_row([hlg.translate('gender', self.__language) + ":", hlg.translate(c_gender_dict[self.__gender], self.__language)])
 
-                for vEvent in self.__PersonEventInfoDict.keys():
-                    if (vEvent in vVitalEventsSet):
-                        vString_1 = "Date of " + vEventTypeDict[vEvent]
-                        vString_2 = "Place of " + vEventTypeDict[vEvent]
+                for v_event in self.__PersonEventInfoDict.keys():
+                    if v_event in c_vital_events_set:
+                        v_string_1 = "Date of " + c_event_type_dict[v_event]
+                        v_string_2 = "Place of " + c_event_type_dict[v_event]
 
-                        vString3 = hsf.DateToText(self.__PersonEventInfoDict[vEvent][0][0], False)
-                        vString4 = hsf.PlaceToText(self.__PersonEventInfoDict[vEvent][0][1], True)
+                        v_string3 = hsf.date_to_text(self.__PersonEventInfoDict[v_event][0][0], False)
+                        v_string4 = hsf.place_to_text(self.__PersonEventInfoDict[v_event][0][1], True)
 
-                        if(len(vString3)>0): vTable.add_row([hlg.Translate(vString_1, self.__language) + ":", vString3])
-                        if(len(vString4)>0): vTable.add_row([hlg.Translate(vString_2, self.__language) + ":", vString4])
+                        if len(v_string3) > 0:
+                            v_table.add_row([hlg.translate(v_string_1, self.__language) + ":", v_string3])
+                        if len(v_string4) > 0:
+                            v_table.add_row([hlg.translate(v_string_2, self.__language) + ":", v_string4])
 
-            vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+            v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __WriteParentalSection_Graph(self, pLevel):
+    def __write_parental_section_graph(self, p_level):
         # Add Family graph
-        pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with hlt.CreateSubLevel(pLevel=pLevel, pTitle=hlg.Translate('parental family', self.__language), pLabel=False) as vSubLevel:
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('parental family', self.__language), pLabel=False) as v_sub_level:
             # Create a sorted list of self and siblings
-            vSiblingList = []
-            vSiblingList.append(self.__PersonHandle)
+            v_sibling_list = [self.__person_handle]
+            for v_sibling_handle in self.__sibling_handles_list:
+                v_sibling_list.append(v_sibling_handle)
 
-            for vSiblingHandle in self.__SiblingHandlesList:
-                vSiblingList.append(vSiblingHandle)
-
-            vSiblingList = hsf.SortPersonListByBirth(vSiblingList, self.__Cursor)
+            v_sibling_list = hsf.sort_person_list_by_birth(v_sibling_list, self.__cursor)
 
             # Create nodes
-            vSubLevel.append(pu.NoEscape(r'\begin{tikzpicture}'))
-            vSubLevel.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
+            v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
+            v_sub_level.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
 
             # Parents
-            vFatherName = hlg.Translate('Unknown', self.__language)
-            if(self.__FatherHandle is not None):
-                vFatherData = DecodePersonData(self.__FatherHandle, self.__Cursor)
-                vFatherName = pl.NoEscape(hlt.GetPersonNameWithReference(vFatherData[3][1], vFatherData[3][0], vFatherData[1]))
+            v_father_name = hlg.translate('Unknown', self.__language)
+            if self.__father_handle is not None:
+                v_father_data = decode_person_data(self.__father_handle, self.__cursor)
+                v_father_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_father_data[3][1], v_father_data[3][0], v_father_data[1]))
 
-            vMotherName = hlg.Translate('Unknown', self.__language)
-            if(self.__MotherHandle is not None):
-                vMotherData = DecodePersonData(self.__MotherHandle, self.__Cursor)
-                vMotherName = pl.NoEscape(hlt.GetPersonNameWithReference(vMotherData[3][1], vMotherData[3][0], vMotherData[1]))
+            v_mother_name = hlg.translate('Unknown', self.__language)
+            if self.__mother_handle is not None:
+                v_mother_data = decode_person_data(self.__mother_handle, self.__cursor)
+                v_mother_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_mother_data[3][1], v_mother_data[3][0], v_mother_data[1]))
 
             # First row
-            vSubLevel.append(pu.NoEscape(r'\node (father) [left, man]    {\small ' + vFatherName + r'}; &'))
-            vSubLevel.append(pu.NoEscape(r'\node (p0)     [terminal]     {+}; &'))
-            vSubLevel.append(pu.NoEscape(r'\node (mother) [right, woman] {\small ' + vMotherName + r'};\\'))
+            v_sub_level.append(pu.NoEscape(r'\node (father) [left, man]    {\small ' + v_father_name + r'}; &'))
+            v_sub_level.append(pu.NoEscape(r'\node (p0)     [terminal]     {+}; &'))
+            v_sub_level.append(pu.NoEscape(r'\node (mother) [right, woman] {\small ' + v_mother_name + r'};\\'))
 
             # Empty row
-            vString = r' & & \\'
-            vSubLevel.append(pu.NoEscape(vString))
+            v_string: str = r' & & \\'
+            v_sub_level.append(pu.NoEscape(v_string))
 
             # Next one row per sibling
-            vCounter = 0
-            for vSiblingHandle in vSiblingList:
-                vCounter       = vCounter + 1
-                vSiblingData   = DecodePersonData(vSiblingHandle, self.__Cursor)
-                vSiblingId     = vSiblingData[1]
-                vSiblingGender = vSiblingData[2]
+            v_counter = 0
+            for v_sibling_handle in v_sibling_list:
+                v_counter = v_counter + 1
+                v_sibling_data = decode_person_data(v_sibling_handle, self.__cursor)
+                v_sibling_id = v_sibling_data[1]
+                v_sibling_gender = v_sibling_data[2]
 
-                if(vSiblingId == self.__GrampsId):
-                    vSiblingName = self.__GivenNames + ' ' + self.__Surname
+                if v_sibling_id == self.__gramps_id:
+                    v_sibling_name = self.__given_names + ' ' + self.__surname
                 else:
-                    vSiblingName = pl.NoEscape(hlt.GetPersonNameWithReference(vSiblingData[3][1], vSiblingData[3][0], vSiblingData[1]))
+                    v_sibling_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_sibling_data[3][1], v_sibling_data[3][0], v_sibling_data[1]))
 
-                vString = ''
-                if(vSiblingGender == 0): # Female
-                    vString = r' & & \node (p' + str(vCounter) + r') [right, woman'
-                elif(vSiblingGender == 1): # Male
-                    vString = r' & & \node (p' + str(vCounter) + r') [right, man'
+                if v_sibling_gender == 0:  # Female
+                    v_string = r' & & \node (p' + str(v_counter) + r') [right, woman'
+                elif v_sibling_gender == 1:  # Male
+                    v_string = r' & & \node (p' + str(v_counter) + r') [right, man'
                 else:
-                    vString = r' & & \node (p' + str(vCounter) + r') [right, man'
+                    v_string = r' & & \node (p' + str(v_counter) + r') [right, man'
 
-                if(vSiblingId == self.__GrampsId):
-                    vString = vString + r', self'
+                if v_sibling_id == self.__gramps_id:
+                    v_string = v_string + r', self'
 
-                vString = vString + r'] {\small ' + vSiblingName + r'}; \\'
-                vSubLevel.append(pu.NoEscape(vString))
+                v_string = v_string + r'] {\small ' + v_sibling_name + r'}; \\'
+                v_sub_level.append(pu.NoEscape(v_string))
 
-            vSubLevel.append(pu.NoEscape(r'};'))
+            v_sub_level.append(pu.NoEscape(r'};'))
 
             # Create the graph
-            vSubLevel.append(pu.NoEscape(r'\graph [use existing nodes] {'))
-            vSubLevel.append(pu.NoEscape(r'father -- p0 -- mother;'))
+            v_sub_level.append(pu.NoEscape(r'\graph [use existing nodes] {'))
+            v_sub_level.append(pu.NoEscape(r'father -- p0 -- mother;'))
 
-            for vCount in range(1, vCounter + 1):
-                vSubLevel.append(pu.NoEscape(r'p0 -> [vh path] p' + str(vCount) + r';'))
+            for v_count in range(1, v_counter + 1):
+                v_sub_level.append(pu.NoEscape(r'p0 -> [vh path] p' + str(v_count) + r';'))
 
-            vSubLevel.append(pu.NoEscape(r'};'))
-            vSubLevel.append(pu.NoEscape(r'\end{tikzpicture}'))
-            vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+            v_sub_level.append(pu.NoEscape(r'};'))
+            v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
+            v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __WriteParentalSubsection_Table(self, pLevel):
+    def __write_parental_subsection_table(self, p_level):
         # Add Family table
-        pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with hlt.CreateSubLevel(pLevel=pLevel, pTitle=hlg.Translate('parental family', self.__language), pLabel=False) as vSubLevel:
-            with vSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
-                vFatherName = hlg.Translate('Unknown', self.__language)
-                if(self.__FatherHandle is not None):
-                    vFatherData = DecodePersonData(self.__FatherHandle, self.__Cursor)
-                    vFatherName = pl.NoEscape(hlt.GetPersonNameWithReference(vFatherData[3][1], vFatherData[3][0], vFatherData[1]))
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('parental family', self.__language), pLabel=False) as vSubLevel:
+            with vSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
+                v_father_name = hlg.translate('Unknown', self.__language)
+                if self.__father_handle is not None:
+                    v_father_data = decode_person_data(self.__father_handle, self.__cursor)
+                    v_father_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_father_data[3][1], v_father_data[3][0], v_father_data[1]))
 
-                vTable.add_row([hlg.Translate('father', self.__language) + ":", vFatherName])
+                v_table.add_row([hlg.translate('father', self.__language) + ":", v_father_name])
 
-                vMotherName = hlg.Translate('Unknown', self.__language)
-                if(self.__MotherHandle is not None):
-                    vMotherData = DecodePersonData(self.__MotherHandle, self.__Cursor)
-                    vMotherName = pl.NoEscape(hlt.GetPersonNameWithReference(vMotherData[3][1], vMotherData[3][0], vMotherData[1]))
+                v_mother_name = hlg.translate('Unknown', self.__language)
+                if self.__mother_handle is not None:
+                    v_mother_data = decode_person_data(self.__mother_handle, self.__cursor)
+                    v_mother_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_mother_data[3][1], v_mother_data[3][0], v_mother_data[1]))
 
-                vTable.add_row([hlg.Translate('mother', self.__language) + ":", vMotherName])
+                v_table.add_row([hlg.translate('mother', self.__language) + ":", v_mother_name])
 
-                for vSiblingHandle in self.__SiblingHandlesList:
-                    vSiblingData = DecodePersonData(vSiblingHandle, self.__Cursor)
-                    if(vSiblingData[1] == self.__GrampsId):
-                        vSiblingType = hlg.Translate('self', self.__language) + ":"
-                    elif(vSiblingData[2] == 0):
-                        vSiblingType = hlg.Translate('sister', self.__language) + ":"
-                    elif(vSiblingData[2] == 1):
-                        vSiblingType = hlg.Translate('brother', self.__language) + ":"
+                for v_sibling_handle in self.__sibling_handles_list:
+                    v_sibling_data = decode_person_data(v_sibling_handle, self.__cursor)
+                    if v_sibling_data[1] == self.__gramps_id:
+                        v_sibling_type = hlg.translate('self', self.__language) + ":"
+                    elif v_sibling_data[2] == 0:
+                        v_sibling_type = hlg.translate('sister', self.__language) + ":"
+                    elif v_sibling_data[2] == 1:
+                        v_sibling_type = hlg.translate('brother', self.__language) + ":"
                     else:
-                        vSiblingType = hlg.Translate('unknown', self.__language) + ":"
+                        v_sibling_type = hlg.translate('unknown', self.__language) + ":"
 
-                    vTable.add_row([vSiblingType, pl.NoEscape(hlt.GetPersonNameWithReference(vSiblingData[3][1], vSiblingData[3][0], vSiblingData[1]))])
+                    v_table.add_row([v_sibling_type, pl.NoEscape(hlt.GetPersonNameWithReference(v_sibling_data[3][1], v_sibling_data[3][0], v_sibling_data[1]))])
 
             vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __WritePartnerSections_Graph(self, pLevel):
+    def __write_partner_sections_graph(self, p_level):
         # Add families with partners
-        for vPartnerHandle in self.__PartnerHandleList:
-            if(vPartnerHandle is not None):  # TODO: Also handle families with unknown partners
-                vPartnerData = DecodePersonData(vPartnerHandle, self.__Cursor)
-                vPartnerGrampsId = vPartnerData[1]
-                vPartnerSurname = vPartnerData[3][0]
-                vPartnerGivenNames = vPartnerData[3][1]
+        for v_partner_handle in self.__partner_handle_list:
+            if v_partner_handle is not None:  # TODO: Also handle families with unknown partners
+                v_partner_data = decode_person_data(v_partner_handle, self.__cursor)
+                v_partner_gramps_id = v_partner_data[1]
+                v_partner_surname = v_partner_data[3][0]
+                v_partner_given_names = v_partner_data[3][1]
 
-                # For each partner create a sub section
-                pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-                with hlt.CreateSubLevel(pLevel=pLevel, pTitle=pl.NoEscape(hlt.GetPersonNameWithReference(vPartnerGivenNames, vPartnerSurname, vPartnerGrampsId)), pLabel=False) as vSubLevel:
-                    if(self.__Gender == 0):
-                        vFamilyHandle = GetFamilyHandleByFatherMother(vPartnerHandle, self.__PersonHandle, self.__Cursor)
+                # For each partner create a subsection
+                p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+                with hlt.CreateSubLevel(pLevel=p_level, pTitle=pl.NoEscape(hlt.GetPersonNameWithReference(v_partner_given_names, v_partner_surname, v_partner_gramps_id)), pLabel=False) as vSubLevel:
+                    if self.__gender == 0:
+                        v_family_handle = get_family_handle_by_father_mother(v_partner_handle, self.__person_handle, self.__cursor)
                     else:
-                        vFamilyHandle = GetFamilyHandleByFatherMother(self.__PersonHandle, vPartnerHandle, self.__Cursor)
+                        v_family_handle = get_family_handle_by_father_mother(self.__person_handle, v_partner_handle, self.__cursor)
 
-                    if(vFamilyHandle is not None):
-                        vFamilyHandle = vFamilyHandle[0]
+                    if v_family_handle is not None:
+                        v_family_handle = v_family_handle[0]
 
                         # Nieuw
-                        vFamilyInfo = DecodeFamilyData(vFamilyHandle, self.__Cursor)
-                        vFamilyGrampsId = vFamilyInfo[0]
-                        vFamilyEventRefList = vFamilyInfo[5]
+                        v_family_info = decode_family_data(v_family_handle, self.__cursor)
+                        # v_family_gramps_id = v_family_info[0]
+                        v_family_event_ref_list = v_family_info[5]
 
-                        vFamilyEventInfoDict = {}
-                        for vFamilyEventRef in vFamilyEventRefList:
-                            vFamilyEventHandle = vFamilyEventRef[3]
-                            vFamilyEventInfo = DecodeEventData(vFamilyEventHandle, self.__Cursor)
-                            if(vFamilyEventInfo[0] in vFamilyEventInfoDict):
-                                vFamilyEventInfoDict[vFamilyEventInfo[0]].append(vFamilyEventInfo[1:])
+                        v_family_event_info_dict = {}
+                        for v_family_event_ref in v_family_event_ref_list:
+                            v_family_event_handle = v_family_event_ref[3]
+                            v_family_event_info = decode_event_data(v_family_event_handle, self.__cursor)
+                            if v_family_event_info[0] in v_family_event_info_dict:
+                                v_family_event_info_dict[v_family_event_info[0]].append(v_family_event_info[1:])
                             else:
-                                vFamilyEventInfoDict[vFamilyEventInfo[0]] = [vFamilyEventInfo[1:]]
+                                v_family_event_info_dict[v_family_event_info[0]] = [v_family_event_info[1:]]
 
                         # OUD
-                        vFamilyEvents = vFamilyEventsSet.intersection(vFamilyEventInfoDict.keys())
-                        if(vFamilyEvents):
-                            with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.Translate('family events', self.__language), pLabel=False) as vSubSubLevel:
-                                with vSubSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
-                                    for vEvent in vFamilyEvents:
-                                        vString_1 = "Date of " + vEventTypeDict[vEvent]
-                                        vString_2 = "Place of " + vEventTypeDict[vEvent]
-                                        vString_3 = hsf.DateToText(vFamilyEventInfoDict[vEvent][0][0], False)
-                                        vString_4 = hsf.PlaceToText(vFamilyEventInfoDict[vEvent][0][1], True)
+                        v_family_events = c_family_events_set.intersection(v_family_event_info_dict.keys())
+                        if v_family_events:
+                            with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.translate('family events', self.__language), pLabel=False) as v_sub_sub_level:
+                                with v_sub_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
+                                    for vEvent in v_family_events:
+                                        v_string_1 = "Date of " + c_event_type_dict[vEvent]
+                                        v_string_2 = "Place of " + c_event_type_dict[vEvent]
+                                        v_string_3 = hsf.date_to_text(v_family_event_info_dict[vEvent][0][0], False)
+                                        v_string_4 = hsf.place_to_text(v_family_event_info_dict[vEvent][0][1], True)
 
-                                        if(len(vString_3)>0): vTable.add_row([hlg.Translate(vString_1, self.__language) + ":", vString_3])
-                                        if(len(vString_4)>0): vTable.add_row([hlg.Translate(vString_2, self.__language) + ":", vString_4])
+                                        if len(v_string_3) > 0:
+                                            v_table.add_row([hlg.translate(v_string_1, self.__language) + ":", v_string_3])
+                                        if len(v_string_4) > 0:
+                                            v_table.add_row([hlg.translate(v_string_2, self.__language) + ":", v_string_4])
 
-                                vSubSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+                                v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
                             # Add subchapter for children
-                            vChildrenHandles = GetChildrenHandlesByFamily(vFamilyHandle, self.__Cursor)
-                            if(len(vChildrenHandles) > 0):
-                                # If children exist, then create sub chapter and a table
-                                with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.Translate('children', self.__language), pLabel=False) as vSubSubLevel:
-                                    vFatherString = ''
-                                    vMotherString = ''
+                            v_children_handles = get_children_handles_by_family(v_family_handle, self.__cursor)
+                            if len(v_children_handles) > 0:
+                                # If children exist, then create subchapter and a table
+                                with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.translate('children', self.__language), pLabel=False) as v_sub_sub_level:
+                                    v_father_string = ''
+                                    v_mother_string = ''
 
-                                    vSubSubLevel.append(pu.NoEscape(r'\begin{tikzpicture}'))
-                                    vSubSubLevel.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
+                                    v_sub_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
+                                    v_sub_sub_level.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
 
                                     # Self
-                                    vName = pl.NoEscape(self.GivenNames + ' ' + self.__Surname)
-                                    if(self.__Gender == 0): # Female
-                                        vMotherString = r'\node (mother) [right, woman, self] {\small ' + vName + r'};'
-                                    else: # Male
-                                        vFatherString = r'\node (father) [left, man, self] {\small ' + vName + r'};'
+                                    v_name = pl.NoEscape(self.given_names + ' ' + self.__surname)
+                                    if self.__gender == 0:  # Female
+                                        v_mother_string = r'\node (mother) [right, woman, self] {\small ' + v_name + r'};'
+                                    else:  # Male
+                                        v_father_string = r'\node (father) [left, man, self] {\small ' + v_name + r'};'
 
                                     # Partner
-                                    vName = pl.NoEscape(hlt.GetPersonNameWithReference(vPartnerData[3][1], vPartnerData[3][0], vPartnerData[1]))
-                                    if(vPartnerData[2] == 0): # Female
-                                        vMotherString = r'\node (mother) [right, woman] {\small ' + vName + r'};'
-                                    else: # Male
-                                        vFatherString = r'\node (father) [left, man] {\small ' + vName + r'};'
+                                    v_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_partner_data[3][1], v_partner_data[3][0], v_partner_data[1]))
+                                    if v_partner_data[2] == 0:  # Female
+                                        v_mother_string = r'\node (mother) [right, woman] {\small ' + v_name + r'};'
+                                    else:  # Male
+                                        v_father_string = r'\node (father) [left, man] {\small ' + v_name + r'};'
 
                                     # First row
-                                    vSubSubLevel.append(pu.NoEscape(vFatherString + r' &'))
-                                    vSubSubLevel.append(pu.NoEscape(r'\node (p0)     [terminal]     {+}; &'))
-                                    vSubSubLevel.append(pu.NoEscape(vMotherString + r' \\'))
+                                    v_sub_sub_level.append(pu.NoEscape(v_father_string + r' &'))
+                                    v_sub_sub_level.append(pu.NoEscape(r'\node (p0)     [terminal]     {+}; &'))
+                                    v_sub_sub_level.append(pu.NoEscape(v_mother_string + r' \\'))
 
                                     # Empty row
-                                    vString = r' & & \\'
-                                    vSubSubLevel.append(pu.NoEscape(vString))
+                                    v_string = r' & & \\'
+                                    v_sub_sub_level.append(pu.NoEscape(v_string))
 
                                     # Next one row per child
-                                    vCounter = 0
+                                    v_counter = 0
 
                                     # Children
-                                    for vChildHandle in vChildrenHandles:
-                                        vCounter = vCounter + 1
-                                        vChildData = DecodePersonData(vChildHandle, self.__Cursor)
-                                        vChildName = pl.NoEscape(hlt.GetPersonNameWithReference(vChildData[3][1], vChildData[3][0], vChildData[1]))
+                                    for vChildHandle in v_children_handles:
+                                        v_counter = v_counter + 1
+                                        v_child_data = decode_person_data(vChildHandle, self.__cursor)
+                                        v_child_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_child_data[3][1], v_child_data[3][0], v_child_data[1]))
 
-                                        vString = ''
-                                        if(vChildData[2] == 0): # Female
-                                            vString = r' & & \node (p' + str(vCounter) + r') [right, woman] {\small ' + vChildName + r'}; \\'
-                                        elif(vChildData[2] == 1): # Male
-                                            vString = r' & & \node (p' + str(vCounter) + r') [right, man] {\small ' + vChildName + r'}; \\'
+                                        if v_child_data[2] == 0:  # Female
+                                            v_string = r' & & \node (p' + str(v_counter) + r') [right, woman] {\small ' + v_child_name + r'}; \\'
+                                        elif v_child_data[2] == 1:  # Male
+                                            v_string = r' & & \node (p' + str(v_counter) + r') [right, man] {\small ' + v_child_name + r'}; \\'
                                         else:
-                                            vString = r' & & \node (p' + str(vCounter) + r') [right, man] {\small ' + vChildName + r'}; \\'
+                                            v_string = r' & & \node (p' + str(v_counter) + r') [right, man] {\small ' + v_child_name + r'}; \\'
 
-                                        vSubSubLevel.append(pu.NoEscape(vString))
+                                        v_sub_sub_level.append(pu.NoEscape(v_string))
 
-                                    vSubSubLevel.append(pu.NoEscape(r'};'))
+                                    v_sub_sub_level.append(pu.NoEscape(r'};'))
 
                                     # Create the graph
-                                    vSubSubLevel.append(pu.NoEscape(r'\graph [use existing nodes] {'))
-                                    vSubSubLevel.append(pu.NoEscape(r'father -- p0 -- mother;'))
+                                    v_sub_sub_level.append(pu.NoEscape(r'\graph [use existing nodes] {'))
+                                    v_sub_sub_level.append(pu.NoEscape(r'father -- p0 -- mother;'))
 
-                                    for vCount in range(1, vCounter + 1):
-                                        vSubSubLevel.append(pu.NoEscape(r'p0 -> [vh path] p' + str(vCount) + r';'))
+                                    for v_count in range(1, v_counter + 1):
+                                        v_sub_sub_level.append(pu.NoEscape(r'p0 -> [vh path] p' + str(v_count) + r';'))
 
-                                    vSubSubLevel.append(pu.NoEscape(r'};'))
-                                    vSubSubLevel.append(pu.NoEscape(r'\end{tikzpicture}'))
-                                    vSubSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+                                    v_sub_sub_level.append(pu.NoEscape(r'};'))
+                                    v_sub_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
+                                    v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __WritePartnerSections_Table(self, pLevel):
+    def __write_partner_sections_table(self, p_level):
         # Add families with partners
-        for vPartnerHandle in self.__PartnerHandleList:
-            if(vPartnerHandle is not None):  # TODO: Also handle families with unknown partners
-                vPartnerData = DecodePersonData(vPartnerHandle, self.__Cursor)
-                vPartnerGrampsId = vPartnerData[1]
-                vPartnerSurname = vPartnerData[3][0]
-                vPartnerGivenNames = vPartnerData[3][1]
+        for v_partner_handle in self.__partner_handle_list:
+            if v_partner_handle is not None:  # TODO: Also handle families with unknown partners
+                v_partner_data = decode_person_data(v_partner_handle, self.__cursor)
+                v_partner_gramps_id = v_partner_data[1]
+                v_partner_surname = v_partner_data[3][0]
+                v_partner_given_names = v_partner_data[3][1]
 
-                # For each partner create a sub section
-                pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-                with hlt.CreateSubLevel(pLevel=pLevel, pTitle=pl.NoEscape(hlt.GetPersonNameWithReference(vPartnerGivenNames, vPartnerSurname, vPartnerGrampsId)), pLabel=False) as vSubLevel:
-                    if(self.__Gender == 0):
-                        vFamilyHandle = GetFamilyHandleByFatherMother(vPartnerHandle, self.__PersonHandle, self.__Cursor)
+                # For each partner create a subsection
+                p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+                with hlt.CreateSubLevel(pLevel=p_level, pTitle=pl.NoEscape(hlt.GetPersonNameWithReference(v_partner_given_names, v_partner_surname, v_partner_gramps_id)), pLabel=False) as vSubLevel:
+                    if self.__gender == 0:
+                        v_family_handle = get_family_handle_by_father_mother(v_partner_handle, self.__person_handle, self.__cursor)
                     else:
-                        vFamilyHandle = GetFamilyHandleByFatherMother(self.__PersonHandle, vPartnerHandle, self.__Cursor)
+                        v_family_handle = get_family_handle_by_father_mother(self.__person_handle, v_partner_handle, self.__cursor)
 
-                    if(vFamilyHandle is not None):
-                        vFamilyHandle = vFamilyHandle[0]
+                    if v_family_handle is not None:
+                        v_family_handle = v_family_handle[0]
 
                         # Nieuw
-                        vFamilyInfo = DecodeFamilyData(vFamilyHandle, self.__Cursor)
-                        vFamilyGrampsId = vFamilyInfo[0]
-                        vFamilyEventRefList = vFamilyInfo[5]
+                        v_family_info = decode_family_data(v_family_handle, self.__cursor)
+                        # v_family_gramps_id = v_family_info[0]
+                        v_family_event_ref_list = v_family_info[5]
 
-                        vFamilyEventInfoDict = {}
-                        for vFamilyEventRef in vFamilyEventRefList:
-                            vFamilyEventHandle = vFamilyEventRef[3]
-                            vFamilyEventInfo = DecodeEventData(vFamilyEventHandle, self.__Cursor)
-                            if(vFamilyEventInfo[0] in vFamilyEventInfoDict):
-                                vFamilyEventInfoDict[vFamilyEventInfo[0]].append(vFamilyEventInfo[1:])
+                        v_family_event_info_dict = {}
+                        for v_family_event_ref in v_family_event_ref_list:
+                            v_family_event_handle = v_family_event_ref[3]
+                            v_family_event_info = decode_event_data(v_family_event_handle, self.__cursor)
+                            if v_family_event_info[0] in v_family_event_info_dict:
+                                v_family_event_info_dict[v_family_event_info[0]].append(v_family_event_info[1:])
                             else:
-                                vFamilyEventInfoDict[vFamilyEventInfo[0]] = [vFamilyEventInfo[1:]]
+                                v_family_event_info_dict[v_family_event_info[0]] = [v_family_event_info[1:]]
 
                         # OUD
-                        vFamilyEvents = vFamilyEventsSet.intersection(vFamilyEventInfoDict.keys())
-                        if(vFamilyEvents):
-                            with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.Translate('family events', self.__language), pLabel=False) as vSubSubLevel:
-                                with vSubSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
-                                    for vEvent in vFamilyEvents:
-                                        vString_1 = "Date of " + vEventTypeDict[vEvent]
-                                        vString_2 = "Place of " + vEventTypeDict[vEvent]
-                                        vTable.add_row([hlg.Translate(vString_1, self.__language) + ":", hsf.DateToText(vFamilyEventInfoDict[vEvent][0][0], False)])
-                                        vTable.add_row([hlg.Translate(vString_2, self.__language) + ":", hsf.PlaceToText(vFamilyEventInfoDict[vEvent][0][1], True)])
+                        v_family_events = c_family_events_set.intersection(v_family_event_info_dict.keys())
+                        if v_family_events:
+                            with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.translate('family events', self.__language), pLabel=False) as v_sub_sub_level:
+                                with v_sub_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
+                                    for vEvent in v_family_events:
+                                        v_string_1 = "Date of " + c_event_type_dict[vEvent]
+                                        v_string_2 = "Place of " + c_event_type_dict[vEvent]
+                                        v_table.add_row([hlg.translate(v_string_1, self.__language) + ":", hsf.date_to_text(v_family_event_info_dict[vEvent][0][0], False)])
+                                        v_table.add_row([hlg.translate(v_string_2, self.__language) + ":", hsf.place_to_text(v_family_event_info_dict[vEvent][0][1], True)])
 
-                                vSubSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+                                v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
                         # Add subchapter for children
-                        vChildrenHandles = GetChildrenHandlesByFamily(vFamilyHandle, self.__Cursor)
-                        if(len(vChildrenHandles) > 0):
-                            # If children exist, then create sub chapter and a table
-                            with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.Translate('children', self.__language), pLabel=False) as vSubSubLevel:
-                                with vSubSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
-                                    for vChildHandle in vChildrenHandles:
+                        v_children_handles = get_children_handles_by_family(v_family_handle, self.__cursor)
+                        if len(v_children_handles) > 0:
+                            # If children exist, then create subchapter and a table
+                            with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.translate('children', self.__language), pLabel=False) as v_sub_sub_level:
+                                with v_sub_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
+                                    for v_child_handle in v_children_handles:
                                         # For each child create a separate row
                                         # in the table
-                                        vChildData = DecodePersonData(vChildHandle, self.__Cursor)
-                                        if(vChildData[2] == 0):
-                                            vChildType = hlg.Translate('daughter', self.__language) + ":"
-                                        elif(vChildData[2] == 1):
-                                            vChildType = hlg.Translate('son', self.__language) + ":"
+                                        v_child_data = decode_person_data(v_child_handle, self.__cursor)
+                                        if v_child_data[2] == 0:
+                                            v_child_type = hlg.translate('daughter', self.__language) + ":"
+                                        elif v_child_data[2] == 1:
+                                            v_child_type = hlg.translate('son', self.__language) + ":"
                                         else:
-                                            vChildType = hlg.Translate('unknown', self.__language) + ":"
+                                            v_child_type = hlg.translate('unknown', self.__language) + ":"
 
-                                        vTable.add_row([vChildType, pl.NoEscape(hlt.GetPersonNameWithReference(vChildData[3][1], vChildData[3][0], vChildData[1]))])
+                                        v_table.add_row([v_child_type, pl.NoEscape(hlt.GetPersonNameWithReference(v_child_data[3][1], v_child_data[3][0], v_child_data[1]))])
 
-                                vSubSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+                                v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __WriteFamilySection(self, pLevel):
+    def __write_family_section(self, p_level):
         """
         Create a section listing all family relationships
         """
 
         # Create section with Family Information
-        pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with pLevel.create(hlt.Section(title=hlg.Translate('family', self.__language), label=False)) as vSubLevel:
-            self.__WriteParentalSection_Graph(vSubLevel)
-            self.__WritePartnerSections_Graph(vSubLevel)
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with p_level.create(hlt.Section(title=hlg.translate('family', self.__language), label=False)) as vSubLevel:
+            self.__write_parental_section_graph(vSubLevel)
+            self.__write_partner_sections_graph(vSubLevel)
 
-    def __WriteEducationSection(self, pLevel):
+    def __write_education_section(self, p_level):
         """
         Create a section with a table containing education
         """
 
         # Create section with Education ***
-        vEducationEvents = vEducationEventsSet.intersection(self.__PersonEventInfoDict.keys())
-        if(vEducationEvents):
-            vEducationList = []
-            for vEvent in vEducationEvents:
-                vEducationList = vEducationList + self.__PersonEventInfoDict[vEvent]
+        v_education_events = c_education_events_set.intersection(self.__PersonEventInfoDict.keys())
+        if v_education_events:
+            v_education_list = []
+            for v_event in v_education_events:
+                v_education_list = v_education_list + self.__PersonEventInfoDict[v_event]
 
-            vDateFunc = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
-            vEducationList.sort(key=vDateFunc)
+            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
+            v_education_list.sort(key=f_date_func)
 
-            pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=pLevel, pTitle=hlg.Translate('education', self.__language), pLabel=False) as vSubLevel:
-                with vSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
+            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('education', self.__language), pLabel=False) as v_sub_level:
+                with v_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
                     # Header row
-                    vTable.add_row([pu.bold(hlg.Translate('date', self.__language)), pu.bold(hlg.Translate('course', self.__language))])
-                    vTable.add_hline()
-                    vTable.end_table_header()
+                    v_table.add_row([pu.bold(hlg.translate('date', self.__language)), pu.bold(hlg.translate('course', self.__language))])
+                    v_table.add_hline()
+                    v_table.end_table_header()
 
                     # Add row for each event
-                    for vEducation in vEducationList:
-                        if(len(vEducation[2]) == 0):
-                            vEducation[2] = '-'
+                    for v_education in v_education_list:
+                        if len(v_education[2]) == 0:
+                            v_education[2] = '-'
 
-                        vDate   = hsf.DateToText(vEducation[0])
-                        vCourse = vEducation[2]
-                        vPlace  = hsf.PlaceToText(vEducation[1], True)
-                        vTable.add_row([vDate, pl.NoEscape(vCourse) + pl.NoEscape(r'\newline ') + pu.escape_latex(vPlace)])
+                        v_date = hsf.date_to_text(v_education[0])
+                        v_course = v_education[2]
+                        v_place = hsf.place_to_text(v_education[1], True)
+                        v_table.add_row([v_date, pl.NoEscape(v_course) + pl.NoEscape(r'\newline ') + pu.escape_latex(v_place)])
 
-                vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __WriteProfessionSection(self, pLevel):
+    def __write_profession_section(self, p_level):
         """
         Create a section with a table containing working experiences
         """
 
         # Create section with Working Experience ***
-        vProfessionalEvents = vProfessionalEventsSet.intersection(self.__PersonEventInfoDict.keys())
-        if(vProfessionalEvents):
-            vProfessionalList = []
-            for vEvent in vProfessionalEvents:
-                vProfessionalList = vProfessionalList + self.__PersonEventInfoDict[vEvent]
+        v_professional_events = c_professional_events_set.intersection(self.__PersonEventInfoDict.keys())
+        if v_professional_events:
+            v_professional_list = []
+            for v_event in v_professional_events:
+                v_professional_list = v_professional_list + self.__PersonEventInfoDict[v_event]
 
-            vDateFunc = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
-            vProfessionalList.sort(key=vDateFunc)
+            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
+            v_professional_list.sort(key=f_date_func)
 
-            pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=pLevel, pTitle=hlg.Translate('occupation', self.__language), pLabel=False) as vSubLevel:
-                with vSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
+            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('occupation', self.__language), pLabel=False) as vSubLevel:
+                with vSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
                     # Header row
-                    vTable.add_row([pu.bold(hlg.Translate('date', self.__language)), pu.bold(hlg.Translate('profession', self.__language))])
-                    vTable.add_hline()
-                    vTable.end_table_header()
+                    v_table.add_row([pu.bold(hlg.translate('date', self.__language)), pu.bold(hlg.translate('profession', self.__language))])
+                    v_table.add_hline()
+                    v_table.end_table_header()
 
                     # Add row for each event
-                    for vProfession in vProfessionalList:
-                        if(len(vProfession[2]) == 0):
-                            vProfession[2] = '-'
+                    for v_profession in v_professional_list:
+                        if len(v_profession[2]) == 0:
+                            v_profession[2] = '-'
 
-                        vDate   = hsf.DateToText(vProfession[0])
-                        vJob    = vProfession[2]
-                        vPlace  = hsf.PlaceToText(vProfession[1], True)
-                        vTable.add_row([vDate, pu.escape_latex(vJob) + pl.NoEscape(r'\newline ') + pu.escape_latex(vPlace)])
+                        v_date = hsf.date_to_text(v_profession[0])
+                        v_job = v_profession[2]
+                        v_place = hsf.place_to_text(v_profession[1], True)
+                        v_table.add_row([v_date, pu.escape_latex(v_job) + pl.NoEscape(r'\newline ') + pu.escape_latex(v_place)])
 
                 vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __WriteResidenceSection_Map(self, pLevel):
+    def __write_residence_section_map(self, p_level):
         """
         Create a section with maps of all residences
         """
@@ -900,413 +965,481 @@ class Person:
         #
 
         # Create section with Residential Information
-        vResidentialEvents = vResidentialEventsSet.intersection(self.__PersonEventInfoDict.keys())
-        if(vResidentialEvents):
+        v_residential_events = c_residential_events_set.intersection(self.__PersonEventInfoDict.keys())
+        if v_residential_events:
             # Create path name for map
-            vPath = self.__DocumentPath + r'Figures'
+            # v_path = self.__document_path + r'Figures'
 
             # Compose some temporary place type labeles
-            vCityLabel         = vPlaceTypeDict[vPlaceTypeCity]
-            vTownLabel         = vPlaceTypeDict[vPlaceTypeTown]
-            vVillageLabel      = vPlaceTypeDict[vPlaceTypeVillage]
-            vMunicipalityLabel = vPlaceTypeDict[vPlaceTypeMunicipality]
-            vCountryLabel      = vPlaceTypeDict[vPlaceTypeCountry]
+            v_city_label = c_place_type_dict[c_place_type_city]
+            v_town_label = c_place_type_dict[c_place_type_town]
+            v_village_label = c_place_type_dict[c_place_type_village]
+            v_municipality_label = c_place_type_dict[c_place_type_municipality]
+            v_country_label = c_place_type_dict[c_place_type_country]
 
             # Compose residence list
-            vResidenceList = []
-            for vEvent in vResidentialEvents:
-                vResidenceList = vResidenceList + self.__PersonEventInfoDict[vEvent]
+            v_residence_list = []
+            for v_event in v_residential_events:
+                v_residence_list = v_residence_list + self.__PersonEventInfoDict[v_event]
 
             # Create minipage
-            pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=pLevel, pTitle=hlg.Translate('residences', self.__language), pLabel=False) as vSubLevel:
+            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('residences', self.__language), pLabel=False) as v_sub_level:
                 # Create Tikz drawing with map as background
-#                    vSubLevel.append(pu.NoEscape(r'\begin{tikzpicture}'))
+                # v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
 
                 # Create nodes
-                vScopeOpen = False
-                vDoneList  = []
-                vCounter   = 0
-                for vResidence in vResidenceList:
-                    vCounter = vCounter + 1
+                v_scope_open = False
+                v_done_list = []
+                v_counter = 0
+                for v_residence in v_residence_list:
+                    v_counter = v_counter + 1
 
-                    # Split date  from place
-                    vDate  = vResidence[0]
-                    vPlace = vResidence[1]
+                    # Split date from place
+                    # v_date = v_residence[0]
+                    v_place = v_residence[1]
 
                     # Find place name and coordinates
-                    vName      = '-'
-                    vLatitude  = 0.
-                    vLongitude = 0.
-                    vCode      = ''
-                    if(vCityLabel in vPlace):
-                        vName      = vPlace[vCityLabel][0]
-                        vLatitude  = float(vPlace[vCityLabel][1][0])
-                        vLongitude = float(vPlace[vCityLabel][1][1])
-                        vCode      = vPlace[vCityLabel][2]
-                    elif(vTownLabel in vPlace):
-                        vName      = vPlace[vTownLabel][0]
-                        vLatitude  = float(vPlace[vTownLabel][1][0])
-                        vLongitude = float(vPlace[vTownLabel][1][1])
-                        vCode      = vPlace[vTownLabel][2]
-                    elif(vVillageLabel in vPlace):
-                        vName      = vPlace[vVillageLabel][0]
-                        vLatitude  = float(vPlace[vVillageLabel][1][0])
-                        vLongitude = float(vPlace[vVillageLabel][1][1])
-                        vCode      = vPlace[vVillageLabel][2]
-                    elif(vMunicipalityLabel in vPlace):
-                        vName      = vPlace[vMunicipalityLabel][0]
-                        vLatitude  = float(vPlace[vMunicipalityLabel][1][0])
-                        vLongitude = float(vPlace[vMunicipalityLabel][1][1])
-                        vCode      = vPlace[vMunicipalityLabel][2]
+                    v_name: str = '-'
+                    v_latitude: float = 0.
+                    v_longitude: float = 0.
+                    # v_code: str = ''
+                    if v_city_label in v_place:
+                        v_name = v_place[v_city_label][0]
+                        v_latitude = float(v_place[v_city_label][1][0])
+                        v_longitude = float(v_place[v_city_label][1][1])
+                        # v_code = v_place[v_city_label][2]
+                    elif v_town_label in v_place:
+                        v_name = v_place[v_town_label][0]
+                        v_latitude = float(v_place[v_town_label][1][0])
+                        v_longitude = float(v_place[v_town_label][1][1])
+                        # v_code = v_place[v_town_label][2]
+                    elif v_village_label in v_place:
+                        v_name = v_place[v_village_label][0]
+                        v_latitude = float(v_place[v_village_label][1][0])
+                        v_longitude = float(v_place[v_village_label][1][1])
+                        # v_code = v_place[v_village_label][2]
+                    elif v_municipality_label in v_place:
+                        v_name = v_place[v_municipality_label][0]
+                        v_latitude = float(v_place[v_municipality_label][1][0])
+                        v_longitude = float(v_place[v_municipality_label][1][1])
+                        # v_code = v_place[v_municipality_label][2]
                     else:
-                        print('Warning in hkPersonChapter.__WriteResidenceSection_Map: No valid city/village found in vPlace: ', vPlace)
+                        print('Warning in hkPersonChapter.__WriteResidenceSection_Map: No valid city/village found in v_place: ', v_place)
 
                     # Debug
-#                        print('vName, vLongitude, vLatititude: ', vName, vLongitude, vLatitude)
+                    logging.debug('v_name, v_longitude, v_latititude: %s, %5.3f. %5.3f', v_name, v_longitude, v_latitude)
                     
-                    if(vCountryLabel in vPlace):
-                        vCountry     = vPlace[vCountryLabel][0]
-                        vCountryCode = vPlace[vCountryLabel][2]
+                    if v_country_label in v_place:
+                        v_country = v_place[v_country_label][0]
+                        v_country_code = v_place[v_country_label][2]
 
-                        if(len(vCountryCode)==0):
-                            vCountryCode = vCountry
+                        if len(v_country_code) == 0:
+                            v_country_code = v_country
 
                     # 20220109: Limit number of maps to Netherlands, Western Europe and the World
-                    if(vCountryCode != 'NLD'):
-                        vRegionList = hsf.GetCountryContinentSubregion(vCountryCode)
-                        if(vRegionList[1] == 'Western Europe'):
-                            vCountryCode = 'WEU'
-                        elif(vRegionList[0] == 'Europe'):
-                            vCountryCode = 'EUR'
+                    if v_country_code != 'NLD':
+                        v_region_list = hsf.get_country_continent_subregion(v_country_code)
+                        if v_region_list[1] == 'Western Europe':
+                            v_country_code = 'WEU'
+                        elif v_region_list[0] == 'Europe':
+                            v_country_code = 'EUR'
                         else:
-                            vCountryCode = 'WLD'
+                            v_country_code = 'WLD'
                     
                     # Create path / file name for map
-                    vPath = self.__DocumentPath + r'Figures'
-                    vFilePath = hsf.CreateMap(vPath, vCountryCode)
+                    v_path = self.__document_path + r'Figures'
+                    v_file_path = hsf.create_map(v_path, v_country_code)
 
-                    if(vCountryCode not in vDoneList):
-                        vDoneList.append(vCountryCode)
+                    if v_country_code not in v_done_list:
+                        v_done_list.append(v_country_code)
 
                         # Check if scope is still open
-                        if(vScopeOpen):
-                            vSubLevel.append(pu.NoEscape(r'\end{scope}'))
-                            vSubLevel.append(pu.NoEscape(r'\end{tikzpicture}')) # 20220109
-                            vScopeOpen = False
+                        if v_scope_open:
+                            v_sub_level.append(pu.NoEscape(r'\end{scope}'))
+                            v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))  # 20220109
+                            v_scope_open = False
 
                         # Create node for background map
-                        vSubLevel.append(pu.NoEscape(r'\begin{tikzpicture}')) # 20220109
-                        vString = r'\node [inner sep=0] (' + vCountryCode + r') {\includegraphics[width=10cm]{' + vFilePath + r'}};'
-                        vSubLevel.append(pu.NoEscape(vString))
+                        v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))  # 20220109
+                        v_string = r'\node [inner sep=0] (' + v_country_code + r') {\includegraphics[width=10cm]{' + v_file_path + r'}};'
+                        v_sub_level.append(pu.NoEscape(v_string))
 
                         # Create new scope with lower left corner (0,0) and upper right corner (1,1)
-                        vString = r'\begin{scope}[x={(' + vCountryCode + r'.south east)},y={(' + vCountryCode + r'.north west)}]'
-                        vSubLevel.append(pu.NoEscape(vString))
-                        vScopeOpen = True
+                        v_string = r'\begin{scope}[x={(' + v_country_code + r'.south east)},y={(' + v_country_code + r'.north west)}]'
+                        v_sub_level.append(pu.NoEscape(v_string))
+                        v_scope_open = True
 
                     # width and height in degrees
-                    vCoordinates = hsf.GetCountryMinMaxCoordinates(vCountryCode)
-                    vMap_lon0 = vCoordinates[0]
-                    vMap_lat0 = vCoordinates[1]
-                    vMap_lon1 = vCoordinates[2]
-                    vMap_lat1 = vCoordinates[3]
+                    v_coordinates = hsf.get_country_min_max_coordinates(v_country_code)
+                    v_map_lon0 = v_coordinates[0]
+                    v_map_lat0 = v_coordinates[1]
+                    v_map_lon1 = v_coordinates[2]
+                    v_map_lat1 = v_coordinates[3]
 
                     # Debug
-#                        print('vMap_lon0, vMap_lat0, vMap_lon1, vMap_lat1: ', vMap_lon0, vMap_lat0, vMap_lon1, vMap_lat1)
+                    logging.debug('v_map_lon0, v_map_lat0, v_map_lon1, v_map_lat1: %5.3f, %5.3f, %5.3f, %5.3f', v_map_lon0, v_map_lat0, v_map_lon1, v_map_lat1)
 
                     # width and height in pixels
-                    vMap_width = 0
-                    vMap_height = 0
-                    with Image.open(vFilePath, mode='r') as vImage:
-                        vMap_width, vMap_height = vImage.size
+                    v_map_width = 0
+                    v_map_height = 0
+                    with Image.open(v_file_path, mode='r') as vImage:
+                        v_map_width, v_map_height = vImage.size
 
                     # Debug
-#                        print('vMap_width, vMap_height: ', vMap_width, vMap_height)
+                    logging.debug('v_map_width, v_map_height: %d, %d', v_map_width, v_map_height)
 
                     # Convert to image coordinates
-                    vX = (vLongitude - vMap_lon0)/(vMap_lon1 - vMap_lon0) 
-                    vY = (vLatitude - vMap_lat0)/(vMap_lat1 - vMap_lat0) 
-                    if(vX<0 or vY<0):
-                        print('Warning in hkPersonChapter.__WriteResidenceSection_Map: Place off map. vX, vY: ', vX, vY)
+                    v_x = (v_longitude - v_map_lon0)/(v_map_lon1 - v_map_lon0)
+                    v_y = (v_latitude - v_map_lat0)/(v_map_lat1 - v_map_lat0)
+                    if v_x < 0 or v_y < 0:
+                        logging.warning('Place off map. v_x, v_y: %5.3f, %5.3f', v_x, v_y)
 
-                    vString = r'\node (p' + str(vCounter) + r') at (' + str(vX) + r', ' + str(vY) +r') [point] {};'
-                    vSubLevel.append(pu.NoEscape(vString))
-
+                    v_string = r'\node (p' + str(v_counter) + r') at (' + str(v_x) + r', ' + str(v_y) + r') [point] {};'
+                    v_sub_level.append(pu.NoEscape(v_string))
 
                 # Create graph
-#                    vSubLevel.append(pu.NoEscape(r'\graph [use existing nodes] {'))
-#
-#                    for vCount in range(2, vCounter + 1):
-#                        vSubLevel.append(pu.NoEscape(r'p' + str(vCount-1) + ' -> p' + str(vCount) + r';'))
-#
-#                    vSubLevel.append(pu.NoEscape(r'};'))
-                if(vScopeOpen):
-                    vSubLevel.append(pu.NoEscape(r'\end{scope}'))
-                    vSubLevel.append(pu.NoEscape(r'\end{tikzpicture}'))
-                    vScopeOpen = False
+                # v_sub_level.append(pu.NoEscape(r'\graph [use existing nodes] {'))
+                #
+                # for vCount in range(2, v_counter + 1):
+                #     v_sub_level.append(pu.NoEscape(r'p' + str(vCount-1) + ' -> p' + str(vCount) + r';'))
+                #
+                # v_sub_level.append(pu.NoEscape(r'};'))
+                if v_scope_open:
+                    v_sub_level.append(pu.NoEscape(r'\end{scope}'))
+                    v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
+                    v_scope_open = False
 
-                vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __WriteResidenceSection_Timeline(self, pLevel):
+    def __write_residence_section_timeline(self, p_level):
         """
         Create a section with a list of all residences in a graphical timeline format
         """
 
         # Create section with Residential Information
-        vResidentialEvents = vResidentialEventsSet.intersection(self.__PersonEventInfoDict.keys())
-        if(vResidentialEvents):
-            vResidenceList = []
-            for vEvent in vResidentialEvents:
-                vResidenceList = vResidenceList + self.__PersonEventInfoDict[vEvent]
+        v_residential_events = c_residential_events_set.intersection(self.__PersonEventInfoDict.keys())
+        if v_residential_events:
+            v_residence_list = []
+            for v_event in v_residential_events:
+                v_residence_list = v_residence_list + self.__PersonEventInfoDict[v_event]
 
-            vDateFunc = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
-            vResidenceList.sort(key=vDateFunc)
+            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
+            v_residence_list.sort(key=f_date_func)
 
-            pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=pLevel, pTitle=hlg.Translate('residences', self.__language), pLabel=False) as vSubLevel:
+            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('residences', self.__language), pLabel=False) as v_sub_level:
                 # Create nodes
-                vSubLevel.append(pu.NoEscape(r'\begin{tikzpicture}'))
-                vSubLevel.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
+                v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
+                v_sub_level.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
 
-                vCounter = 0
-                for vResidence in vResidenceList:
-                    vCounter = vCounter + 1
+                v_counter = 0
+                for v_residence in v_residence_list:
+                    v_counter = v_counter + 1
 
-                    vStartDate = hsf.GetStartDate(vResidence[0])
-                    vAddress   = hsf.StreetToText(vResidence[1])
+                    v_start_date = hsf.get_start_date(v_residence[0])
+                    v_address = hsf.street_to_text(v_residence[1])
 
-                    vString = r'\node (p' + str(vCounter) + r') [date] {\small ' + vStartDate + r'}; & '
-                    vString = vString + r'\node [text width=10cm] {\small ' + pu.escape_latex(vAddress) + r'};\\'
-                    vSubLevel.append(pu.NoEscape(vString))
+                    v_string = r'\node (p' + str(v_counter) + r') [date] {\small ' + v_start_date + r'}; & '
+                    v_string = v_string + r'\node [text width=10cm] {\small ' + pu.escape_latex(v_address) + r'};\\'
+                    v_sub_level.append(pu.NoEscape(v_string))
 
-                vSubLevel.append(pu.NoEscape(r'};'))
+                v_sub_level.append(pu.NoEscape(r'};'))
 
                 # Create graph
-                vSubLevel.append(pu.NoEscape(r'\graph [use existing nodes] {'))
+                v_sub_level.append(pu.NoEscape(r'\graph [use existing nodes] {'))
 
-                for vCount in range(2, vCounter + 1):
-                    vSubLevel.append(pu.NoEscape(r'p' + str(vCount-1) + ' -> p' + str(vCount) + r';'))
+                for v_count in range(2, v_counter + 1):
+                    v_sub_level.append(pu.NoEscape(r'p' + str(v_count-1) + ' -> p' + str(v_count) + r';'))
 
-                vSubLevel.append(pu.NoEscape(r'};'))
-                vSubLevel.append(pu.NoEscape(r'\end{tikzpicture}'))
-                vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+                v_sub_level.append(pu.NoEscape(r'};'))
+                v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
+                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __WriteResidenceSection_Table(self, pLevel):
+    def __write_residence_section_table(self, p_level):
         """
         Create a section with a list of all residences in a table format
         """
 
         # Create section with Residential Information
-        vResidentialEvents = vResidentialEventsSet.intersection(self.__PersonEventInfoDict.keys())
-        if(vResidentialEvents):
-            vResidenceList = []
-            for vEvent in vResidentialEvents:
-                vResidenceList = vResidenceList + self.__PersonEventInfoDict[vEvent]
+        v_residential_events = c_residential_events_set.intersection(self.__PersonEventInfoDict.keys())
+        if v_residential_events:
+            v_residence_list = []
+            for vEvent in v_residential_events:
+                v_residence_list = v_residence_list + self.__PersonEventInfoDict[vEvent]
 
-            vDateFunc = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
-            vResidenceList.sort(key=vDateFunc)
+            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
+            v_residence_list.sort(key=f_date_func)
 
-            pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=pLevel, pTitle=hlg.Translate('residences', self.__language), pLabel=False) as vSubLevel:
-                with vSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as vTable:
+            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('residences', self.__language), pLabel=False) as v_sub_level:
+                with v_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
                     # Header row
-                    vTable.add_row([pu.bold(hlg.Translate('date', self.__language)), pu.bold(hlg.Translate('residence', self.__language))])
-                    vTable.add_hline()
-                    vTable.end_table_header()
+                    v_table.add_row([pu.bold(hlg.translate('date', self.__language)), pu.bold(hlg.translate('residence', self.__language))])
+                    v_table.add_hline()
+                    v_table.end_table_header()
 
-                    for vResidence in vResidenceList:
-                        vDate    = hsf.DateToText(vResidence[0])
-                        vAddress = hsf.StreetToText(vResidence[1])
-                        vTable.add_row([vDate, pu.escape_latex(vAddress)])
+                    for v_residence in v_residence_list:
+                        v_date = hsf.date_to_text(v_residence[0])
+                        v_address = hsf.street_to_text(v_residence[1])
+                        v_table.add_row([v_date, pu.escape_latex(v_address)])
 
-                vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __WritePhotoSection(self, pLevel):
+    def __write_photo_section(self, p_level):
         """
         Create section with photos
         """
 
-        vFilteredPhotoList = self.__GetFilteredPhotoList()
-        if(len(vFilteredPhotoList) > 0):
+        v_filtered_photo_list = self.__get_filtered_photo_list()
+        if len(v_filtered_photo_list) > 0:
             # Allocate variables
-            vMediaPath_1  = None
-            vMediaTitle_1 = None
-            vMediaPath_2  = None
-            vMediaTitle_2 = None
+            v_media_path_1 = None
+            v_media_title_1 = None
+            v_media_rect_1 = None
+            v_media_path_2 = None
+            v_media_title_2 = None
+            v_media_rect_2 = None
 
-            pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=pLevel, pTitle=hlg.Translate('photos', self.__language), pLabel=False) as vSubLevel:
+            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('photos', self.__language), pLabel=False) as v_sub_level:
                 #
                 # 1. All photos with notes
                 #
-                vTempList = vFilteredPhotoList.copy() # Use temporary list, so items can be removed while iterating
-                for vMediaHandle in vTempList:
-                    vMediaData = GetMediaData(vMediaHandle, self.__Cursor)
-                    vMediaPath = vMediaData[2]
-                    vMediaTitle = vMediaData[4]
-                    vMediaNoteHandles = vMediaData[8]
-                    if(len(vMediaNoteHandles) > 0):
+                v_position = 'o'
+                v_temp_list = v_filtered_photo_list.copy()  # Use temporary list, so items can be removed while iterating
+                for vItem in v_temp_list:
+                    v_media_handle = vItem[0]
+                    v_media_rect = vItem[1]
+
+                    v_media_data = get_media_data(v_media_handle, self.__cursor)
+                    v_media_path = v_media_data[2]
+                    v_media_title = v_media_data[4]
+                    v_media_note_handles = v_media_data[8]
+                    if len(v_media_note_handles) > 0:
                         # Picture contains notes, then special treatment
-                        self.__PictureWithNote(vSubLevel, vMediaPath, vMediaTitle, vMediaNoteHandles)
+                        v_position = 'o' if v_position == 'i' else 'i'  # Alternate position of image / text
+                        self.__picture_with_note(v_sub_level, v_media_path, v_media_title, v_media_note_handles, v_media_rect, v_position)
 
                         # Done, remove from list
-                        vFilteredPhotoList.remove(vMediaHandle)
+                        v_filtered_photo_list.remove(vItem)
 
                 #
                 # 2. Remaining photos, side by side
                 #
-                vCounter = 0
+                v_counter = 0
 
-                vTempList = vFilteredPhotoList.copy() # Use temporary list, so items can be removed while iterating
-                for vMediaHandle in vTempList:
-                    vMediaData = GetMediaData(vMediaHandle, self.__Cursor)
-                    vCounter = vCounter + 1
-                    if (vCounter % 2 == 1):
-                        vMediaPath_1  = vMediaData[2]
-                        vMediaTitle_1 = vMediaData[4]
+                v_temp_list = v_filtered_photo_list.copy()  # Use temporary list, so items can be removed while iterating
+                for vItem in v_temp_list:
+                    v_media_handle = vItem[0]
+                    v_media_rect = vItem[1]
+
+                    v_media_data = get_media_data(v_media_handle, self.__cursor)
+                    v_counter = v_counter + 1
+                    if v_counter % 2 == 1:
+                        v_media_path_1 = v_media_data[2]
+                        v_media_title_1 = v_media_data[4]
+                        v_media_rect_1 = v_media_rect
 
                         # Remove media_1 from list
-                        vFilteredPhotoList.remove(vMediaData[0])
+                        v_filtered_photo_list.remove(vItem)
                     else:
-                        vMediaPath_2  = vMediaData[2]
-                        vMediaTitle_2 = vMediaData[4]
-                        hsf.PictureSideBySideEqualHeight(vSubLevel, vMediaPath_1, vMediaPath_2, vMediaTitle_1, vMediaTitle_2)
+                        v_media_path_2 = v_media_data[2]
+                        v_media_title_2 = v_media_data[4]
+                        v_media_rect_2 = v_media_rect
+
+                        hsf.picture_side_by_side_equal_height(v_sub_level, v_media_path_1, v_media_path_2, v_media_title_1, v_media_title_2)
 
                         # Remove media_2 from list
-                        vFilteredPhotoList.remove(vMediaData[0])
+                        v_filtered_photo_list.remove(vItem)
 
                         # Reset variables
-                        vMediaPath_1  = None
-                        vMediaTitle_1 = None
+                        v_media_path_1 = None
+                        v_media_title_1 = None
 
-                        vMediaPath_2  = None
-                        vMediaTitle_2 = None
+                        v_media_path_2 = None
+                        v_media_title_2 = None
 
                 #
                 # 3. In case temp list had an odd length, one document might be remaining
                 #
-                if(vMediaPath_1 is not None):
-                    # One picture remaining
-                    with vSubLevel.create(hlt.Figure(position='htpb')) as vPhoto:
-                        vPhoto.add_image(pl.NoEscape(vMediaPath_1)) # TODO: Zoom in on vMediaRect
-                        vPhoto.add_caption(pu.escape_latex(vMediaTitle_1))
+                if v_media_path_1 is not None:
+                    # Latex Debug
+                    v_sub_level.append(pl.NoEscape("% hkPersonChapter.Person.__WritePhotoSection"))
 
-                vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+                    # 20230313: Start a minipage
+                    p_level.append(pl.NoEscape(r'\begin{minipage}{\textwidth}'))
 
-    def __WriteDocumentSection(self, pLevel):
+                    if v_media_rect_1 is not None:
+                        # Set focus area 20220328
+                        v_left_1 = '{' + str(v_media_rect_1[0]/100) + r'\wd1}'
+                        v_right_1 = '{' + str(1-v_media_rect_1[2]/100) + r'\wd1}'
+                        v_top_1 = '{' + str(v_media_rect_1[1]/100) + r'\ht1}'
+                        v_bottom_1 = '{' + str(1-v_media_rect[3]/100) + r'\ht1}'
+
+                        v_trim = v_left_1 + ' ' + v_bottom_1 + ' ' + v_right_1 + ' ' + v_top_1
+                        v_sub_level.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + v_media_path_1 + r'"}}'))
+                        v_sub_level.append(pl.NoEscape(r'\includegraphics[trim=' + v_trim + ', clip]{"' + v_media_path_1 + r'"}'))
+                        v_sub_level.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(v_media_title_1) + '}'))
+
+                        # v_sub_level.append(pl.NoEscape(r'\includegraphics[trim=' + v_trim + ', clip, scale=0.1]{"' + v_media_path_1 + r'"}}'))
+                        # v_sub_level.append(pl.NoEscape(r'\caption{' + pu.escape_latex(v_media_title_1) + '}'))
+                    else:
+                        # 20230313
+                        v_sub_level.append(pl.NoEscape(r'\includegraphics[width=\textwidth]{"' + v_media_path_1 + r'"}'))
+                        v_sub_level.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(v_media_title_1) + '}'))
+
+                        # with v_sub_level.create(hlt.Figure(position='htpb')) as vPhoto:
+                        #     vPhoto.add_image(pl.NoEscape(v_media_path_1))
+                        #     vPhoto.add_caption(pu.escape_latex(v_media_title_1))
+
+                    # 20230313: End the minipage
+                    p_level.append(pl.NoEscape(r'\end{minipage}'))
+
+                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+
+    def __write_document_section(self, p_level):
         """
         Create section with document scans
         """
 
-        vFilteredDocumentList = self.__GetFilteredDocumentList()
-        if(len(vFilteredDocumentList) > 0):
+        v_filtered_document_list = self.__get_filtered_document_list()
+        if len(v_filtered_document_list) > 0:
             # Allocate variables
-            vMediaPath_1  = None
-            vMediaTitle_1 = None
-            vMediaRect_1  = None
-            vMediaPath_2  = None
-            vMediaTitle_2 = None
-            vMediaRect_2  = None
+            v_media_path_1 = None
+            v_media_title_1 = None
+            v_media_rect_1 = None
+            v_media_path_2 = None
+            v_media_title_2 = None
+            v_media_rect_2 = None
 
             # Debug
-            #print("hkPersonChapter:__WriteDocumentSection - vFilteredDocumentList: ", vFilteredDocumentList)
+            logging.debug("v_filtered_document_list: ".join(map(str, v_filtered_document_list)))
 
-            pLevel.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=pLevel, pTitle=hlg.Translate('documents', self.__language), pLabel=False) as vSubLevel:
+            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('documents', self.__language), pLabel=False) as v_sub_level:
                 #
                 # 1. All documents with notes
                 #
-                vTempList = vFilteredDocumentList.copy() # Use temporary list, so items can be removed while iterating
-                for vItem in vTempList:
-                    vMediaHandle = vItem[0]
-                    vMediaRect   = vItem[1]
+                v_position = 'o'
+                v_temp_list = v_filtered_document_list.copy()  # Use temporary list, so items can be removed while iterating
+                for v_item in v_temp_list:
+                    v_media_handle = v_item[0]
+                    v_media_rect = v_item[1]
 
-                    vMediaData        = GetMediaData(vMediaHandle, self.__Cursor)
-                    vMediaPath        = vMediaData[2]
-                    vMediaTitle       = vMediaData[4]
-                    vMediaNoteHandles = self.__GetFilteredNoteList(vMediaData[8])
+                    v_media_data = get_media_data(v_media_handle, self.__cursor)
+                    v_media_path = v_media_data[2]
+                    v_media_title = v_media_data[4]
+                    v_media_note_handles = self.__get_filtered_note_list(v_media_data[8])
 
                     # TODO: dit gaat mis als het om een note met tag 'source' gaat
-                    if(len(vMediaNoteHandles) > 0):
+                    if len(v_media_note_handles) > 0:
                         # Document contains notes, then treatment
-                        self.__DocumentWithNote(vSubLevel, vMediaPath, vMediaTitle, vMediaNoteHandles, vMediaRect) #20220322: Added vMediaRect
+                        v_position = 'o' if v_position == 'i' else 'i'  # Alternate position of image / text
+                        self.__document_with_note(v_sub_level, v_media_path, v_media_title, v_media_note_handles, v_media_rect, v_position)  # 20220322: Added v_media_rect
 
                         # Done, remove from list
-                        vFilteredDocumentList.remove(vItem)
+                        v_filtered_document_list.remove(v_item)
 
                 #
                 # 2. Remaining documents, side by side
                 #
-                vCounter = 0
+                v_counter = 0
 
-                vTempList = vFilteredDocumentList.copy() # Use temporary list, so items can be removed while iterating
-                for vItem in vTempList:
-                    vMediaHandle = vItem[0]
-                    vMediaRect   = vItem[1]
+                v_temp_list = v_filtered_document_list.copy()  # Use temporary list, so items can be removed while iterating
+                for v_item in v_temp_list:
+                    v_media_handle = v_item[0]
+                    v_media_rect = v_item[1]
 
-                    vMediaData = GetMediaData(vMediaHandle, self.__Cursor)
+                    v_media_data = get_media_data(v_media_handle, self.__cursor)
 
-                    vCounter = vCounter + 1
-                    if (vCounter % 2 == 1):
-                        vMediaPath_1  = vMediaData[2]
-                        vMediaTitle_1 = vMediaData[4]
-                        vMediaRect_1  = vMediaRect
+                    v_counter = v_counter + 1
+                    if v_counter % 2 == 1:
+                        v_media_path_1 = v_media_data[2]
+                        v_media_title_1 = v_media_data[4]
+                        v_media_rect_1 = v_media_rect
 
                         # Remove media_1 from list
-                        vFilteredDocumentList.remove(vItem)
+                        v_filtered_document_list.remove(v_item)
                     else:
-                        vMediaPath_2  = vMediaData[2]
-                        vMediaTitle_2 = vMediaData[4]
-                        vMediaRect_2 = vMediaRect
+                        v_media_path_2 = v_media_data[2]
+                        v_media_title_2 = v_media_data[4]
+                        v_media_rect_2 = v_media_rect
 
-                        hsf.PictureSideBySideEqualHeight(vSubLevel, vMediaPath_1, vMediaPath_2, vMediaTitle_1, vMediaTitle_2, vMediaRect_1, vMediaRect_2) # 20220322: Added vMediaRect_1, vMediaRect_2
+                        hsf.picture_side_by_side_equal_height(v_sub_level, v_media_path_1, v_media_path_2, v_media_title_1, v_media_title_2, v_media_rect_1, v_media_rect_2)
 
                         # Remove media_2 from list
-                        vFilteredDocumentList.remove(vItem)
+                        v_filtered_document_list.remove(v_item)
 
                         # Reset variables
-                        vMediaPath_1  = None
-                        vMediaTitle_1 = None
-                        vMediaRect_1  = None
+                        v_media_path_1 = None
+                        v_media_title_1 = None
+                        v_media_rect_1 = None
 
-                        vMediaPath_2  = None
-                        vMediaTitle_2 = None
-                        vMediaRect_2  = None
+                        v_media_path_2 = None
+                        v_media_title_2 = None
+                        v_media_rect_2 = None
 
                 #
                 # 3. In case temp list had an odd length, one document might be remaining
                 #
-                if(vMediaPath_1 is not None):
-                    # One picture remaining
-                    with vSubLevel.create(hlt.Figure(position='htpb')) as vPhoto:
-                        vPhoto.add_image(pl.NoEscape(vMediaPath_1)) # TODO: Zoom in on vMediaRect
-                        vPhoto.add_caption(pu.escape_latex(vMediaTitle_1))
+                if v_media_path_1 is not None:
+                    # Latex Debug
+                    v_sub_level.append(pl.NoEscape("% hkPersonChapter.Person.__WriteDocumentSection"))
 
-                vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+                    # 20230313: Start a minipage
+                    p_level.append(pl.NoEscape(r'\begin{minipage}{\textwidth}'))
 
-    def WritePersonChapter(self):
+                    if v_media_rect_1 is not None:
+                        # 20220328: Set focus area
+                        v_left_1 = '{' + str(v_media_rect_1[0]/100) + r'\wd1}'
+                        v_right_1 = '{' + str(1-v_media_rect_1[2]/100) + r'\wd1}'
+                        v_top_1 = '{' + str(v_media_rect_1[1]/100) + r'\ht1}'
+                        v_bottom_1 = '{' + str(1-v_media_rect[3]/100) + r'\ht1}'
+
+                        v_trim = v_left_1 + ' ' + v_bottom_1 + ' ' + v_right_1 + ' ' + v_top_1
+                        v_sub_level.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + v_media_path_1 + r'"}}'))
+                        v_sub_level.append(pl.NoEscape(r'\includegraphics[width=\textwidth, trim=' + v_trim + ', clip]{"' + v_media_path_1 + r'"}'))
+                        v_sub_level.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(v_media_title_1) + '}'))
+
+                        # v_sub_level.append(pl.NoEscape(r'\includegraphics[trim=' + v_trim + ', clip, scale=0.1]{"' + v_media_path_1 + r'"}}'))
+                        # v_sub_level.append(pl.NoEscape(r'\caption{' + pu.escape_latex(v_media_title_1) + '}'))
+                    else:
+                        # 20230313
+                        v_sub_level.append(pl.NoEscape(r'\includegraphics[width=\textwidth]{"' + v_media_path_1 + r'"}'))
+                        v_sub_level.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(v_media_title_1) + '}'))
+
+#                        with v_sub_level.create(hlt.Figure(position='htpb')) as vPhoto:
+#                            vPhoto.add_image(pl.NoEscape(v_media_path_1))
+#                            vPhoto.add_caption(pu.escape_latex(v_media_title_1))
+
+                    # 20230313: End the minipage
+                    p_level.append(pl.NoEscape(r'\end{minipage}'))
+
+                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+
+    def write_person_chapter(self):
         """
         Writes the person to a separate chapter in a subdocument
         """
 
         # Display progress
-        print("Writing a chapter about: ", self.GivenNames, self.Surname)
+        print("Writing a chapter about: ", self.given_names, self.surname)
 
         # Create a new chapter for the active person
-        vChapter = hlt.Chapter(title=self.GivenNames + ' ' + self.Surname, label=self.GrampsId)
+        v_chapter = hlt.Chapter(title=self.given_names + ' ' + self.surname, label=self.gramps_id)
 
-        self.__WriteLifeSketchSection(vChapter)
-        self.__WriteVitalInformationSection(vChapter)
-        #self.__WriteFamilySection(vChapter)
-        self.__WriteParentalSection_Graph(vChapter)
-        self.__WritePartnerSections_Graph(vChapter)
+        self.__write_life_sketch_section(v_chapter)
+        self.__write_vital_information_section(v_chapter)
+        # self.__WriteFamilySection(v_chapter)
+        self.__write_parental_section_graph(v_chapter)
+        self.__write_partner_sections_graph(v_chapter)
 
-        self.__WriteEducationSection(vChapter)
-        self.__WriteProfessionSection(vChapter)
-        self.__WriteResidenceSection_Timeline(vChapter)
-        #self.__WriteResidenceSection_Map(vChapter)
-        self.__WritePhotoSection(vChapter)
-        self.__WriteDocumentSection(vChapter)
+        self.__write_education_section(v_chapter)
+        self.__write_profession_section(v_chapter)
+        self.__write_residence_section_timeline(v_chapter)
+        # self.__WriteResidenceSection_Map(v_chapter)
+        self.__write_photo_section(v_chapter)
+        self.__write_document_section(v_chapter)
 
-        vChapter.generate_tex(filepath=self.DocumentPath + self.GrampsId)
+        v_chapter.generate_tex(filepath=self.document_path + self.gramps_id)

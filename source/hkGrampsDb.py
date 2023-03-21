@@ -1,1062 +1,1016 @@
-import sqlite3
+import calendar
+# import sqlite3
+import logging
 import pickle
 import pathlib
+# from typing import List, Any
 
 # Niet zo chique hier...
 
 # Constants
-vGrampsPersonTable = 'person'
-vGrampsFamilyTable = 'family'
-vGrampsEventTable = 'event'
-vGrampsMediaTable = 'media'
+c_gramps_person_table: str = 'person'
+c_gramps_family_table: str = 'family'
+c_gramps_event_table: str = 'event'
+c_gramps_media_table: str = 'media'
 
 # https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/eventtype.py
-vEventUnknown = -1
-vEventCustom = 0
-vEventMarriage = 1
-vEventMarriageSettlement = 2
-vEventMarriageLicense = 3
-vEventMarriageContract = 4
-vEventMarriageBanns = 5
-vEventEngagement = 6
-vEventDivorce = 7
-vEventDivorceFiling = 8
-vEventAnnulment = 9
-vEventAlternateMarriage = 10
-vEventAdopted = 11
-vEventBirth = 12
-vEventDeath = 13
-vEventAdultChristening = 14
-vEventBaptism = 15
-vEventBarMitzvah = 16
-vEventBasMitzvah = 17
-vEventBlessing = 18
-vEventBurial = 19
-vEventCauseOfDeath = 20
-vEventCensus = 21
-vEventChristening = 22
-vEventConfirmation = 23
-vEventCremation = 24
-vEventDegree = 25
-vEventEducation = 26
-vEventElected = 27
-vEventEmigration = 28
-vEventFirstCommunion = 29
-vEventImmigration = 30
-vEventGraduation = 31
-vEventMedicalInformation = 32
-vEventMilitaryService = 33
-vEventNaturalization = 34
-vEventNobilityTitle = 35
-vEventNumberOfMarriages = 36
-vEventOccupation = 37
-vEventOrdination = 38
-vEventProbate = 39
-vEventProperty = 40
-vEventReligion = 41
-vEventResidence = 42
-vEventRetirement = 43
-vEventWill = 44
+c_event_unknown: int = -1
+c_event_custom: int = 0
+c_event_marriage: int = 1
+c_event_marriage_settlement: int = 2
+c_event_marriage_license: int = 3
+c_event_marriage_contract: int = 4
+c_event_marriage_banns: int = 5
+c_event_engagement: int = 6
+c_event_divorce: int = 7
+c_event_divorce_filing: int = 8
+c_event_annulment: int = 9
+c_event_alternate_marriage: int = 10
+c_event_adopted: int = 11
+c_event_birth: int = 12
+c_event_death: int = 13
+c_event_adult_christening: int = 14
+c_event_baptism: int = 15
+c_event_bar_mitzvah: int = 16
+c_event_bas_mitzvah: int = 17
+c_event_blessing: int = 18
+c_event_burial: int = 19
+c_event_cause_of_death: int = 20
+c_event_census: int = 21
+c_event_christening: int = 22
+c_event_confirmation: int = 23
+c_event_cremation: int = 24
+c_event_degree: int = 25
+c_event_education: int = 26
+c_event_elected: int = 27
+c_event_emigration: int = 28
+c_event_first_communion: int = 29
+c_event_immigration: int = 30
+c_event_graduation: int = 31
+c_event_medical_information: int = 32
+c_event_military_service: int = 33
+c_event_naturalization: int = 34
+c_event_nobility_title: int = 35
+c_event_number_of_marriages: int = 36
+c_event_occupation: int = 37
+c_event_ordination: int = 38
+c_event_probate: int = 39
+c_event_property: int = 40
+c_event_religion: int = 41
+c_event_residence: int = 42
+c_event_retirement: int = 43
+c_event_will: int = 44
 
-vVitalEventsSet = {
-    vEventBirth,
-    vEventBaptism,
-    vEventChristening,
-    vEventAdopted,
-    vEventFirstCommunion,
-    vEventBarMitzvah,
-    vEventBasMitzvah,
-    vEventBlessing,
-    vEventAdultChristening,
-    vEventConfirmation,
-    vEventElected,
-    vEventEmigration,
-    vEventImmigration,
-    vEventNaturalization,
-    vEventNobilityTitle,
-    vEventDeath,
-    vEventBurial,
-    vEventCremation,
-    vEventWill}
+c_vital_events_set = {
+    c_event_birth,
+    c_event_baptism,
+    c_event_christening,
+    c_event_adopted,
+    c_event_first_communion,
+    c_event_bar_mitzvah,
+    c_event_bas_mitzvah,
+    c_event_blessing,
+    c_event_adult_christening,
+    c_event_confirmation,
+    c_event_elected,
+    c_event_emigration,
+    c_event_immigration,
+    c_event_naturalization,
+    c_event_nobility_title,
+    c_event_death,
+    c_event_burial,
+    c_event_cremation,
+    c_event_will}
 
-vFamilyEventsSet = {
-    vEventMarriage,
-    vEventMarriageSettlement,
-    vEventMarriageLicense,
-    vEventMarriageContract,
-    vEventMarriageBanns,
-    vEventEngagement,
-    vEventDivorce,
-    vEventDivorceFiling,
-    vEventAnnulment,
-    vEventAlternateMarriage}
+c_family_events_set = {
+    c_event_marriage,
+    c_event_marriage_settlement,
+    c_event_marriage_license,
+    c_event_marriage_contract,
+    c_event_marriage_banns,
+    c_event_engagement,
+    c_event_divorce,
+    c_event_divorce_filing,
+    c_event_annulment,
+    c_event_alternate_marriage}
 
-vEducationEventsSet = {
-    vEventDegree, 
-    vEventEducation, 
-    vEventGraduation}
+c_education_events_set = {
+    c_event_degree,
+    c_event_education,
+    c_event_graduation}
 
-vProfessionalEventsSet = {
-    vEventOccupation}  # , vEventRetirement}
+c_professional_events_set = {
+    c_event_occupation}  # , c_event_retirement}
 
-vResidentialEventsSet = {
-    vEventProperty, 
-    vEventResidence}
+c_residential_events_set = {
+    c_event_property,
+    c_event_residence}
 
-vEventTypeDict = {
-    vEventUnknown: "Unknown",
-    vEventCustom: "Custom",
-    vEventMarriage: "Marriage",
-    vEventMarriageSettlement: "Marriage Settlement",
-    vEventMarriageLicense: "Marriage License",
-    vEventMarriageContract: "Marriage Contract",
-    vEventMarriageBanns: "Marriage Banns",
-    vEventEngagement: "Engagement",
-    vEventDivorce: "Divorce",
-    vEventDivorceFiling: "Divorce Filing",
-    vEventAnnulment: "Annulment",
-    vEventAlternateMarriage: "Alternate Marriage",
-    vEventAdopted: "Adopted",
-    vEventBirth: "Birth",
-    vEventDeath: "Death",
-    vEventAdultChristening: "Adult Christening",
-    vEventBaptism: "Baptism",
-    vEventBarMitzvah: "Bar Mitzvah",
-    vEventBasMitzvah: "Bas Mitzvah",
-    vEventBlessing: "Blessing",
-    vEventBurial: "Burial",
-    vEventCauseOfDeath: "Cause Of Death",
-    vEventCensus: "Census",
-    vEventChristening: "Christening",
-    vEventConfirmation: "Confirmation",
-    vEventCremation: "Cremation",
-    vEventDegree: "Degree",
-    vEventEducation: "Education",
-    vEventElected: "Elected",
-    vEventEmigration: "Emigration",
-    vEventFirstCommunion: "First Communion",
-    vEventImmigration: "Immigration",
-    vEventGraduation: "Graduation",
-    vEventMedicalInformation: "Medical Information",
-    vEventMilitaryService: "Military Service",
-    vEventNaturalization: "Naturalization",
-    vEventNobilityTitle: "Nobility Title",
-    vEventNumberOfMarriages: "Number of Marriages",
-    vEventOccupation: "Occupation",
-    vEventOrdination: "Ordination",
-    vEventProbate: "Probate",
-    vEventProperty: "Property",
-    vEventReligion: "Religion",
-    vEventResidence: "Residence",
-    vEventRetirement: "Retirement",
-    vEventWill: "Will"
+c_event_type_dict = {
+    c_event_unknown: "Unknown",
+    c_event_custom: "Custom",
+    c_event_marriage: "Marriage",
+    c_event_marriage_settlement: "Marriage Settlement",
+    c_event_marriage_license: "Marriage License",
+    c_event_marriage_contract: "Marriage Contract",
+    c_event_marriage_banns: "Marriage Banns",
+    c_event_engagement: "Engagement",
+    c_event_divorce: "Divorce",
+    c_event_divorce_filing: "Divorce Filing",
+    c_event_annulment: "Annulment",
+    c_event_alternate_marriage: "Alternate Marriage",
+    c_event_adopted: "Adopted",
+    c_event_birth: "Birth",
+    c_event_death: "Death",
+    c_event_adult_christening: "Adult Christening",
+    c_event_baptism: "Baptism",
+    c_event_bar_mitzvah: "Bar Mitzvah",
+    c_event_bas_mitzvah: "Bas Mitzvah",
+    c_event_blessing: "Blessing",
+    c_event_burial: "Burial",
+    c_event_cause_of_death: "Cause Of Death",
+    c_event_census: "Census",
+    c_event_christening: "Christening",
+    c_event_confirmation: "Confirmation",
+    c_event_cremation: "Cremation",
+    c_event_degree: "Degree",
+    c_event_education: "Education",
+    c_event_elected: "Elected",
+    c_event_emigration: "Emigration",
+    c_event_first_communion: "First Communion",
+    c_event_immigration: "Immigration",
+    c_event_graduation: "Graduation",
+    c_event_medical_information: "Medical Information",
+    c_event_military_service: "Military Service",
+    c_event_naturalization: "Naturalization",
+    c_event_nobility_title: "Nobility Title",
+    c_event_number_of_marriages: "Number of Marriages",
+    c_event_occupation: "Occupation",
+    c_event_ordination: "Ordination",
+    c_event_probate: "Probate",
+    c_event_property: "Property",
+    c_event_religion: "Religion",
+    c_event_residence: "Residence",
+    c_event_retirement: "Retirement",
+    c_event_will: "Will"
 }
 
 # https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/date.py
-vDateModifierNone = 0
-vDateModifierBefore = 1
-vDateModifierAfter = 2
-vDateModifierAbout = 3
-vDateModifierRange = 4
-vDateModifierSpan = 5
-vDateModifierTextOnly = 6
+c_date_modifier_none: int = 0
+c_date_modifier_before: int = 1
+c_date_modifier_after: int = 2
+c_date_modifier_about: int = 3
+c_date_modifier_range: int = 4
+c_date_modifier_span: int = 5
+c_date_modifier_text_only: int = 6
 
-vDateModifierDict = {
-    vDateModifierNone: "None",
-    vDateModifierBefore: "Before",
-    vDateModifierAfter: "After",
-    vDateModifierAbout: "About",
-    vDateModifierRange: "Range",
-    vDateModifierSpan: "Span",
-    vDateModifierTextOnly: "Text Only"
+c_date_modifier_dict = {
+    c_date_modifier_none: "None",
+    c_date_modifier_before: "Before",
+    c_date_modifier_after: "After",
+    c_date_modifier_about: "About",
+    c_date_modifier_range: "Range",
+    c_date_modifier_span: "Span",
+    c_date_modifier_text_only: "Text Only"
 }
 
 # https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/notetype.py
-vNoteUnknown = -1
-vNoteCustom = 0
-vNoteGeneral = 1
-vNoteResearch = 2
-vNoteTranscript = 3
-vNotePerson = 4
-vNoteAttribute = 5
-vNoteAddress = 6
-vNoteAssociation = 7
-vNoteLds = 8
-vNoteFamily = 9
-vNoteEvent = 10
-vNoteEventref = 11
-vNoteSource = 12
-vNoteSourceref = 13
-vNotePlace = 14
-vNoteRepo = 15
-vNoteReporef = 16
-vNoteMedia = 17
-vNoteMediaref = 18
-vNoteChildref = 19
-vNotePersonname = 20
-vNoteSource_Text = 21
-vNoteCitation = 22
-vNoteReport_Text = 23
-vNoteHtml_Code = 24
-vNoteTodo = 25
-vNoteLink = 26
+c_note_unknown: int = -1
+c_note_custom: int = 0
+c_note_general: int = 1
+c_note_research: int = 2
+c_note_transcript: int = 3
+c_note_person: int = 4
+c_note_attribute: int = 5
+c_note_address: int = 6
+c_note_association: int = 7
+c_note_lds: int = 8
+c_note_family: int = 9
+c_note_event: int = 10
+c_note_event_ref: int = 11
+c_note_source: int = 12
+c_note_source_ref: int = 13
+c_note_place: int = 14
+c_note_repo: int = 15
+c_note_repo_ref: int = 16
+c_note_media: int = 17
+c_note_media_ref: int = 18
+c_note_child_ref: int = 19
+c_note_person_name: int = 20
+c_note_source_text: int = 21
+c_note_citation: int = 22
+c_note_report_text: int = 23
+c_note_html_code: int = 24
+c_note_todo: int = 25
+c_note_link: int = 26
 
-vNoteTypeDict = {
-    vNoteUnknown: "Unknown",
-    vNoteCustom: "Custom",
-    vNoteGeneral: "General",
-    vNoteResearch: "Research",
-    vNoteTranscript: "Transcript",
-    vNotePerson: "Person",
-    vNoteAttribute: "Attribute",
-    vNoteAddress: "Address",
-    vNoteAssociation: "Association",
-    vNoteLds: "Lds",
-    vNoteFamily: "Family",
-    vNoteEvent: "Event",
-    vNoteEventref: "Eventref",
-    vNoteSource: "Source",
-    vNoteSourceref: "Sourceref",
-    vNotePlace: "Place",
-    vNoteRepo: "Repo",
-    vNoteReporef: "Reporef",
-    vNoteMedia: "Media",
-    vNoteMediaref: "Mediaref",
-    vNoteChildref: "Childref",
-    vNotePersonname: "Personname",
-    vNoteSource_Text: "Source_Text",
-    vNoteCitation: "Citation",
-    vNoteReport_Text: "Report_Text",
-    vNoteHtml_Code: "Html_Code",
-    vNoteTodo: "Todo",
-    vNoteLink: "Link"
+c_note_type_dict = {
+    c_note_unknown: "Unknown",
+    c_note_custom: "Custom",
+    c_note_general: "General",
+    c_note_research: "Research",
+    c_note_transcript: "Transcript",
+    c_note_person: "Person",
+    c_note_attribute: "Attribute",
+    c_note_address: "Address",
+    c_note_association: "Association",
+    c_note_lds: "Lds",
+    c_note_family: "Family",
+    c_note_event: "Event",
+    c_note_event_ref: "Eventref",
+    c_note_source: "Source",
+    c_note_source_ref: "Sourceref",
+    c_note_place: "Place",
+    c_note_repo: "Repo",
+    c_note_repo_ref: "Reporef",
+    c_note_media: "Media",
+    c_note_media_ref: "Mediaref",
+    c_note_child_ref: "Childref",
+    c_note_person_name: "Personname",
+    c_note_source_text: "Source_Text",
+    c_note_citation: "Citation",
+    c_note_report_text: "Report_Text",
+    c_note_html_code: "Html_Code",
+    c_note_todo: "Todo",
+    c_note_link: "Link"
 }
 
 
 # https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/person.py
-vGenderFemale = 0
-vGenderMale = 1
-vGenderUnknown = 2
+c_gender_female: int = 0
+c_gender_male: int = 1
+c_gender_unknown: int = 2
 
-vGenderDict = {
-    vGenderFemale: "Female",
-    vGenderMale: "Male",
-    vGenderUnknown: "Unknown"
+c_gender_dict = {
+    c_gender_female: "Female",
+    c_gender_male: "Male",
+    c_gender_unknown: "Unknown"
 }
 
 # https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/eventroletype.py
-vRoleUnknown = -1
-vRoleCustom = 0
-vRolePrimary = 1
-vRoleClergy = 2
-vRoleCelebrant = 3
-vRoleAide = 4
-vRoleBride = 5
-vRoleGroom = 6
-vRoleWitness = 7
-vRoleFamily = 8
-vRoleInformant = 9
+c_role_unknown: int = -1
+c_role_custom: int = 0
+c_role_primary: int = 1
+c_role_clergy: int = 2
+c_role_celebrant: int = 3
+c_role_aide: int = 4
+c_role_bride: int = 5
+c_role_groom: int = 6
+c_role_witness: int = 7
+c_role_family: int = 8
+c_role_informant: int = 9
 
-vRoleDict = {
-    vRoleUnknown: "Unknown",
-    vRoleCustom: "Custom",
-    vRolePrimary: "Primary",
-    vRoleClergy: "Clergy",
-    vRoleCelebrant: "Celebrant",
-    vRoleAide: "Aide",
-    vRoleBride: "Bride",
-    vRoleGroom: "Groom",
-    vRoleWitness: "Witness",
-    vRoleFamily: "Family"
+c_role_dict = {
+    c_role_unknown: "Unknown",
+    c_role_custom: "Custom",
+    c_role_primary: "Primary",
+    c_role_clergy: "Clergy",
+    c_role_celebrant: "Celebrant",
+    c_role_aide: "Aide",
+    c_role_bride: "Bride",
+    c_role_groom: "Groom",
+    c_role_witness: "Witness",
+    c_role_family: "Family"
 }
 
-vPlaceTypeUnknown = -1
-vPlaceTypeCustom = 0
-vPlaceTypeCountry = 1
-vPlaceTypeState = 2
-vPlaceTypeCounty = 3
-vPlaceTypeCity = 4
-vPlaceTypeParish = 5
-vPlaceTypeLocalty = 6
-vPlaceTypeStreet = 7
-vPlaceTypeProvince = 8
-vPlaceTypeRegion = 9
-vPlaceTypeDepartment = 10
-vPlaceTypeNeighborhood = 11
-vPlaceTypeDistrict = 12
-vPlaceTypeBorough = 13
-vPlaceTypeMunicipality = 14
-vPlaceTypeTown = 15
-vPlaceTypeVillage = 16
-vPlaceTypeHamlet = 17
-vPlaceTypeFarm = 18
-vPlaceTypeBuilding = 19
-vPlaceTypeNumber = 20
+c_place_type_unknown: int = -1
+c_place_type_custom: int = 0
+c_place_type_country: int = 1
+c_place_type_state: int = 2
+c_place_type_county: int = 3
+c_place_type_city: int = 4
+c_place_type_parish: int = 5
+c_place_type_locality: int = 6
+c_place_type_street: int = 7
+c_place_type_province: int = 8
+c_place_type_region: int = 9
+c_place_type_department: int = 10
+c_place_type_neighborhood: int = 11
+c_place_type_district: int = 12
+c_place_type_borough: int = 13
+c_place_type_municipality: int = 14
+c_place_type_town: int = 15
+c_place_type_village: int = 16
+c_place_type_hamlet: int = 17
+c_place_type_farm: int = 18
+c_place_type_building: int = 19
+c_place_type_number: int = 20
 
-vPlaceTypeDict = {
-    vPlaceTypeUnknown: "Unknown",
-    vPlaceTypeCustom: "Custom",
-    vPlaceTypeCountry: "Country",
-    vPlaceTypeState: "State",
-    vPlaceTypeCounty: "County",
-    vPlaceTypeCity: "City",
-    vPlaceTypeParish: "Parish",
-    vPlaceTypeLocalty: "Localty",
-    vPlaceTypeStreet: "Street",
-    vPlaceTypeProvince: "Province",
-    vPlaceTypeRegion: "Region",
-    vPlaceTypeDepartment: "Department",
-    vPlaceTypeNeighborhood: "Neighborhood",
-    vPlaceTypeDistrict: "District",
-    vPlaceTypeBorough: "Borough",
-    vPlaceTypeMunicipality: "Municipality",
-    vPlaceTypeTown: "Town",
-    vPlaceTypeVillage: "Village",
-    vPlaceTypeHamlet: "Hamlet",
-    vPlaceTypeFarm: "Farm",
-    vPlaceTypeBuilding: "Building",
-    vPlaceTypeNumber: "Number"
+c_place_type_dict = {
+    c_place_type_unknown: "Unknown",
+    c_place_type_custom: "Custom",
+    c_place_type_country: "Country",
+    c_place_type_state: "State",
+    c_place_type_county: "County",
+    c_place_type_city: "City",
+    c_place_type_parish: "Parish",
+    c_place_type_locality: "Locality",
+    c_place_type_street: "Street",
+    c_place_type_province: "Province",
+    c_place_type_region: "Region",
+    c_place_type_department: "Department",
+    c_place_type_neighborhood: "Neighborhood",
+    c_place_type_district: "District",
+    c_place_type_borough: "Borough",
+    c_place_type_municipality: "Municipality",
+    c_place_type_town: "Town",
+    c_place_type_village: "Village",
+    c_place_type_hamlet: "Hamlet",
+    c_place_type_farm: "Farm",
+    c_place_type_building: "Building",
+    c_place_type_number: "Number"
 }
 
-def GetFamilyHandlesByParent(pParentHandle, pCursor):
+
+def get_family_handles_by_parent(p_parent_handle, p_cursor):
     """
     Retrieves all family handles of which person is the parent
     """
 
-    pCursor.execute(
+    p_cursor.execute(
         'SELECT handle FROM family WHERE father_handle=? OR mother_handle=?', [
-            pParentHandle, pParentHandle])
-    vFamilyHandles = pCursor.fetchall()
+            p_parent_handle, p_parent_handle])
+    v_family_handles = p_cursor.fetchall()
 
-    return vFamilyHandles
+    return v_family_handles
 
 
-def GetAllFamilyHandles(pPersonHandle, pCursor):
+def get_all_family_handles(p_person_handle, p_cursor):
     """
     Retrieves all family handles of which person is the parent
     """
 
-    pCursor.execute('SELECT DISTINCT ref_handle FROM reference WHERE obj_handle=? AND ref_class="Family"',[pPersonHandle])
-    vFamilyHandles = pCursor.fetchall()
+    p_cursor.execute('SELECT DISTINCT ref_handle FROM reference WHERE obj_handle=? AND ref_class="Family"', [p_person_handle])
+    v_family_handles = p_cursor.fetchall()
 
-    return vFamilyHandles
+    return v_family_handles
 
 
-def GetPartnerHandle(pPersonHandle, pFamilyHandle, pCursor):
+def get_partner_handle(p_person_handle, p_family_handle, p_cursor):
     """
     Retrieves one partner of person
     """
 
-    pCursor.execute('SELECT mother_handle FROM family WHERE father_handle=? AND handle=?', [pPersonHandle, pFamilyHandle])
-    vPartnerHandle = pCursor.fetchone()
+    p_cursor.execute('SELECT mother_handle FROM family WHERE father_handle=? AND handle=?', [p_person_handle, p_family_handle])
+    v_partner_handle = p_cursor.fetchone()
 
-    # If zero length list is returned, pPersonHandle might be the mother
+    # If zero length list is returned, p_person_handle might be the mother
     # instead of the father
-    if(vPartnerHandle is None):
-        pCursor.execute(
+    if v_partner_handle is None:
+        p_cursor.execute(
             'SELECT father_handle FROM family WHERE mother_handle=? AND handle=?', [
-                pPersonHandle, pFamilyHandle])
-        vPartnerHandle = pCursor.fetchone()
+                p_person_handle, p_family_handle])
+        v_partner_handle = p_cursor.fetchone()
 
-    if(vPartnerHandle is not None):
-        vPartnerHandle = vPartnerhandle[0]
+    if v_partner_handle is not None:
+        v_partner_handle = v_partner_handle[0]
 
-    return vPartnerHandle
+    return v_partner_handle
 
 
-def GetPartnerHandles(pPersonHandle, pCursor):
+def get_partner_handles(p_person_handle, p_cursor):
     """
-    Retreives all partners of person
+    Retrieves all partners of person
     """
 
-    pCursor.execute(
-        'SELECT mother_handle FROM family WHERE father_handle=?',
-        [pPersonHandle])
-    vPartnerHandles1 = pCursor.fetchall()
+    p_cursor.execute('SELECT mother_handle FROM family WHERE father_handle=?', [p_person_handle])
+    v_partner_handles_1 = p_cursor.fetchall()
 
-    # If zero length list is returned, pPersonHandle might be the mother
+    # If zero length list is returned, p_person_handle might be the mother
     # instead of the father
-    if(len(vPartnerHandles1) == 0):
-        pCursor.execute(
-            'SELECT father_handle FROM family WHERE mother_handle=?',
-            [pPersonHandle])
-        vPartnerHandles1 = pCursor.fetchall()
+    if len(v_partner_handles_1) == 0:
+        p_cursor.execute('SELECT father_handle FROM family WHERE mother_handle=?', [p_person_handle])
+        v_partner_handles_1 = p_cursor.fetchall()
 
     # Debug
-#	print('vPartnerHandles1: ', vPartnerHandles1)
+    # logging.debug('v_partner_handles_1: %s', v_partner_handles_1)
 
-    vPartnerHandles2 = []
-    for vPartnerHandle in vPartnerHandles1:
-        vPartnerHandles2.append(vPartnerHandle[0])
+    v_partner_handles_2 = []
+    for v_partner_handle in v_partner_handles_1:
+        v_partner_handles_2.append(v_partner_handle[0])
 
-    return vPartnerHandles2
-
-
-def GetFatherHandleByFamily(pFamilyHandle, pCursor):
-    pCursor.execute(
-        'SELECT father_handle FROM family WHERE handle=?',
-        [pFamilyHandle])
-    vFatherHandle = pCursor.fetchone()
-
-    if(vFatherHandle is not None):
-        vFatherHandle = vFatherHandle[0]
-
-    return vFatherHandle
+    return v_partner_handles_2
 
 
-def GetMotherHandleByFamily(pFamilyHandle, pCursor):
-    pCursor.execute(
-        'SELECT mother_handle FROM family WHERE handle=?',
-        [pFamilyHandle])
-    vMotherHandle = pCursor.fetchone()
+def get_father_handle_by_family(p_family_handle, p_cursor):
+    p_cursor.execute('SELECT father_handle FROM family WHERE handle=?', [p_family_handle])
+    v_father_handle = p_cursor.fetchone()
 
-    if(vMotherHandle is not None):
-        vMotherHandle = vMotherHandle[0]
+    if v_father_handle is not None:
+        v_father_handle = v_father_handle[0]
 
-    return vMotherHandle
+    return v_father_handle
 
 
-def GetFatherHandleByPerson(pPersonHandle, pCursor):
+def get_mother_handle_by_family(p_family_handle, p_cursor):
+    p_cursor.execute('SELECT mother_handle FROM family WHERE handle=?', [p_family_handle])
+    v_mother_handle = p_cursor.fetchone()
+
+    if v_mother_handle is not None:
+        v_mother_handle = v_mother_handle[0]
+
+    return v_mother_handle
+
+
+def get_father_handle_by_person(p_person_handle, p_cursor):
     """
     Retrieves the father for the given person
     """
 
-    vFatherHandle = None
+    v_father_handle = None
 
-#	pCursor.execute('SELECT father_handle, mother_handle FROM family WHERE handle IN (SELECT ref_handle FROM reference WHERE obj_handle=? AND ref_class="Family") AND NOT father_handle=? AND NOT mother_handle=?', [pPersonHandle, pPersonHandle, pPersonHandle])
-    pCursor.execute(
-        'SELECT A.father_handle, A.mother_handle, A.handle, B.ref_handle, B.obj_handle, B.ref_class FROM family A, reference B WHERE COALESCE(A.father_handle,"")!=? AND COALESCE(A.mother_handle,"")!=? AND A.handle=B.ref_handle AND B.obj_handle=? AND B.ref_class="Family"', [
-            pPersonHandle, pPersonHandle, pPersonHandle])
-    vRecord = pCursor.fetchone()
+    # p_cursor.execute('SELECT father_handle, mother_handle FROM family WHERE handle IN (SELECT ref_handle FROM reference WHERE obj_handle=? AND ref_class="Family") AND NOT father_handle=? AND NOT mother_handle=?', [p_person_handle, p_person_handle, p_person_handle])
+    p_cursor.execute('SELECT A.father_handle, A.mother_handle, A.handle, B.ref_handle, B.obj_handle, B.ref_class FROM family A, reference B WHERE COALESCE(A.father_handle,"")!=? AND COALESCE(A.mother_handle,"")!=? AND A.handle=B.ref_handle AND B.obj_handle=? AND B.ref_class="Family"', [p_person_handle, p_person_handle, p_person_handle])
+    v_record = p_cursor.fetchone()
 
-    if(vRecord is not None):
-        vFatherHandle = vRecord[0]
+    if v_record is not None:
+        v_father_handle = v_record[0]
 
-    return vFatherHandle
+    return v_father_handle
 
 
-def GetMotherHandleByPerson(pPersonHandle, pCursor):
+def get_mother_handle_by_person(p_person_handle, p_cursor):
     """
     Retrieves the mother for the given person
     """
 
-    vMotherHandle = None
+    v_mother_handle = None
 
-#	pCursor.execute('SELECT father_handle, mother_handle FROM family WHERE handle IN (SELECT ref_handle FROM reference WHERE obj_handle=? AND ref_class="Family") AND NOT father_handle=? AND NOT mother_handle=?', [pPersonHandle, pPersonHandle, pPersonHandle])
-    pCursor.execute(
-        'SELECT A.father_handle, A.mother_handle, A.handle, B.ref_handle, B.obj_handle, B.ref_class FROM family A, reference B WHERE COALESCE(A.father_handle,"")!=? AND COALESCE(A.mother_handle,"")!=? AND A.handle=B.ref_handle AND B.obj_handle=? AND B.ref_class="Family"', [
-            pPersonHandle, pPersonHandle, pPersonHandle])
-    vRecord = pCursor.fetchone()
+    # p_cursor.execute('SELECT father_handle, mother_handle FROM family WHERE handle IN (SELECT ref_handle FROM reference WHERE obj_handle=? AND ref_class="Family") AND NOT father_handle=? AND NOT mother_handle=?', [p_person_handle, p_person_handle, p_person_handle])
+    p_cursor.execute('SELECT A.father_handle, A.mother_handle, A.handle, B.ref_handle, B.obj_handle, B.ref_class FROM family A, reference B WHERE COALESCE(A.father_handle,"")!=? AND COALESCE(A.mother_handle,"")!=? AND A.handle=B.ref_handle AND B.obj_handle=? AND B.ref_class="Family"', [p_person_handle, p_person_handle, p_person_handle])
+    v_record = p_cursor.fetchone()
 
-    if(vRecord is not None):
-        vMotherHandle = vRecord[1]
+    if v_record is not None:
+        v_mother_handle = v_record[1]
 
-    return vMotherHandle
+    return v_mother_handle
 
 
-def GetFamilyHandleByFatherMother(pFatherHandle, pMotherHandle, pCursor):
+def get_family_handle_by_father_mother(p_father_handle, p_mother_handle, p_cursor):
     """
     Retrieves the family handle of the given father and mother
     """
 
-    pCursor.execute(
-        'SELECT handle FROM family WHERE (father_handle=? AND mother_handle=?)', [
-            pFatherHandle, pMotherHandle])
-    vFamilyHandle = pCursor.fetchone()
+    p_cursor.execute('SELECT handle FROM family WHERE (father_handle=? AND mother_handle=?)', [p_father_handle, p_mother_handle])
+    v_family_handle = p_cursor.fetchone()
 
-    return vFamilyHandle
+    return v_family_handle
 
 
-def GetChildrenHandlesByPerson(pPersonHandle, pCursor):
+def get_children_handles_by_person(p_person_handle, p_cursor):
     """
     Gets all children of a person, from multiple partners if applicable
     Returns a list
     """
 
-    vChildrenHandles = []
+    v_children_handles = []
 
-    pCursor.execute(
-        'SELECT ref_handle, obj_handle FROM reference WHERE obj_handle=? AND ref_class="Family" AND (obj_handle IN (SELECT father_handle FROM family WHERE handle=ref_handle) OR obj_handle IN (SELECT mother_handle FROM family WHERE handle=ref_handle))',
-        [pPersonHandle])
-    vFamilyHandles = pCursor.fetchall()
+    p_cursor.execute('SELECT ref_handle, obj_handle FROM reference WHERE obj_handle=? AND ref_class="Family" AND (obj_handle IN (SELECT father_handle FROM family WHERE handle=ref_handle) OR obj_handle IN (SELECT mother_handle FROM family WHERE handle=ref_handle))', [p_person_handle])
+    v_family_handles = p_cursor.fetchall()
 
-    for vFamilyHandle in vFamilyHandles:
-        vChildrenHandles = vChildrenHandles + \
-            GetChildrenHandlesByFamily(vFamilyHandle[0], pCursor)
+    for v_family_handle in v_family_handles:
+        v_children_handles = v_children_handles + get_children_handles_by_family(v_family_handle[0], p_cursor)
 
-    return vChildrenHandles
+    return v_children_handles
 
 
-def GetChildrenHandlesByPerson_Old(pPersonHandle, pCursor):
+def get_children_handles_by_person_old(p_person_handle, p_cursor):
     """
     Gets all children of a person, from multiple partners if applicable
     Returns a list
     """
 
-    pCursor.execute(
-        'SELECT ref_handle, obj_handle FROM reference WHERE obj_handle=? AND ref_class="Family" AND (obj_handle IN (SELECT father_handle FROM family WHERE handle=ref_handle) OR obj_handle IN (SELECT mother_handle FROM family WHERE handle=ref_handle))',
-        [pPersonHandle])
-    vFamilyHandles = pCursor.fetchall()
+    p_cursor.execute('SELECT ref_handle, obj_handle FROM reference WHERE obj_handle=? AND ref_class="Family" AND (obj_handle IN (SELECT father_handle FROM family WHERE handle=ref_handle) OR obj_handle IN (SELECT mother_handle FROM family WHERE handle=ref_handle))', [p_person_handle])
+    v_family_handles = p_cursor.fetchall()
 
-    vChildrenHandles = []
-    for vFamilyHandle in vFamilyHandles:
-        vChildrenHandles = vChildrenHandles + \
-            GetChildrenHandlesByFamily(vFamilyHandle[0], pCursor)
+    v_children_handles = []
+    for v_family_handle in v_family_handles:
+        v_children_handles = v_children_handles + \
+                             get_children_handles_by_family(v_family_handle[0], p_cursor)
 
-    return vChildrenHandles
+    return v_children_handles
 
 
-def GetChildrenHandlesByFamily(pFamilyHandle, pCursor):
+def get_children_handles_by_family(p_family_handle, p_cursor):
     """
     Get all children of a family
     Returns a list
     """
 
-    vChildrenHandles = []
+    v_children_handles = []
 
-    pCursor.execute(
-        'SELECT handle, blob_data FROM family WHERE handle=?',
-        [pFamilyHandle])
-    vRecord = pCursor.fetchone()
-    vBlobData = vRecord[1]
-    vFamilyData = pickle.loads(vBlobData)
-    vChildRefList = vFamilyData[4]
+    p_cursor.execute('SELECT handle, blob_data FROM family WHERE handle=?', [p_family_handle])
+    v_record = p_cursor.fetchone()
+    v_blob_data = v_record[1]
+    v_family_data = pickle.loads(v_blob_data)
+    v_child_ref_list = v_family_data[4]
 
-    for vChildRef in vChildRefList:
-        vChildHandle = vChildRef[3]
-        vChildrenHandles.append(vChildHandle)
+    for v_child_ref in v_child_ref_list:
+        v_child_handle = v_child_ref[3]
+        v_children_handles.append(v_child_handle)
 
-    return vChildrenHandles
+    return v_children_handles
 
 
-def GetChildrenHandlesByFamily_Old(pFamilyHandle, pCursor):
+def get_children_handles_by_family_old(p_family_handle, p_cursor):
     """
     Get all children of a family
     Returns a list
     """
 
-    pCursor.execute(
-        'SELECT obj_handle FROM reference WHERE ref_handle=? AND ref_class="Family" AND obj_handle NOT IN (SELECT father_handle FROM family WHERE handle=?) AND obj_handle NOT IN (SELECT mother_handle FROM family WHERE handle=?)', [
-            pFamilyHandle, pFamilyHandle, pFamilyHandle])
-    vChildrenHandles = pCursor.fetchall()
+    p_cursor.execute('SELECT obj_handle FROM reference WHERE ref_handle=? AND ref_class="Family" AND obj_handle NOT IN (SELECT father_handle FROM family WHERE handle=?) AND obj_handle NOT IN (SELECT mother_handle FROM family WHERE handle=?)', [p_family_handle, p_family_handle, p_family_handle])
+    v_children_handles = p_cursor.fetchall()
 
-    vChildrenHandles2 = []
-    for vChildHandle in vChildrenHandles:
-        vChildrenHandles2.append(vChildHandle[0])
+    v_children_handles2 = []
+    for v_child_handle in v_children_handles:
+        v_children_handles2.append(v_child_handle[0])
 
-    return vChildrenHandles2
+    return v_children_handles2
 
 
-def GetSiblingHandles(pPersonHandle, pCursor):
+def get_sibling_handles(p_person_handle, p_cursor):
     """
     Retrieves the siblings of the person.
     """
 
-    # TODO: bug: also retrieves pPersonHandle as a sibling
+    # TODO: bug: also retrieves p_person_handle as a sibling
 
-    # Retrieve all family handles of which pPersonHandle is a member, but not
+    # Retrieve all family handles of which p_person_handle is a member, but not
     # a father or a mother
-    pCursor.execute(
-        'SELECT ref_handle, obj_handle FROM reference WHERE obj_handle=? AND ref_class="Family" AND obj_handle NOT IN (SELECT father_handle FROM family WHERE handle=ref_handle) AND obj_handle NOT IN (SELECT mother_handle FROM family WHERE handle=ref_handle)',
-        [pPersonHandle])
-    vFamilyHandles = pCursor.fetchall()
+    p_cursor.execute('SELECT ref_handle, obj_handle FROM reference WHERE obj_handle=? AND ref_class="Family" AND obj_handle NOT IN (SELECT father_handle FROM family WHERE handle=ref_handle) AND obj_handle NOT IN (SELECT mother_handle FROM family WHERE handle=ref_handle)', [p_person_handle])
+    v_family_handles = p_cursor.fetchall()
 
-    vSiblingHandles = []
-    for vFamilyHandle in vFamilyHandles:
-        vSiblingHandles = vSiblingHandles + \
-            GetChildrenHandlesByFamily(vFamilyHandle[0], pCursor)
+    v_sibling_handles = []
+    for vFamilyHandle in v_family_handles:
+        v_sibling_handles = v_sibling_handles + get_children_handles_by_family(vFamilyHandle[0], p_cursor)
 
-    return vSiblingHandles
+    return v_sibling_handles
 
 
-def GetSiblingHandles_Old(pPersonHandle, pCursor):
+def get_sibling_handles_old(p_person_handle, p_cursor):
     """
     Retrieves the siblings of the person.
     """
 
-    pCursor.execute(
-        'SELECT ref_handle, obj_handle FROM reference WHERE obj_handle=? AND ref_class="Family" AND obj_handle NOT IN (SELECT father_handle FROM family WHERE handle=ref_handle) AND obj_handle NOT IN (SELECT mother_handle FROM family WHERE handle=ref_handle)',
-        [pPersonHandle])
-    vFamilyHandle = pCursor.fetchone()
+    p_cursor.execute('SELECT ref_handle, obj_handle FROM reference WHERE obj_handle=? AND ref_class="Family" AND obj_handle NOT IN (SELECT father_handle FROM family WHERE handle=ref_handle) AND obj_handle NOT IN (SELECT mother_handle FROM family WHERE handle=ref_handle)', [p_person_handle])
+    v_family_handle = p_cursor.fetchone()
 
-    vSiblingHandles2 = []
-    if(vFamilyHandle is not None):
-        vFamilyHandle = vFamilyHandle[0]
+    v_sibling_handles2 = []
+    if v_family_handle is not None:
+        v_family_handle = v_family_handle[0]
 
-        pCursor.execute(
-            'SELECT obj_handle FROM reference WHERE ref_handle=? AND ref_class="Family" AND obj_handle<>? AND obj_handle NOT IN (SELECT father_handle FROM family WHERE handle=ref_handle) AND obj_handle NOT IN (SELECT mother_handle FROM family WHERE handle=ref_handle)', [
-                vFamilyHandle, pPersonHandle])
-        vSiblingHandles = pCursor.fetchall()
+        p_cursor.execute('SELECT obj_handle FROM reference WHERE ref_handle=? AND ref_class="Family" AND obj_handle<>? AND obj_handle NOT IN (SELECT father_handle FROM family WHERE handle=ref_handle) AND obj_handle NOT IN (SELECT mother_handle FROM family WHERE handle=ref_handle)', [v_family_handle, p_person_handle])
+        v_sibling_handles = p_cursor.fetchall()
 
-        for vSiblingHandle in vSiblingHandles:
-            vSiblingHandles2.append(vSiblingHandle[0])
+        for v_sibling_handle in v_sibling_handles:
+            v_sibling_handles2.append(v_sibling_handle[0])
 
-    return vSiblingHandles2
+    return v_sibling_handles2
 
 
-def GetGrampsIdByPersonHandle(pPersonHandle, pCursor):
-    pCursor.execute(
-        'SELECT gramps_id FROM person WHERE handle=?',
-        [pPersonHandle])
-    vPersonId = pCursor.fetchone()
+def get_gramps_id_by_person_handle(p_person_handle, p_cursor):
+    p_cursor.execute('SELECT gramps_id FROM person WHERE handle=?', [p_person_handle])
+    v_person_id = p_cursor.fetchone()
 
-    if (vPersonId is not None):
-        vPersonId = vPersonId[0]
+    if v_person_id is not None:
+        v_person_id = v_person_id[0]
 
-    return vPersonId
+    return v_person_id
 
 
-def GetPersonHandleByGrampsId(pPersonId, pCursor):
-    pCursor.execute('SELECT handle FROM person WHERE gramps_id=?', [pPersonId])
-    vPersonHandle = pCursor.fetchone()
+def get_person_handle_by_gramps_id(p_person_id, p_cursor):
+    p_cursor.execute('SELECT handle FROM person WHERE gramps_id=?', [p_person_id])
+    v_person_handle = p_cursor.fetchone()
 
-    if(vPersonHandle is not None):
-        vPersonHandle = vPersonHandle[0]
+    if v_person_handle is not None:
+        v_person_handle = v_person_handle[0]
 
-    return vPersonHandle
+    return v_person_handle
 
-def DecodeDateTuple(pDateTuple):
-    vDay = ''
-    vMonth = ''
-    vYear = ''
-    vDateList = []
 
-    if(pDateTuple is not None):
-        vModifier = pDateTuple[1]
-        vDate = pDateTuple[3]
+def decode_date_tuple(p_date_tuple):
+    v_date_list = []
 
-        if(len(vDate) == 4):
+    if p_date_tuple is not None:
+        v_modifier = p_date_tuple[1]
+        v_date = p_date_tuple[3]
+
+        if len(v_date) == 4:
             # Single date
-            [vDay, vMonth, vYear, _] = vDate
-            vDateList = [vModifier, vDay, vMonth, vYear]
+            [v_day, v_month, v_year, _] = v_date
+            v_date_list = [v_modifier, v_day, v_month, v_year]
 
-        elif(len(vDate) == 8):
+        elif len(v_date) == 8:
             # Dual date
-            [vDay1, vMonth1, vYear1, _, vDay2, vMonth2, vYear2, _] = vDate
-            vDateList = [vModifier, vDay1, vMonth1, vYear1, vDay2, vMonth2, vYear2]
+            [v_day1, v_month1, v_year1, _, v_day2, v_month2, v_year2, _] = v_date
+            v_date_list = [v_modifier, v_day1, v_month1, v_year1, v_day2, v_month2, v_year2]
 
-    return vDateList
+    return v_date_list
 
-def DecodeDateTuple_Old(pDateTuple):
-    vDay = ''
-    vMonth = ''
-    vYear = ''
-    vDateString = ''
 
-    if(pDateTuple is None):
-        vDateString = '-'
+def decode_date_tuple_old(p_date_tuple):
+    v_day = ''
+    v_month = ''
+    v_year = ''
+    v_date_string = ''
+
+    if p_date_tuple is None:
+        v_date_string = '-'
     else:
-        vDate = pDateTuple[3]
+        v_date = p_date_tuple[3]
 
-        if(len(vDate) == 4):
+        if len(v_date) == 4:
             # Single date
-            [vDay, vMonth, vYear, _] = vDate
-            if(vDay == 0):
-                vDay = ''
+            [v_day, v_month, v_year, _] = v_date
+            if v_day == 0:
+                v_day = ''
 
-            if(vMonth == 0):
-                vMonth = ''
+            if v_month == 0:
+                v_month = ''
             else:
-                vMonth = calendar.month_name[vMonth][:3]
+                v_month = calendar.month_name[v_month][:3]
 
-            vDateString = str(vDay) + ' ' + vMonth + ' ' + str(vYear)
-            vDateString = vDateString.strip()
+            v_date_string = str(v_day) + ' ' + v_month + ' ' + str(v_year)
+            v_date_string = v_date_string.strip()
 
-        elif(len(vDate) == 8):
+        elif len(v_date) == 8:
             # Dual date
-            [vDay1, vMonth1, vYear1, _, vDay2, vMonth2, vYear2, _] = vDate
+            [v_day1, v_month1, v_year1, _, v_day2, v_month2, v_year2, _] = v_date
 
             # Start date
-            if(vDay1 == 0):
-                vDay1 = ''
+            if v_day1 == 0:
+                v_day1 = ''
 
-            if(vMonth1 == 0):
-                vMonth1 = ''
+            if v_month1 == 0:
+                v_month1 = ''
             else:
-                vMonth1 = calendar.month_name[vMonth1][:3]
+                v_month1 = calendar.month_name[v_month1][:3]
 
-            vDateString1 = str(vDay1) + ' ' + vMonth1 + ' ' + str(vYear1)
-            vDateString1 = vDateString1.strip()
+            v_date_string1 = str(v_day1) + ' ' + v_month1 + ' ' + str(v_year1)
+            v_date_string1 = v_date_string1.strip()
 
             # End date
-            if(vDay2 == 0):
-                vDay2 = ''
+            if v_day2 == 0:
+                v_day2 = ''
 
-            if(vMonth2 == 0):
-                vMonth2 = ''
+            if v_month2 == 0:
+                v_month2 = ''
             else:
-                vMonth2 = calendar.month_name[vMonth2][:3]
+                v_month2 = calendar.month_name[v_month2][:3]
 
-            vDateString2 = str(vDay2) + ' ' + vMonth2 + ' ' + str(vYear2)
-            vDateString2 = vDateString2.strip()
+            v_date_string2 = str(v_day2) + ' ' + v_month2 + ' ' + str(v_year2)
+            v_date_string2 = v_date_string2.strip()
 
-            vDateString = vDateString1 + ' - ' + vDateString2
+            v_date_string = v_date_string1 + ' - ' + v_date_string2
 
-        vModifier = pDateTuple[1]
-        vModifierSet = {1, 2, 3}
+        v_modifier = p_date_tuple[1]
+        v_modifier_set = {1, 2, 3}
 
-        if(vModifier in vModifierSet):
+        if v_modifier in v_modifier_set:
             # Before, after, about
-            vDateString = vDateModifierDict[vModifier] + ' ' + str(vDay) + ' ' + vMonth + ' ' + str(vYear)
+            v_date_string = c_date_modifier_dict[v_modifier] + ' ' + str(v_day) + ' ' + v_month + ' ' + str(v_year)
 
-        elif(vModifier == 4):
+        elif v_modifier == 4:
             # Range
-            vDateString = 'Between ' + vDateString.split('-')[0] + ' and ' + vDateString.split('-')[1]
+            v_date_string = 'Between ' + v_date_string.split('-')[0] + ' and ' + v_date_string.split('-')[1]
 
-        elif(vModifier == 5):
+        elif v_modifier == 5:
             # Span
-            #			vDateString = 'From ' + vDateString.split('-')[0] + ' until ' +  vDateString.split('-')[1]
-            vDateString = vDateString.split('-')[0] + ' - ' + vDateString.split('-')[1]
+            # vDateString = 'From ' + vDateString.split('-')[0] + ' until ' +  vDateString.split('-')[1]
+            v_date_string = v_date_string.split('-')[0] + ' - ' + v_date_string.split('-')[1]
 
-#		else:
-#			# Unknown modifier
-#			print('ERROR in DecodeDateTuple: unknown modifier: ', vModifier, vDateModifierDict[vModifier])
-#			print('pDateTuple: ', pDateTuple)
+        # else:
+        # 	# Unknown modifier
+        # 	print('ERROR in DecodeDateTuple: unknown modifier: ', v_modifier, vDateModifierDict[v_modifier])
+        # 	print('p_date_tuple: ', p_date_tuple)
 
-    return vDateString
+    return v_date_string
 
 
-def DecodePlaceData(pPlaceHandle, pCursor):
+def decode_place_data(p_place_handle, p_cursor):
     # See https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/place.py
-    vPlaceList = {}
+    v_place_list = {}
 
-    vPlaceHandle = pPlaceHandle
-    while(len(vPlaceHandle) > 0):
-        pCursor.execute('SELECT enclosed_by, blob_data FROM place WHERE handle=?', [vPlaceHandle])
-        vRecord = pCursor.fetchone()
-        if(vRecord is not None):
-            vPlaceHandle = vRecord[0]
-            vBlobData = vRecord[1]
-            vPlaceData = pickle.loads(vBlobData)
+    v_place_handle = p_place_handle
+    while len(v_place_handle) > 0:
+        p_cursor.execute('SELECT enclosed_by, blob_data FROM place WHERE handle=?', [v_place_handle])
+        v_record = p_cursor.fetchone()
+        if v_record is not None:
+            v_place_handle = v_record[0]
+            v_blob_data = v_record[1]
+            v_place_data = pickle.loads(v_blob_data)
 
-            if(len(vPlaceData[3])==0):
-                vLongitude = 0.
+            if len(v_place_data[3]) == 0:
+                v_longitude = 0.
             else:
-                vLongitude = float(vPlaceData[3])
+                v_longitude = float(v_place_data[3])
 
-            if(len(vPlaceData[4])==0):
-                vLatitude = 0.
+            if len(v_place_data[4]) == 0:
+                v_latitude = 0.
             else:
-                vLatitude  = float(vPlaceData[4])
+                v_latitude = float(v_place_data[4])
 
-            vName = vPlaceData[6][0]
-            vType = vPlaceTypeDict[vPlaceData[8][0]]
-            vCode = vPlaceData[9]
+            v_name = v_place_data[6][0]
+            v_type = c_place_type_dict[v_place_data[8][0]]
+            v_code = v_place_data[9]
 
             # Debug
-#            print('vName     : ', vName)
-#            print('vType     : ', vType)
-#            print('vCode     : ', vCode)
-#            print('vLatitude : ', vLatitude)
-#            print('vLongitude: ', vLongitude)
+#            print('v_name     : ', v_name)
+#            print('v_type     : ', v_type)
+#            print('v_code     : ', v_code)
+#            print('v_latitude : ', v_latitude)
+#            print('v_longitude: ', v_longitude)
 
-            vPlaceList[vType] = [vName, (vLatitude, vLongitude), vCode]
+            v_place_list[v_type] = [v_name, (v_latitude, v_longitude), v_code]
 
-    return vPlaceList
+    return v_place_list
 
-def DecodeEventData(pEventHandle, pCursor):
-    vGrampsId = ""
-    vType = ""
-    vDate = ""
-    vPlace = ""
-    vDescription = ""
-    vMediaList = []
 
-    pCursor.execute('SELECT blob_data FROM event WHERE handle=?', [pEventHandle])
-    vBlobData = pCursor.fetchone()
-    if(vBlobData is not None):
-        vEventData = pickle.loads(vBlobData[0])
+def decode_event_data(p_event_handle, p_cursor):
+    v_type = ""
+    v_date = ""
+    v_place = ""
+    v_description = ""
+    v_media_list = []
 
-        vGrampsId = vEventData[1]
-        vType = vEventData[2]
-        if(vType is not None):
+    p_cursor.execute('SELECT blob_data FROM event WHERE handle=?', [p_event_handle])
+    v_blob_data = p_cursor.fetchone()
+    if v_blob_data is not None:
+        v_event_data = pickle.loads(v_blob_data[0])
+
+        v_type = v_event_data[2]
+        if v_type is not None:
             # https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/eventtype.py
-            vType = vType[0]
+            v_type = v_type[0]
 
-        vDate = vEventData[3]
-        if(vDate is not None):
-            vDate = DecodeDateTuple(vDate)
+        v_date = v_event_data[3]
+        if v_date is not None:
+            v_date = decode_date_tuple(v_date)
         else:
-            vDate = '-'
+            v_date = '-'
 
-        vDescription = vEventData[4]
+        v_description = v_event_data[4]
 
-        vPlaceHandle = vEventData[5]
-        if(vPlaceHandle is not None):
-            vPlace = DecodePlaceData(vPlaceHandle, pCursor)
+        v_place_handle = v_event_data[5]
+        if v_place_handle is not None:
+            v_place = decode_place_data(v_place_handle, p_cursor)
 
-        vMediaList = vEventData[8]
+        v_media_list = v_event_data[8]
 
-    return [vType, vDate, vPlace, vDescription, vMediaList]
+    return [v_type, v_date, v_place, v_description, v_media_list]
 
 
-def DecodeFamilyData(pFamilyHandle, pCursor):
+def decode_family_data(p_family_handle, p_cursor):
     # https://github.com/gramps-project/gramps/blob/master/gramps/gen/lib/family.py
 
-    vGrampsId = ""
-    vFatherHandle = ""
-    vMotherHandle = ""
-    vChildRefList = []
-    vType = ""
-    vEventRefList = []
-    vMediaList = []
+    v_gramps_id = ""
+    v_father_handle = ""
+    v_mother_handle = ""
+    v_child_ref_list = []
+    v_type = ""
+    v_event_ref_list = []
+    v_media_list = []
 
-    pCursor.execute(
-        'SELECT blob_data, gramps_id, father_handle, mother_handle FROM family WHERE handle=?',
-        [pFamilyHandle])
-    vRecord = pCursor.fetchone()
+    p_cursor.execute('SELECT blob_data, gramps_id, father_handle, mother_handle FROM family WHERE handle=?', [p_family_handle])
+    v_record = p_cursor.fetchone()
 
-    if(vRecord is not None):
-        vBlobData = vRecord[0]
-        vGrampsId = vRecord[1]
-        vFatherHandle = vRecord[2]
-        vMotherHandle = vRecord[3]
+    if v_record is not None:
+        v_blob_data = v_record[0]
+        v_gramps_id = v_record[1]
+        v_father_handle = v_record[2]
+        v_mother_handle = v_record[3]
 
-        if(vBlobData is not None):
+        if v_blob_data is not None:
             # See
             # https://www.gramps-project.org/wiki/index.php/Using_database_API#2._Family:
-            vFamilyData = pickle.loads(vBlobData)
+            v_family_data = pickle.loads(v_blob_data)
 
-            vGrampsId = vFamilyData[1]
-            vFatherHandle = vFamilyData[2]
-            vMotherHandle = vFamilyData[3]
-            vChildRefList = vFamilyData[4]
-            vType = vFamilyData[5]
-            vEventRefList = vFamilyData[6]
-            vMediaList = vFamilyData[7]
+            v_gramps_id = v_family_data[1]
+            v_father_handle = v_family_data[2]
+            v_mother_handle = v_family_data[3]
+            v_child_ref_list = v_family_data[4]
+            v_type = v_family_data[5]
+            v_event_ref_list = v_family_data[6]
+            v_media_list = v_family_data[7]
 
-    return [
-        vGrampsId,
-        vFatherHandle,
-        vMotherHandle,
-        vChildRefList,
-        vType,
-        vEventRefList,
-        vMediaList]
+    return [v_gramps_id, v_father_handle, v_mother_handle, v_child_ref_list, v_type, v_event_ref_list, v_media_list]
 
 
-def DecodePersonData(pPersonHandle, pCursor):
-    vGivenName = ""
-    vSurname = ""
-    vCallName = ""
+def decode_person_data(p_person_handle, p_cursor):
+    # v_given_name = ""
+    # v_surname = ""
+    # v_call_name = ""
 
-    vPersonData = []
+    v_person_data = []
 
-    vHandle = ""
-    vGrampsId = ""
-    vGender = 2
-    vPrimaryName = []
-    vAlternateName = []
-    vDeathRefIndex = -1
-    vBirthRefIndex = -1
-    vEventRefList = []
-    vFamilyList = []
-    vParentFamilyList = []
-    vMediaBase = []
-    vAddressBase = []
-    vAttributeBase = []
-    vUrlBase = []
-    vLdsOrdBase = []
-    vCitationBase = []
-    vNoteBase = []
-    vChange = 0
-    vTagBase = []
-    vPrivate = False
-    vPersonRefList = []
+    # v_handle = ""
+    # v_gramps_id = ""
+    # v_gender = 2
+    # v_primary_name = []
+    # v_alternate_name = []
+    # v_death_ref_index = -1
+    # v_birth_ref_index = -1
+    # v_event_ref_list = []
+    # v_family_list = []
+    # v_parent_family_list = []
+    # v_media_base = []
+    # v_address_base = []
+    # v_attribute_base = []
+    # v_url_base = []
+    # v_lds_ord_base = []
+    # v_citation_base = []
+    # v_note_base = []
+    # v_change = 0
+    # v_tag_base = []
+    # v_private = False
+    # v_person_ref_list = []
 
-    pCursor.execute(
-        'SELECT given_name, surname, blob_data FROM person WHERE handle=?',
-        [pPersonHandle])
-    vRecord = pCursor.fetchone()
+    p_cursor.execute('SELECT given_name, surname, blob_data FROM person WHERE handle=?', [p_person_handle])
+    v_record = p_cursor.fetchone()
 
     # Debug
-#	print('vRecord: ', vRecord)
+    # logging.debug('v_record: '.join(map(str, v_record)))
 
-    if(vRecord is not None):
-        vGivenName = vRecord[0]
-        vSurname = vRecord[1]
-        vBlobData = vRecord[2]
+    if v_record is not None:
+        # v_given_name = v_record[0]
+        # v_surname = v_record[1]
+        v_blob_data = v_record[2]
 
-        if(vBlobData is not None):
+        if v_blob_data is not None:
             # See
             # https://www.gramps-project.org/wiki/index.php/Using_database_API#1._Person
-            vPersonData = pickle.loads(vBlobData)
-            vPersonData = list(vPersonData)
+            v_person_data = pickle.loads(v_blob_data)
+            v_person_data = list(v_person_data)
 
             # Debug
-#			print('vPersonData: ', vPersonData)
+            # logging.debug('v_person_data: '.join(map(str, v_person_data)))
 
-            vHandle = vPersonData[0]
-            vGrampsId = vPersonData[1]
-            vGender = vPersonData[2]
-            vPrimaryName = vPersonData[3]
-            vAlternateName = vPersonData[4]
-            vDeathRefIndex = vPersonData[5]
-            vBirthRefIndex = vPersonData[6]
-            vEventRefList = vPersonData[7]
-            vFamilyList = vPersonData[8]
-            vParentFamilyList = vPersonData[9]
-            vMediaBase = vPersonData[10]
-            vAddressBase = vPersonData[11]
-            vAttributeBase = vPersonData[12]
-            vUrlBase = vPersonData[13]
-            vLdsOrdBase = vPersonData[14]
-            vCitationBase = vPersonData[15]
-            vNoteBase = vPersonData[16]
-            vChange = vPersonData[17]
-            vTagBase = vPersonData[18]
-            vPrivate = vPersonData[19]
-            vPersonRefList = vPersonData[20]
+            # v_handle = v_person_data[0]
+            # v_gramps_id = v_person_data[1]
+            # v_gender = v_person_data[2]
+            v_primary_name = v_person_data[3]
+            # v_alternate_name = v_person_data[4]
+            # v_death_ref_index = v_person_data[5]
+            # v_birth_ref_index = v_person_data[6]
+            # v_event_ref_list = v_person_data[7]
+            # v_family_list = v_person_data[8]
+            # v_parent_family_list = v_person_data[9]
+            # v_media_base = v_person_data[10]
+            # v_address_base = v_person_data[11]
+            # v_attribute_base = v_person_data[12]
+            # v_url_base = v_person_data[13]
+            # v_lds_ord_base = v_person_data[14]
+            # v_citation_base = v_person_data[15]
+            # v_note_Base = v_person_data[16]
+            # v_change = v_person_data[17]
+            # v_tag_base = v_person_data[18]
+            # v_private = v_person_data[19]
+            # v_person_ref_list = v_person_data[20]
 
-            vCallName = vPrimaryName[12]
-            vGivenName = vPrimaryName[4]
-            vSurname = vPrimaryName[5][0][1] + ' ' + vPrimaryName[5][0][0]
+            v_call_name = v_primary_name[12]
+            v_given_name = v_primary_name[4]
+            v_surname = v_primary_name[5][0][1] + ' ' + v_primary_name[5][0][0]
 
-            vPersonData[3] = [
-                vSurname.strip(),
-                vGivenName.strip(),
-                vCallName.strip()]  # Overwrite primary names
+            v_person_data[3] = [v_surname.strip(), v_given_name.strip(), v_call_name.strip()]  # Overwrite primary names
 
-    return vPersonData
+    return v_person_data
 
 
-def GetPersonNotesHandles(pPersonHandle, pCursor):
-    pCursor.execute(
-        'SELECT ref_handle FROM reference WHERE obj_handle=? AND ref_class="Note"',
-        [pPersonHandle])
-    vNotesHandles = pCursor.fetchall()
+def get_person_notes_handles(p_person_handle, p_cursor):
+    p_cursor.execute('SELECT ref_handle FROM reference WHERE obj_handle=? AND ref_class="Note"', [p_person_handle])
+    v_notes_handles = p_cursor.fetchall()
 
-    return vNotesHandles
+    return v_notes_handles
 
 
-def DecodeNoteData(pNoteHandle, pCursor):
-    vHandle = ""
-    vGrampsId = ""
-    vText = []
-    vFormat = ""
-    vType = []
-    vChange = 0
-    vTagBase = []
-    vPrivate = False
+def decode_note_data(p_note_handle, p_cursor):
+    # v_handle = ""
+    # v_gramps_id = ""
+    # v_text = []
+    # v_format = ""
+    # v_type = []
+    # v_change = 0
+    # v_tag_base = []
+    # v_private = False
 
-    vNoteData = []
+    v_note_data = []
 
-    pCursor.execute('SELECT blob_data FROM note WHERE handle=?', [pNoteHandle])
-    vRecord = pCursor.fetchone()
+    p_cursor.execute('SELECT blob_data FROM note WHERE handle=?', [p_note_handle])
+    v_record = p_cursor.fetchone()
 
-    if(vRecord is not None):
-        vBlobData = vRecord[0]
+    if v_record is not None:
+        v_blob_data = v_record[0]
 
-        if(vBlobData is not None):
+        if v_blob_data is not None:
             # See
             # https://www.gramps-project.org/wiki/index.php/Using_database_API#9._Note
-            vNoteData = pickle.loads(vBlobData)
+            v_note_data = pickle.loads(v_blob_data)
 
             # Debug
-#			print('vNoteData: ', vNoteData)
+            # logging.debug('v_note_data: '.join(map(str, v_note_data)))
 
-            vHandle = vNoteData[0]
-            vGrampsId = vNoteData[1]
-            vText = vNoteData[2][0]
-            vFormat = vNoteData[3]
-            vType = vNoteData[4][0]
-            vChange = vNoteData[5]
-            vTagBase = vNoteData[6]
-            vPrivate = vNoteData[7]
+            # v_handle = v_note_data[0]
+            # v_gramps_id = v_note_data[1]
+            v_text = v_note_data[2][0]
+            # v_format = v_note_data[3]
+            v_type = v_note_data[4][0]
+            # v_change = v_note_data[5]
+            # v_tag_base = v_note_data[6]
+            # v_private = v_note_data[7]
 
             # Debug
-#			print('vNoteData: ', vNoteData)
-#			print('vNoteText: ', vNoteText)
-#			print('vNoteType: ', vNoteType)
+            # logging.debug('v_note_data = %s', v_note_data)
+            # logging.debug('v_text = %s', v_text)
+            # logging.debug('v_type = %s', v_type)
 
-    return vNoteData
+    return v_note_data
 
 
-def GetMediaData(pMediaHandle, pCursor):
-    vHandle = ""
-    vGrampsId = ""
-    vPath = ""
-    vMime = ""
-    vDescription = ""
-    vCheckSum = ""
-    vAttributeBase = []
-    vCitationBase = []
-    vNoteBase = []
-    vChange = 0
-    vDataBase = ()
-    vTagBase = []
-    vPrivate = False
+def get_media_data(p_media_handle, p_cursor):
+    # v_handle: str = ""
+    # v_gramps_id = ""
+    # v_path = ""
+    # v_mime = ""
+    # v_description = ""
+    # v_check_sum = ""
+    # v_attribute_base = []
+    # v_citation_base = []
+    # v_note_base = []
+    # v_change = 0
+    # v_data_base = ()
+    # v_tag_base = []
+    # v_private = False
 
-    vMediaData = []
+    v_media_data = []
 
-    vBasePath = ""
+    # v_base_path = ""
 
     # Get base media path
-    pCursor.execute('SELECT value FROM metadata WHERE setting=?', ['media-path'])
-    vBlobData = pCursor.fetchone()
+    p_cursor.execute('SELECT value FROM metadata WHERE setting=?', ['media-path'])
+    v_blob_data = p_cursor.fetchone()
 
-    if(vBlobData is not None):
-        vBasePath = pickle.loads(vBlobData[0])
+    if v_blob_data is not None:
+        v_base_path = pickle.loads(v_blob_data[0])
 
-        # Get path for pMediaHandle
-        pCursor.execute('SELECT blob_data FROM media WHERE handle=?', [pMediaHandle])
-        vRecord = pCursor.fetchone()
+        # Get path for p_media_handle
+        p_cursor.execute('SELECT blob_data FROM media WHERE handle=?', [p_media_handle])
+        v_record = p_cursor.fetchone()
 
-        if(vRecord is not None):
-            vMediaData = pickle.loads(vRecord[0])
-            vMediaData = list(vMediaData)
+        if v_record is not None:
+            v_media_data = pickle.loads(v_record[0])
+            v_media_data = list(v_media_data)
 
-            vHandle = vMediaData[0]
-            vGrampsId = vMediaData[1]
-            vPath = vMediaData[2]
-            vMime = vMediaData[3]
-            vDescription = vMediaData[4]
-            vCheckSum = vMediaData[5]
-            vAttributeBase = vMediaData[6]
-            vCitationBase = vMediaData[7]
-            vNoteBase = vMediaData[8]
-            vChange = vMediaData[9]
-            vDataBase = vMediaData[10]
-            vTagBase = vMediaData[11]
-            vPrivate = vMediaData[12]
+            # v_handle = v_media_data[0]
+            # v_gramps_id = v_media_data[1]
+            v_path = v_media_data[2]
+            # v_mime = v_media_data[3]
+            # v_description = v_media_data[4]
+            # v_check_sum = v_media_data[5]
+            # v_attribute_base = v_media_data[6]
+            # v_citation_base = v_media_data[7]
+            # v_note_base = v_media_data[8]
+            # v_change = v_media_data[9]
+            # v_data_base = v_media_data[10]
+            # v_tag_base = v_media_data[11]
+            # v_private = v_media_data[12]
 
             # Debug
-#            if(vGrampsId == "O0008"):
-#                print("vMediaData: ", vMediaData)
+            # if v_gramps_id == "O0008":
+            #     print("v_media_data: ", v_media_data)
 
             # Check whether path is relative or absolute
-            vPathObject = pathlib.Path(vPath)
-            if(not vPathObject.is_absolute()):
+            v_path_object = pathlib.Path(v_path)
+            if not v_path_object.is_absolute():
                 # Relative path, add base path
-                vPathObject = pathlib.Path.joinpath(pathlib.Path(vBasePath), vPathObject)
+                v_path_object = pathlib.Path.joinpath(pathlib.Path(v_base_path), v_path_object)
 
-            vMediaData[2] = str(vPathObject.as_posix())
+            v_media_data[2] = str(v_path_object.as_posix())
 
-    return vMediaData
-
-
-def GetTagDictionary(pCursor):
-    vTagDictionary = {}
-
-    pCursor.execute('SELECT handle, name FROM tag')
-    vTagData = pCursor.fetchall()
-
-    for vTag in vTagData:
-        vTagDictionary[vTag[0]] = vTag[1]
-
-    # Debug
-#	print("vTagDictionary: ", vTagDictionary)
-
-    return vTagDictionary
+    return v_media_data
 
 
-def GetTagList(pTagHandleList, pTagDictionary):
-    vTagList = []
+def get_tag_dictionary(p_cursor):
+    v_tag_dictionary = {}
 
-    for vTagHandle in pTagHandleList:
-        vTagList.append(pTagDictionary[vTagHandle])
+    p_cursor.execute('SELECT handle, name FROM tag')
+    v_tag_data = p_cursor.fetchall()
+
+    for v_tag in v_tag_data:
+        v_tag_dictionary[v_tag[0]] = v_tag[1]
 
     # Debug
-#	print("vTagList: ", vTagList)
+    # logging.debug("v_tag_dictionary: ".join(map(str, v_tag_dictionary)))
 
-    return vTagList
+    return v_tag_dictionary
+
+
+def get_tag_list(p_tag_handle_list, p_tag_dictionary):
+    v_tag_list = []
+
+    for v_tag_handle in p_tag_handle_list:
+        v_tag_list.append(p_tag_dictionary[v_tag_handle])
+
+    # Debug
+    # logging.debug("v_tag_list: ".join(map(str, v_tag_list)))
+
+    return v_tag_list

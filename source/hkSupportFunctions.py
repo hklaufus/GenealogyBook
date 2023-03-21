@@ -2,14 +2,15 @@ import hkGrampsDb as hgd
 import hkLanguage as hkl
 
 import calendar
+import logging
 
 import pylatex as pl
 import pylatex.utils as pu
 
 # https://matplotlib.org/basemap/index.html
-#from mpl_toolkits.basemap import Basemap 
+# from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
-#import matplotlib.axes as axs
+# import matplotlib.axes as axs
 import matplotlib.figure as fig
 
 import cartopy.crs as ccrs
@@ -21,393 +22,482 @@ import pandas as pd
 
 from PIL import Image
 
-def GetStartDate(pDateList, pAbbreviated=True):
-    vDateString   = '-'
 
-    if(len(pDateList)==4) or (len(pDateList)==7):
-        vDay1 = pDateList[1]
-        vMonth1 = pDateList[2]
-        vYear1 = pDateList[3]
+def get_start_date(p_date_list, p_abbreviated=True):
+    v_date_string = '-'
 
-        vMonthString1 = calendar.month_name[vMonth1]
-        if(pAbbreviated):
-            vMonthString1 = calendar.month_abbr[vMonth1]
+    if (len(p_date_list) == 4) or (len(p_date_list) == 7):
+        v_day1 = p_date_list[1]
+        v_month1 = p_date_list[2]
+        v_year1 = p_date_list[3]
 
-        vMonthString1 = hkl.Translate(vMonthString1)
+        v_month_string1 = calendar.month_name[v_month1]
+        if p_abbreviated:
+            v_month_string1 = calendar.month_abbr[v_month1]
 
-        vDateString = ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1)
+        v_month_string1 = hkl.translate(v_month_string1)
 
-    return vDateString
+        v_date_string = ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
 
-def DateToText(pDateList, pAbbreviated=True):
-    vModifier = 0
-    vModifierSet = {1, 2, 3}
-    vDateString = '-'
+    return v_date_string
 
-    if(len(pDateList)==4):
-        vModifier = pDateList[0]
 
-        vDay1 = pDateList[1]
-        vMonth1 = pDateList[2]
-        vYear1 = pDateList[3]
-        
-        vMonthString1 = calendar.month_name[vMonth1]
-        if(pAbbreviated):
-            vMonthString1 = calendar.month_abbr[vMonth1]
+def date_to_text(p_date_list, p_abbreviated=True):
+    # v_modifier = 0
+    v_modifier_set = {1, 2, 3}
+    v_date_string = '-'
 
-        vMonthString1 = hkl.Translate(vMonthString1)
+    if len(p_date_list) == 4:
+        v_modifier = p_date_list[0]
 
-        if(vModifier in vModifierSet):
+        v_day1 = p_date_list[1]
+        v_month1 = p_date_list[2]
+        v_year1 = p_date_list[3]
+
+        v_month_string1 = calendar.month_name[v_month1]
+        if p_abbreviated:
+            v_month_string1 = calendar.month_abbr[v_month1]
+
+        v_month_string1 = hkl.translate(v_month_string1)
+
+        if v_modifier in v_modifier_set:
             # Before, after, about
-            vDateString = hkl.Translate(hgd.vDateModifierDict[vModifier]) + ' ' + ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1)
+            v_date_string = hkl.translate(hgd.c_date_modifier_dict[v_modifier]) + ' ' + (
+                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
         else:
-            vDateString = ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1)
+            v_date_string = ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
 
-    elif(len(pDateList)==7):
-        vModifier = pDateList[0]
+    elif len(p_date_list) == 7:
+        v_modifier = p_date_list[0]
 
-        vDay1 = pDateList[1]
-        vMonth1 = pDateList[2]
-        vYear1 = pDateList[3]
+        v_day1 = p_date_list[1]
+        v_month1 = p_date_list[2]
+        v_year1 = p_date_list[3]
 
-        vMonthString1 = calendar.month_name[vMonth1]
-        if(pAbbreviated):
-            vMonthString1 = calendar.month_abbr[vMonth1]
+        v_month_string1 = calendar.month_name[v_month1]
+        if p_abbreviated:
+            v_month_string1 = calendar.month_abbr[v_month1]
 
-        vMonthString1 = hkl.Translate(vMonthString1)
+        v_month_string1 = hkl.translate(v_month_string1)
 
-        vDay2 = pDateList[4]
-        vMonth2 = pDateList[5]
-        vYear2 = pDateList[6]
+        v_day2 = p_date_list[4]
+        v_month2 = p_date_list[5]
+        v_year2 = p_date_list[6]
 
-        vMonthString2 = calendar.month_name[vMonth2]
-        if(pAbbreviated):
-            vMonthString2 = calendar.month_abbr[vMonth2]
+        v_month_string2 = calendar.month_name[v_month2]
+        if p_abbreviated:
+            v_month_string2 = calendar.month_abbr[v_month2]
 
-        vMonthString2 = hkl.Translate(vMonthString2)
+        v_month_string2 = hkl.translate(v_month_string2)
 
-        if(vModifier == 4):
+        if v_modifier == 4:
             # Range
-            vDateString = hkl.Translate('between') + ' ' + ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1) + ' ' + hkl.Translate('and') + ' ' + ((str(vDay2) + ' ') if vDay2!=0 else '') + vMonthString2 + ' ' + str(vYear2)
-        elif(vModifier == 5):
+            v_date_string = hkl.translate('between') + ' ' + (
+                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1) + ' ' + hkl.translate(
+                'and') + ' ' + ((str(v_day2) + ' ') if v_day2 != 0 else '') + v_month_string2 + ' ' + str(v_year2)
+        elif v_modifier == 5:
             # Span
-            vDateString = hkl.Translate('from') + ' ' + ((str(vDay1) + ' ') if vDay1!=0 else '') + vMonthString1 + ' ' + str(vYear1) + ' ' + hkl.Translate('until') + ' ' + ((str(vDay2) + ' ') if vDay2!=0 else '') + vMonthString2 + ' ' + str(vYear2)
+            v_date_string = hkl.translate('from') + ' ' + (
+                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1) + ' ' + hkl.translate(
+                'until') + ' ' + ((str(v_day2) + ' ') if v_day2 != 0 else '') + v_month_string2 + ' ' + str(v_year2)
 
-    return vDateString
+    return v_date_string
 
-def StreetToText(pPlaceList, pLongStyle=False):
-    vStreetLabel      = hgd.vPlaceTypeDict[hgd.vPlaceTypeStreet]
 
-    vString = ''
-    if(pLongStyle):
-        for vPlace in pPlaceList:
-            vString = vString + ', ' + pPlaceList[vPlace][0]
+def street_to_text(p_place_list, p_long_style=False):
+    v_street_label = hgd.c_place_type_dict[hgd.c_place_type_street]
 
-        vString = vString[2:].strip()
+    v_string = ''
+    if p_long_style:
+        for v_place in p_place_list:
+            v_string = v_string + ', ' + p_place_list[v_place][0]
+
+        v_string = v_string[2:].strip()
     else:
-        if(vStreetLabel in pPlaceList):
-            vString = vString + pPlaceList[vStreetLabel][0]
+        if v_street_label in p_place_list:
+            v_string = v_string + p_place_list[v_street_label][0]
 
-            vPlaceString = PlaceToText(pPlaceList, pLongStyle)
-            if(len(vPlaceString)>0):
-                vString = vString + ', ' + vPlaceString
+            v_place_string = place_to_text(p_place_list, p_long_style)
+            if len(v_place_string) > 0:
+                v_string = v_string + ', ' + v_place_string
         else:
-            vString = vString + PlaceToText(pPlaceList, pLongStyle)
+            v_string = v_string + place_to_text(p_place_list, p_long_style)
 
     # Debug
-#    print('pPlaceList: ', pPlaceList)
-#    print('PlaceToText: ', vString)
+    # logging.debug('p_place_list: '.join(map(str, p_place_list)))
+    logging.debug('v_string = %s', v_string)
 
-    return vString
+    return v_string
 
-def PlaceToText(pPlaceList, pLongStyle=False):
-    vCityLabel         = hgd.vPlaceTypeDict[hgd.vPlaceTypeCity]
-    vTownLabel         = hgd.vPlaceTypeDict[hgd.vPlaceTypeTown]
-    vVillageLabel      = hgd.vPlaceTypeDict[hgd.vPlaceTypeVillage]
-    vMunicipalityLabel = hgd.vPlaceTypeDict[hgd.vPlaceTypeMunicipality] 
 
-    vString = ''
-    if(pLongStyle):
-        for vPlace in pPlaceList:
-            vString = vString + ', ' + pPlaceList[vPlace][0]
+def place_to_text(p_place_list, p_long_style=False):
+    v_city_label = hgd.c_place_type_dict[hgd.c_place_type_city]
+    v_town_label = hgd.c_place_type_dict[hgd.c_place_type_town]
+    v_village_label = hgd.c_place_type_dict[hgd.c_place_type_village]
+    v_municipality_label = hgd.c_place_type_dict[hgd.c_place_type_municipality]
 
-        vString = vString[2:].strip()
+    v_string = ''
+    if p_long_style:
+        for v_place in p_place_list:
+            v_string = v_string + ', ' + p_place_list[v_place][0]
+
+        v_string = v_string[2:].strip()
     else:
-        vFound = True
-        if(vCityLabel in pPlaceList):
-            vString = vString + pPlaceList[vCityLabel][0]
-        elif(vTownLabel in pPlaceList):
-            vString = vString + pPlaceList[vTownLabel][0]
-        elif(vVillageLabel in pPlaceList):
-            vString = vString + pPlaceList[vVillageLabel][0]
-        elif(vMunicipalityLabel in pPlaceList):
-            vString = vString + pPlaceList[vMunicipalityLabel][0]
+        v_found = True
+        if v_city_label in p_place_list:
+            v_string = v_string + p_place_list[v_city_label][0]
+        elif v_town_label in p_place_list:
+            v_string = v_string + p_place_list[v_town_label][0]
+        elif v_village_label in p_place_list:
+            v_string = v_string + p_place_list[v_village_label][0]
+        elif v_municipality_label in p_place_list:
+            v_string = v_string + p_place_list[v_municipality_label][0]
         else:
-            vFound = False
+            v_found = False
 
-        if(vFound):
-            vCountryString = CountryToText(pPlaceList, pLongStyle)
-            if(len(vCountryString)>0):
-                vString = vString + ', ' + vCountryString
+        if v_found:
+            v_country_string = country_to_text(p_place_list, p_long_style)
+            if len(v_country_string) > 0:
+                v_string = v_string + ', ' + v_country_string
         else:
-            vString = vString + CountryToText(pPlaceList, pLongStyle)
+            v_string = v_string + country_to_text(p_place_list, p_long_style)
 
     # Debug
-#    print('pPlaceList: ', pPlaceList)
-#    print('PlaceToText: ', vString)
+    # logging.debug('p_place_list: '.join(map(str, p_place_list)))
+    logging.debug('v_string = %s', v_string)
 
-    return vString
+    return v_string
 
-def CountryToText(pPlaceList, pLongStyle=False):
-    vCountryLabel      = hgd.vPlaceTypeDict[hgd.vPlaceTypeCountry]
 
-    vString = ''
-    if(pLongStyle):
-        for vPlace in pPlaceList:
-            vString = vString + ', ' + pPlaceList[vPlace][0]
+def country_to_text(p_place_list, p_long_style=False):
+    v_country_label = hgd.c_place_type_dict[hgd.c_place_type_country]
 
-        vString = vString[2:].strip()
+    v_string = ''
+    if p_long_style:
+        for v_place in p_place_list:
+            v_string = v_string + ', ' + p_place_list[v_place][0]
+
+        v_string = v_string[2:].strip()
     else:
-        if(vCountryLabel in pPlaceList):
-            vString = vString + pPlaceList[vCountryLabel][0]
+        if v_country_label in p_place_list:
+            v_string = v_string + p_place_list[v_country_label][0]
 
     # Debug
-#    print('pPlaceList: ', pPlaceList)
-#    print('CountryToText: ', vString)
+    # logging.debug('p_place_list: '.join(map(str, p_place_list)))
+    logging.debug('v_string = %s', v_string)
 
-    return vString
+    return v_string
 
-def SortPersonListByBirth(pPersonHandleList, pCursor):
+
+def sort_person_list_by_birth(p_person_handle_list, p_cursor):
     # Sort ID of persons in pPersonIdList by birth date
 
     # Debug
-#    print('Before: ',pPersonHandleList)
-    
+    # logging.debug('Before: '.join(map(str, p_person_handle_list)))
+
     # Retrieve person info
-    vNewPersonList = []
-    for vPersonHandle in pPersonHandleList:
-        vPersonData = hgd.DecodePersonData(vPersonHandle, pCursor)
-        vBirthRefIndex = vPersonData[6]
-        if(vBirthRefIndex>=0):
-            vEventRefList = vPersonData[7]
-            vBirthEventRef = vEventRefList[vBirthRefIndex]
-            vBirthEventHandle = vBirthEventRef[3]
-            vBirthEventInfo = hgd.DecodeEventData(vBirthEventHandle, pCursor)
-            vBirthDate = vBirthEventInfo[1]
+    v_new_person_list = []
+    for v_person_handle in p_person_handle_list:
+        v_person_data = hgd.decode_person_data(v_person_handle, p_cursor)
+        v_birth_ref_index = v_person_data[6]
+        if v_birth_ref_index >= 0:
+            v_event_ref_list = v_person_data[7]
+            v_birth_event_ref = v_event_ref_list[v_birth_ref_index]
+            v_birth_event_handle = v_birth_event_ref[3]
+            v_birth_event_info = hgd.decode_event_data(v_birth_event_handle, p_cursor)
+            v_birth_date = v_birth_event_info[1]
         else:
-            vBirthDate = '-'
+            v_birth_date = '-'
 
-        vNewPersonList.append([vBirthDate,vPersonHandle])
+        v_new_person_list.append([v_birth_date, v_person_handle])
 
-    vDateFunc = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
-    vNewPersonList.sort(key=vDateFunc)
-    pPersonHandleList = [item[1] for item in vNewPersonList]
+    f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
+    v_new_person_list.sort(key=f_date_func)
+    p_person_handle_list = [item[1] for item in v_new_person_list]
 
     # Debug
-#    print('After: ',pPersonHandleList)
+    # logging.debug('After: '.join(map(str, p_person_handle_list)))
 
-    return pPersonHandleList
+    return p_person_handle_list
 
-def PictureSideBySideEqualHeight(pChapter, pImagePath_1, pImagePath_2, pImageTitle_1 = "", pImageTitle_2 = "", pImageRect_1 = None, pImageRect_2 = None):
+
+def picture_side_by_side_equal_height(p_chapter, p_image_path_1, p_image_path_2, p_image_title_1="", p_image_title_2="", p_image_rect_1=None, p_image_rect_2=None):
     """
     Positions two pictures side by side, scaling them such that thier heights are equal.
     Zoom in on a focus area in case pImageRect_# is defined
     """
 
-    if(pImageRect_1 is None):
-        pChapter.append(pl.NoEscape(r'\def\imgA{\includegraphics[scale=0.1]{"' + pImagePath_1 + r'"}}')) # Added scale to prevent overflow in scalerel package
+    # Latex Debug
+    p_chapter.append(pl.NoEscape("% hkSupportFunctions.picture_side_by_side_equal_height"))
+
+    if p_image_rect_1 is None:
+        p_chapter.append(pl.NoEscape(
+            r'\def\imgA{\includegraphics[scale=0.1]{"' + p_image_path_1 + r'"}}'))  # Added scale to prevent overflow in scalerel package
     else:
-        vLeft_1   = '{' + str(pImageRect_1[0]/100) + '\wd1}'
-        vRight_1  = '{' + str(1-pImageRect_1[2]/100) + '\wd1}'
-        vTop_1    = '{' + str(pImageRect_1[1]/100) + '\ht1}'
-        vBottom_1 = '{' + str(1-pImageRect_1[3]/100) + '\ht1}'
+        v_left = '{' + str(p_image_rect_1[0] / 100) + r'\wd1}'
+        v_right = '{' + str(1 - p_image_rect_1[2] / 100) + r'\wd1}'
+        v_top = '{' + str(p_image_rect_1[1] / 100) + r'\ht1}'
+        v_bottom = '{' + str(1 - p_image_rect_1[3] / 100) + r'\ht1}'
 
         # Debug
-        #print('PictureSideBySideEqualHeight:', pImageRect_1, vLeft_1, vTop_1, vRight_1, vBottom_1)
+        logging.debug('pImageRect1: %s, %s, %s, %s', v_left, v_top, v_right, v_bottom)
 
-        pChapter.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + pImagePath_1 + r'"}}'))
-        pChapter.append(pl.NoEscape(r'\def\imgA{\includegraphics[trim=' + vLeft_1 + ' ' + vBottom_1 + ' ' + vRight_1 + ' ' + vTop_1 + ', clip, scale=0.1]{"' + pImagePath_1 + r'"}}'))
+        v_trim = v_left + ' ' + v_bottom + ' ' + v_right + ' ' + v_top
 
-    if(pImageRect_2 is None):
-        pChapter.append(pl.NoEscape(r'\def\imgB{\includegraphics[scale=0.1]{"' + pImagePath_2 + r'"}}')) # Added scale to prevent overflow in scalerel package
+        p_chapter.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + p_image_path_1 + r'"}}'))
+        p_chapter.append(pl.NoEscape(r'\def\imgA{\includegraphics[trim=' + v_trim + ', clip, scale=0.1]{"' + p_image_path_1 + r'"}}'))
+
+    if p_image_rect_2 is None:
+        p_chapter.append(pl.NoEscape(r'\def\imgB{\includegraphics[scale=0.1]{"' + p_image_path_2 + r'"}}'))  # Added scale to prevent overflow in scalerel package
     else:
-        vLeft_2   = '{' + str(pImageRect_2[0]/100) + '\wd2}'
-        vRight_2  = '{' + str(1-pImageRect_2[2]/100) + '\wd2}'
-        vTop_2    = '{' + str(pImageRect_2[1]/100) + '\ht2}'
-        vBottom_2 = '{' + str(1-pImageRect_2[3]/100) + '\ht2}'
+        v_left = '{' + str(p_image_rect_2[0] / 100) + r'\wd2}'
+        v_right = '{' + str(1 - p_image_rect_2[2] / 100) + r'\wd2}'
+        v_top = '{' + str(p_image_rect_2[1] / 100) + r'\ht2}'
+        v_bottom = '{' + str(1 - p_image_rect_2[3] / 100) + r'\ht2}'
 
-        pChapter.append(pl.NoEscape(r'\sbox2{\includegraphics{"' + pImagePath_2 + r'"}}'))
-        pChapter.append(pl.NoEscape(r'\def\imgB{\includegraphics[trim=' + vLeft_2 + ' ' + vBottom_2 + ' ' + vRight_2 + ' ' + vTop_2 + ', clip, scale=0.1]{"' + pImagePath_2 + r'"}}'))
+        # Debug
+        logging.debug('pImageRect2: %s, %s, %s, %s', v_left, v_top, v_right, v_bottom)
+
+        v_trim = v_left + ' ' + v_bottom + ' ' + v_right + ' ' + v_top
+
+        p_chapter.append(pl.NoEscape(r'\sbox2{\includegraphics{"' + p_image_path_2 + r'"}}'))
+        p_chapter.append(pl.NoEscape(r'\def\imgB{\includegraphics[trim=' + v_trim + ', clip, scale=0.1]{"' + p_image_path_2 + r'"}}'))
 
     # See: https://tex.stackexchange.com/questions/244635/side-by-side-figures-adjusted-to-have-equal-height
 
-    pChapter.append(pl.NoEscape(r'\sbox\x{\scalerel{$\imgA$}{$\imgB$}}'))
-    pChapter.append(pl.NoEscape(r'\imgwidthA=\wd\x'))
-    pChapter.append(pl.NoEscape(r'\textwidthA=\dimexpr\textwidth-5ex'))
-    pChapter.append(pl.NoEscape(r'\FPdiv\scaleratio{\the\textwidthA}{\the\imgwidthA}'))
-    pChapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\scalerel*{$\imgA$}{$\imgB$}}}'))
-    pChapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
-    pChapter.append(pl.NoEscape(r'\box0'))
-    pChapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(pImageTitle_1) + '}'))
-    pChapter.append(pl.NoEscape(r'\end{minipage}\kern3ex'))
-    pChapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\imgB}}'))
-    pChapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
-    pChapter.append(pl.NoEscape(r'\box0'))
-    pChapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(pImageTitle_2) + '}'))
-    pChapter.append(pl.NoEscape(r'\end{minipage}'))
-    pChapter.append(pl.NoEscape(r'\newline\newline'))
+    p_chapter.append(pl.NoEscape(r'\sbox\x{\scalerel{$\imgA$}{$\imgB$}}'))
+    p_chapter.append(pl.NoEscape(r'\imgwidthA=\wd\x'))
+    p_chapter.append(pl.NoEscape(r'\textwidthA=\dimexpr\textwidth-5ex'))
+    p_chapter.append(pl.NoEscape(r'\FPdiv\scaleratio{\the\textwidthA}{\the\imgwidthA}'))
+    p_chapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\scalerel*{$\imgA$}{$\imgB$}}}'))
+    p_chapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
+    p_chapter.append(pl.NoEscape(r'\box0'))
+    p_chapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(p_image_title_1) + '}'))
+    p_chapter.append(pl.NoEscape(r'\end{minipage}\kern3ex'))
+    p_chapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\imgB}}'))
+    p_chapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
+    p_chapter.append(pl.NoEscape(r'\box0'))
+    p_chapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(p_image_title_2) + '}'))
+    p_chapter.append(pl.NoEscape(r'\end{minipage}'))
+    # p_chapter.append(pl.NoEscape(r'\newline\newline'))
+    p_chapter.append(pl.NoEscape(r'\vfill'))
 
-def PictureSideBySideEqualHeight_Old(pChapter, pImageData_1, pImageData_2):
+
+def picture_side_by_side_equal_height_old(p_chapter, p_image_data_1, p_image_data_2):
     # See: https://tex.stackexchange.com/questions/244635/side-by-side-figures-adjusted-to-have-equal-height
 
-    pChapter.append(pl.NoEscape(r'\def\imgA{\includegraphics[scale=0.1]{"' + pImageData_1[2] + r'"}}'))  # Added scale to prevent overflow in scalerel package
-    pChapter.append(pl.NoEscape(r'\def\imgB{\includegraphics[scale=0.1]{"' + pImageData_2[2] + r'"}}'))
-    pChapter.append(pl.NoEscape(r'\sbox\x{\scalerel{$\imgA$}{$\imgB$}}'))
-    pChapter.append(pl.NoEscape(r'\imgwidthA=\wd\x'))
-    pChapter.append(pl.NoEscape(r'\textwidthA=\dimexpr\textwidth-5ex'))
-    pChapter.append(pl.NoEscape(r'\FPdiv\scaleratio{\the\textwidthA}{\the\imgwidthA}'))
-    pChapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\scalerel*{$\imgA$}{$\imgB$}}}'))
-    pChapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
-    pChapter.append(pl.NoEscape(r'\box0'))
-    pChapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(pImageData_1[4]) + '}'))
-    pChapter.append(pl.NoEscape(r'\end{minipage}\kern3ex'))
-    pChapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\imgB}}'))
-    pChapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
-    pChapter.append(pl.NoEscape(r'\box0'))
-    pChapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(pImageData_2[4]) + '}'))
-    pChapter.append(pl.NoEscape(r'\end{minipage}'))
-    pChapter.append(pl.NoEscape(r'\newline\newline'))
+    p_chapter.append(pl.NoEscape(r'\def\imgA{\includegraphics[scale=0.1]{"' + p_image_data_1[2] + r'"}}'))  # Added scale to prevent overflow in scalerel package
+    p_chapter.append(pl.NoEscape(r'\def\imgB{\includegraphics[scale=0.1]{"' + p_image_data_2[2] + r'"}}'))
+    p_chapter.append(pl.NoEscape(r'\sbox\x{\scalerel{$\imgA$}{$\imgB$}}'))
+    p_chapter.append(pl.NoEscape(r'\imgwidthA=\wd\x'))
+    p_chapter.append(pl.NoEscape(r'\textwidthA=\dimexpr\textwidth-5ex'))
+    p_chapter.append(pl.NoEscape(r'\FPdiv\scaleratio{\the\textwidthA}{\the\imgwidthA}'))
+    p_chapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\scalerel*{$\imgA$}{$\imgB$}}}'))
+    p_chapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
+    p_chapter.append(pl.NoEscape(r'\box0'))
+    p_chapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(p_image_data_1[4]) + '}'))
+    p_chapter.append(pl.NoEscape(r'\end{minipage}\kern3ex'))
+    p_chapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\imgB}}'))
+    p_chapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
+    p_chapter.append(pl.NoEscape(r'\box0'))
+    p_chapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(p_image_data_2[4]) + '}'))
+    p_chapter.append(pl.NoEscape(r'\end{minipage}'))
+    p_chapter.append(pl.NoEscape(r'\newline\newline'))
 
-def WrapFigure(pChapter, pFilename, pCaption=None, pPosition='i', pWidth=r'0.50\textwidth', pText=''):
+
+def wrap_figure_new(p_chapter, p_filename, p_caption=None, p_position='i', p_width=r'0.50\textwidth', p_text='', p_zoom_rect=None):
     # This is a very ugly function, but what it does:
     # 1. It simplifies the use of the wrapfigure environment
     # 2. It fills the textblock with empty line in case the figure height is longer then the text block height.
     # This happens when the text block contains too little text lines, with the result that the next section heading and following text would overlap the figure
 
+    # TODO: Move this to hkLatex in a pylatex format
+
+    # Create a minipage
+    p_chapter.append(pl.NoEscape(r'\begin{minipage}{\textwidth}'))
+
+    # Set focus area 20220328
+    v_trim = ''
+    if p_zoom_rect is not None:
+        v_left = '{' + str(p_zoom_rect[0] / 100) + r'\wd1}'
+        v_right = '{' + str(1 - p_zoom_rect[2] / 100) + r'\wd1}'
+        v_top = '{' + str(p_zoom_rect[1] / 100) + r'\ht1}'
+        v_bottom = '{' + str(1 - p_zoom_rect[3] / 100) + r'\ht1}'
+
+        v_trim = v_left + ' ' + v_bottom + ' ' + v_right + ' ' + v_top
+        p_chapter.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + p_filename + r'"}}'))
+
+    # Add the figure
+    p_chapter.append(pl.NoEscape(r'\begin{wrapfigure}{' + p_position + '}{' + p_width + '}'))
+    p_chapter.append(pl.NoEscape(r'\centering'))
+    p_chapter.append(pl.NoEscape(r'\vspace{-1em}'))
+
+    if p_zoom_rect is not None:
+        p_chapter.append(pl.NoEscape(r'\includegraphics[trim=' + v_trim + ', clip, width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
+    else:
+        p_chapter.append(pl.NoEscape(r'\includegraphics[width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
+
+    if p_caption is not None:
+        p_chapter.append(pl.NoEscape(r'\caption{' + pu.escape_latex(p_caption) + r'}'))
+
+    p_chapter.append(pl.NoEscape(r'\end{wrapfigure}'))
+
+    # Add the text
+    p_chapter.append(pl.NoEscape(p_text))
+
+    # end the minipage
+    p_chapter.append(pl.NoEscape(r'\end{minipage}'))
+    p_chapter.append(pl.NoEscape(r'\vfill'))
+
+
+def wrap_figure(p_chapter, p_filename, p_caption=None, p_position='i', p_width=r'0.50\textwidth', p_text='', p_zoom_rect=None):
+    # This is a very ugly function, but what it does:
+    # 1. It simplifies the use of the wrapfigure environment
+    # 2. It fills the textblock with empty line in case the figure height is longer then the text block height.
+    # This happens when the text block contains too little text lines, with the result that the next section heading and following text would overlap the figure
+
+    # Set focus area 20220328
+    v_trim = ''
+    if p_zoom_rect is not None:
+        v_left = '{' + str(p_zoom_rect[0] / 100) + r'\wd1}'
+        v_right = '{' + str(1 - p_zoom_rect[2] / 100) + r'\wd1}'
+        v_top = '{' + str(p_zoom_rect[1] / 100) + r'\ht1}'
+        v_bottom = '{' + str(1 - p_zoom_rect[3] / 100) + r'\ht1}'
+
+        v_trim = v_left + ' ' + v_bottom + ' ' + v_right + ' ' + v_top
+        p_chapter.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + p_filename + r'"}}'))
+
     # Get the height of the figure
-    pChapter.append(pl.NoEscape(r'\newdimen\imageheightA'))
-    pChapter.append(pl.NoEscape(r'\settoheight{\imageheightA}{\includegraphics[width='+pWidth+r'-1em]{"' + pFilename + r'"}}'))
+    p_chapter.append(pl.NoEscape(r'\newdimen\imageheightA'))
+    p_chapter.append(pl.NoEscape(r'\settoheight{\imageheightA}{\includegraphics[width=' + p_width + r'-1em]{"' + p_filename + r'"}}'))
 
     # Get the height if the text
-    pChapter.append(pl.NoEscape(r'\newdimen\textheightA'))
-    pChapter.append(pl.NoEscape(r'\setbox0=\vbox{' + pText  + '}'))
-    pChapter.append(pl.NoEscape(r'\textheightA=\ht0 \advance\textheightA by \dp0'))
+    p_chapter.append(pl.NoEscape(r'\newdimen\textheightA'))
+    p_chapter.append(pl.NoEscape(r'\setbox0=\vbox{' + p_text + '}'))
+    p_chapter.append(pl.NoEscape(r'\textheightA=\ht0 \advance\textheightA by \dp0'))
 
-    pChapter.append(pl.NoEscape(r'\makeatletter'))
+    p_chapter.append(pl.NoEscape(r'\makeatletter'))
 
     # Strip 'pt' from heights
-    pChapter.append(pl.NoEscape(r'\def\imageheightB{\strip@pt\imageheightA}'))
-    pChapter.append(pl.NoEscape(r'\def\textheightB{\strip@pt\textheightA}'))
-    pChapter.append(pl.NoEscape(r'\def\lineheight{\strip@pt\baselineskip}'))
+    p_chapter.append(pl.NoEscape(r'\def\imageheightB{\strip@pt\imageheightA}'))
+    p_chapter.append(pl.NoEscape(r'\def\textheightB{\strip@pt\textheightA}'))
+    p_chapter.append(pl.NoEscape(r'\def\lineheight{\strip@pt\baselineskip}'))
 
     # Initialise variables
-    pChapter.append(pl.NoEscape(r'\def\deltaheight{0}'))
-    pChapter.append(pl.NoEscape(r'\def\remaininglines{0}'))
+    p_chapter.append(pl.NoEscape(r'\def\deltaheight{0}'))
+    p_chapter.append(pl.NoEscape(r'\def\remaininglines{0}'))
 
     # Calculate the remaining number of lines as a float
-    pChapter.append(pl.NoEscape(r'\FPsub\deltaheight\imageheightB\textheightB'))
-    pChapter.append(pl.NoEscape(r'\FPdiv\remaininglines\deltaheight\lineheight'))
+    p_chapter.append(pl.NoEscape(r'\FPsub\deltaheight\imageheightB\textheightB'))
+    p_chapter.append(pl.NoEscape(r'\FPdiv\remaininglines\deltaheight\lineheight'))
 
-    pChapter.append(pl.NoEscape(r'\makeatother'))
+    p_chapter.append(pl.NoEscape(r'\makeatother'))
 
     # Calculate the remaining number of lines as an integer
-    pChapter.append(pl.NoEscape(r'\setcounter{maxlines}{\intpart\remaininglines}'))
-    pChapter.append(pl.NoEscape(r'\addtocounter{maxlines}{1}'))
+    p_chapter.append(pl.NoEscape(r'\setcounter{maxlines}{\intpart\remaininglines}'))
+    p_chapter.append(pl.NoEscape(r'\addtocounter{maxlines}{1}'))
 
     # TODO: Move this to hkLatex in a pylatex format
     # Add the figure
-    pChapter.append(pl.NoEscape(r'\begin{wrapfigure}{'+pPosition+'}{'+pWidth+'}'))
-    pChapter.append(pl.NoEscape(r'\centering'))
-    pChapter.append(pl.NoEscape(r'\vspace{-1em}'))
-    pChapter.append(pl.NoEscape(r'\includegraphics[width='+pWidth+r'-1em]{"' + pFilename + r'"}'))
+    p_chapter.append(pl.NoEscape(r'\begin{wrapfigure}{' + p_position + '}{' + p_width + '}'))
+    p_chapter.append(pl.NoEscape(r'\centering'))
+    p_chapter.append(pl.NoEscape(r'\vspace{-1em}'))
 
-    if(pCaption is not None):
-        pChapter.append(pl.NoEscape(r'\caption{' + pu.escape_latex(pCaption) + r'}'))
+    if p_zoom_rect is not None:
+        p_chapter.append(pl.NoEscape(r'\includegraphics[trim=' + v_trim + ', clip, width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
+    else:
+        p_chapter.append(pl.NoEscape(r'\includegraphics[width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
 
-    pChapter.append(pl.NoEscape(r'\end{wrapfigure}'))
+    if p_caption is not None:
+        p_chapter.append(pl.NoEscape(r'\caption{' + pu.escape_latex(p_caption) + r'}'))
+
+    p_chapter.append(pl.NoEscape(r'\end{wrapfigure}'))
 
     # Add the text
-    pChapter.append(pl.NoEscape(pText))
+    p_chapter.append(pl.NoEscape(p_text))
 
     # Add the empty lines
-    pChapter.append(pl.NoEscape(r'\setcounter{mycounter}{1}'))
-    pChapter.append(pl.NoEscape(r'\loop'))
-    pChapter.append(pl.NoEscape(r'\textcolor{white}{Empty line\\}'))
-    #pChapter.append(pl.NoEscape(r'\par'))
-    pChapter.append(pl.NoEscape(r'\addtocounter{mycounter}{1}'))
-    pChapter.append(pl.NoEscape(r'\ifnum \value{mycounter}<\value{maxlines}'))
-    pChapter.append(pl.NoEscape(r'\repeat'))
+    p_chapter.append(pl.NoEscape(r'\setcounter{mycounter}{1}'))
+    p_chapter.append(pl.NoEscape(r'\loop'))
+    p_chapter.append(pl.NoEscape(r'\textcolor{white}{Empty line\\}'))
+    # p_chapter.append(pl.NoEscape(r'\par'))
+    p_chapter.append(pl.NoEscape(r'\addtocounter{mycounter}{1}'))
+    p_chapter.append(pl.NoEscape(r'\ifnum \value{mycounter}<\value{maxlines}'))
+    p_chapter.append(pl.NoEscape(r'\repeat'))
+    p_chapter.append(pl.NoEscape(r'\par'))
 
-def CreateMap(pDocumentPath, pCountry):
+
+def create_map(p_document_path, p_country):
     # Check for existence of path
-    if(not os.path.exists(pDocumentPath)):
-        os.mkdir(pDocumentPath)
+    if not os.path.exists(p_document_path):
+        os.mkdir(p_document_path)
 
     # Create file name for figure
-    vFilePath = os.path.join(pDocumentPath, 'Map_' + pCountry + '.png')
-    if(not os.path.exists(vFilePath)):
+    v_file_path = os.path.join(p_document_path, 'Map_' + p_country + '.png')
+    if not os.path.exists(v_file_path):
         # Get country latitude / longitudes
-        vCoordinates = GetCountryMinMaxCoordinates(pCountry)
-        vLon0 = vCoordinates[0]
-        vLat0 = vCoordinates[1]
-        vLon1 = vCoordinates[2]
-        vLat1 = vCoordinates[3]
+        v_coordinates = get_country_min_max_coordinates(p_country)
+        v_lon_0 = v_coordinates[0]
+        v_lat_0 = v_coordinates[1]
+        v_lon_1 = v_coordinates[2]
+        v_lat_1 = v_coordinates[3]
 
         # Draw map
-#        vFigure = fig.Figure()
-#        vAxes = cga.GeoAxes(rect=[0, 1, 0, 1], fig=vFigure, map_projection=ccrs.Mercator())
-        vAxes = plt.axes(projection=ccrs.Mercator())
-        vAxes.set_extent([vLon0, vLon1, vLat0, vLat1])
-        vAxes.add_feature(cfeature.LAND.with_scale('10m')) #, color='Bisque')
-        vAxes.add_feature(cfeature.LAKES.with_scale('10m'), alpha=0.5)
-        vAxes.add_feature(cfeature.BORDERS.with_scale('10m'), linewidth=0.2)
-        vAxes.add_feature(cfeature.OCEAN.with_scale('10m'), linewidth=0.2)
+        # v_figure = fig.Figure()
+        # v_axes = cga.GeoAxes(rect=[0, 1, 0, 1], fig=v_figure, map_projection=ccrs.Mercator())
+        v_axes = plt.axes(projection=ccrs.Mercator())
+        v_axes.set_extent([v_lon_0, v_lon_1, v_lat_0, v_lat_1])
+        v_axes.add_feature(cfeature.LAND.with_scale('10m'))  # , color='Bisque')
+        v_axes.add_feature(cfeature.LAKES.with_scale('10m'), alpha=0.5)
+        v_axes.add_feature(cfeature.BORDERS.with_scale('10m'), linewidth=0.2)
+        v_axes.add_feature(cfeature.OCEAN.with_scale('10m'), linewidth=0.2)
 
-        vFigure = vAxes.get_figure()
-#        vFigure.show()
-        vFigure.savefig(fname=vFilePath, bbox_inches='tight', pad_inches=0.0, transparent=True, dpi=500)
-        plt.close(vFigure)
+        v_figure = v_axes.get_figure()
+        #        v_figure.show()
+        v_figure.savefig(fname=v_file_path, bbox_inches='tight', pad_inches=0.0, transparent=True, dpi=500)
+        plt.close(v_figure)
 
-    return vFilePath
+    return v_file_path
 
-def GetCountryMinMaxCoordinates(pCountryCode):
+
+def get_country_min_max_coordinates(p_country_code):
     # Load list of Countries of the world from current working directory
-    vCwd = os.getcwd()
-    vFilePath = os.path.join(vCwd, 'cow.txt')
-    vDataFrame = pd.read_csv(vFilePath, sep=';', comment='#')
+    v_cwd = os.getcwd()
+    v_file_path = os.path.join(v_cwd, 'cow.txt')
+    v_data_frame = pd.read_csv(v_file_path, sep=';', comment='#')
 
     # 20220109: Limit number of maps to Netherlands, Western Europe and the World
-    if(pCountryCode == 'WEU'):
+    if p_country_code == 'WEU':
         # Western Europe
-        vDataFrame = vDataFrame.loc[vDataFrame['subregion']=='Western Europe', ['min_lon', 'min_lat', 'max_lon', 'max_lat']]
-        vMinMaxList = [vDataFrame['min_lon'].min(), vDataFrame['min_lat'].min(), vDataFrame['max_lon'].max(), vDataFrame['max_lat'].max()]
-    elif(pCountryCode == 'EUR'):
+        v_data_frame = v_data_frame.loc[v_data_frame['subregion'] == 'Western Europe', ['min_lon', 'min_lat', 'max_lon', 'max_lat']]
+        v_min_max_list = [v_data_frame['min_lon'].min(), v_data_frame['min_lat'].min(), v_data_frame['max_lon'].max(), v_data_frame['max_lat'].max()]
+    elif p_country_code == 'EUR':
         # Western Europe
-        vDataFrame = vDataFrame.loc[vDataFrame['continent']=='Europe', ['min_lon', 'min_lat', 'max_lon', 'max_lat']]
-        vMinMaxList = [vDataFrame['min_lon'].min(), vDataFrame['min_lat'].min(), vDataFrame['max_lon'].max(), vDataFrame['max_lat'].max()]
-    elif(pCountryCode == 'WLD'):
+        v_data_frame = v_data_frame.loc[v_data_frame['continent'] == 'Europe', ['min_lon', 'min_lat', 'max_lon', 'max_lat']]
+        v_min_max_list = [v_data_frame['min_lon'].min(), v_data_frame['min_lat'].min(), v_data_frame['max_lon'].max(), v_data_frame['max_lat'].max()]
+    elif p_country_code == 'WLD':
         # World
-        vMinMaxList = [-179.,-89.,179.,89.]
+        v_min_max_list = [-179., -89., 179., 89.]
     else:
-        vDataFrame = vDataFrame.loc[vDataFrame['adm0_a3']==pCountryCode, ['min_lon', 'min_lat', 'max_lon', 'max_lat']]
-        vMinMaxList = vDataFrame.values.tolist()[0]
-        
+        v_data_frame = v_data_frame.loc[v_data_frame['adm0_a3'] == p_country_code, ['min_lon', 'min_lat', 'max_lon', 'max_lat']]
+        v_min_max_list = v_data_frame.values.tolist()[0]
+
     # Debug
-#    print('GetCountryMinMaxCoordinates: ', vMinMaxList)
+    logging.debug('get_country_min_max_coordinates: '.join(map(str, v_min_max_list)))
 
-    return vMinMaxList
+    return v_min_max_list
 
-def GetCountryContinentSubregion(pCountryCode):
+
+def get_country_continent_subregion(p_country_code):
     # Load list of Countries of the world from current working directory
-    vCwd = os.getcwd()
-    vFilePath = os.path.join(vCwd, 'cow.txt')
-    vDataFrame = pd.read_csv(vFilePath, sep=';', comment='#')
+    v_cwd = os.getcwd()
+    v_file_path = os.path.join(v_cwd, 'cow.txt')
+    v_data_frame = pd.read_csv(v_file_path, sep=';', comment='#')
 
-    vDataFrame = vDataFrame.loc[vDataFrame['adm0_a3']==pCountryCode, ['continent', 'subregion']]
-    vRegionList = vDataFrame.values.tolist()[0]
-        
+    v_data_frame = v_data_frame.loc[v_data_frame['adm0_a3'] == p_country_code, ['continent', 'subregion']]
+    v_region_list = v_data_frame.values.tolist()[0]
+
     # Debug
-#    print('GetCountryContinentSubregion: ', vRegionList)
+    logging.debug('get_country_continent_subregion: '.join(map(str, v_region_list)))
 
-    return vRegionList
-
+    return v_region_list
