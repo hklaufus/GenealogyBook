@@ -185,14 +185,14 @@ def write_main_document(p_cursor, p_book_parameters):
     if v_person_handle is not None:
         # Write the Ahnentafel of this person
         v_ahnentafel = hac.Ahnentafel(v_person_handle, p_cursor, p_book_parameters['Path'], True)
-        v_ahnentafel.CreateAhnentafelChapter()
+        v_ahnentafel.create_ahnentafel_chapter()
         v_document.append(pl.NoEscape(r'\include{Ahnentafel}'))
 
         #
         # Build a book consisting of parts for each generation.
         # Each part will contain chapters for all persons in the Ahnentafel
         #
-        v_multi_generation_list = v_ahnentafel.GenerationList
+        v_multi_generation_list = v_ahnentafel.generation_list
 
         # Create sub list for first generation
         v_generation_index = 1
