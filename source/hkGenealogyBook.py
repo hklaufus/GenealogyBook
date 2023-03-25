@@ -21,7 +21,7 @@ def read_config_xml(p_file_name='config.xml'):
     v_book_parameters['Author'] = '<Author>'
     v_book_parameters['Title'] = '<Title>'
     v_book_parameters['Filename'] = '<Filename>'
-    v_book_parameters['StartePersonId'] = 'I0000'
+    v_book_parameters['StartPersonId'] = 'I0000'
     v_book_parameters['Language'] = 'nl'
     v_book_parameters['Path'] = '../book/'
 
@@ -43,10 +43,10 @@ def read_config_xml(p_file_name='config.xml'):
     return v_book_parameters
 
 
-def process_person(p_person_handle, p_cursor, p_document, p_document_path, v_done_list):
-    if p_person_handle not in v_done_list:
+def process_person(p_person_handle, p_cursor, p_document, p_document_path, p_done_list):
+    if p_person_handle not in p_done_list:
         # Add person to Done list to prevent of processing twice
-        v_done_list.append(p_person_handle)
+        p_done_list.append(p_person_handle)
 
         v_person = hpc.Person(p_person_handle, p_cursor)
 
@@ -73,7 +73,7 @@ def process_person(p_person_handle, p_cursor, p_document, p_document_path, v_don
             # Process stack
             for v_next_person in v_process_list:
                 if v_next_person is not None:
-                    process_person(v_next_person, p_cursor, p_document, p_document_path, v_done_list)
+                    process_person(v_next_person, p_cursor, p_document, p_document_path, p_done_list)
                 # else:
                 #     print('ERROR fetching v_next_person')
                 #     print("v_next_person: ", v_next_person)
@@ -95,7 +95,7 @@ def write_main_document(p_cursor, p_book_parameters):
     # v_document.packages.append(pl.Package('lipsum'))
     v_document.packages.append(pl.Package('blindtext'))
     v_document.packages.append(pl.Package('hyperref'))
-    v_document.packages.append(pl.Package('graphicx'))
+    # v_document.packages.append(pl.Package('graphicx'))  # TODO: Check no longer needed??
 
     # https://tex.stackexchange.com/questions/118602/how-to-text-wrap-an-image-in-latex#132313
     v_document.packages.append(pl.Package('wrapfig'))
@@ -144,8 +144,8 @@ def write_main_document(p_cursor, p_book_parameters):
 
     # See: https://tex.stackexchange.com/questions/244635/side-by-side-figures-adjusted-to-have-equal-height
     v_document.preamble.append(pl.NoEscape(r'\newsavebox\x'))
-    v_document.preamble.append(pl.NoEscape(r'\newcount\imgwidthA'))
-    v_document.preamble.append(pl.NoEscape(r'\newcount\textwidthA'))
+    v_document.preamble.append(pl.NoEscape(r'\newcount\widthImages'))
+    v_document.preamble.append(pl.NoEscape(r'\newcount\widthAvailable'))
 
     # Counters for filling up wrapfigure in hkPersonChapter
     v_document.preamble.append(pl.NoEscape(r'\newcounter{maxlines}'))
@@ -221,12 +221,12 @@ def write_main_document(p_cursor, p_book_parameters):
         # OR
         # write a detailed chapter for each person by running iteratively through the family tree
         #
-        # v_done_list = []
-        # process_person(v_person_handle, p_cursor, v_document, p_document_path, v_done_list)
+        # p_done_list = []
+        # process_person(v_person_handle, p_cursor, v_document, p_document_path, p_done_list)
 
     v_document.generate_tex(filepath=p_book_parameters['Path'] + p_book_parameters['Filename'])
 
-    # print("Number of persons processed: ", len(v_done_list))
+    # print("Number of persons processed: ", len(p_done_list))
 
 
 def main():

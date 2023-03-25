@@ -6,7 +6,7 @@ import hkLatex as hlt
 # https://jeltef.github.io/PyLaTeX/current/index.html
 import pylatex as pl
 import pylatex.utils as pu
-import pylatex.base_classes.containers as pbc
+# import pylatex.base_classes.containers as pbc
 
 
 class Ahnentafel:
@@ -16,6 +16,7 @@ class Ahnentafel:
         self.__person_handle = p_subject_handle
         self.__cursor = p_cursor
         self.__document_path = p_document_path
+        self.__chapter = None
 
         # Displays the status of sources to the Ahnentafel
         self.__source_status = p_source_status
@@ -41,7 +42,7 @@ class Ahnentafel:
         v_string = v_pre_string + ' ' + p_binary_tree_string + r'\quad\quad ' + pu.escape_latex(v_person.given_names) + ' ' + pu.escape_latex(v_person.surname) + r'\newline'
         print(v_string)
 
-        self.__Chapter.append(pl.NoEscape(v_string))
+        self.__chapter.append(pl.NoEscape(v_string))
 
         v_father_handle = v_person.father_handle
         if v_father_handle is not None:
@@ -61,24 +62,22 @@ class Ahnentafel:
         """
         v_generation_index = len(p_generation_list[0][1]) + 1  # The generation index is determined using the length of the binary string
         v_next_generation_list = []
-        # v_section = None
 
         if len(p_generation_list) > 0:
             v_generation_started = False
             for (v_person_handle, v_binary_tree_string) in p_generation_list:
                 if v_person_handle is not None:
                     if not v_generation_started:
-                        with self.__Chapter.create(pl.Section(numbering=False, title=hlg.translate('generation') + ' ' + str(v_generation_index), label=False)):
+                        with self.__chapter.create(pl.Section(numbering=False, title=hlg.translate('generation') + ' ' + str(v_generation_index), label=False)):
                             v_generation_started = True
                             if self.__source_status:
-                                self.__Chapter.append(pl.NoEscape(r'\begin{longtabu}{p{\dimexpr.7\textwidth} p{\dimexpr.3\textwidth} | c | c | c |}%'))
+                                self.__chapter.append(pl.NoEscape(r'\begin{longtabu}{p{\dimexpr.7\textwidth} p{\dimexpr.3\textwidth} | c | c | c |}%'))
                             else:
-                                self.__Chapter.append(pl.NoEscape(r'\begin{longtabu}{p{\dimexpr.7\textwidth} p{\dimexpr.3\textwidth}}%'))
+                                self.__chapter.append(pl.NoEscape(r'\begin{longtabu}{p{\dimexpr.7\textwidth} p{\dimexpr.3\textwidth}}%'))
 
                     v_person = hpc.Person(v_person_handle, self.__cursor, self.__document_path)
                     v_source_status = v_person.source_status
 
-                    v_new_binary_string = ''
                     if v_generation_index == 1:
                         v_new_binary_string = 'X'
                     elif v_person.gender == 0:
@@ -90,16 +89,16 @@ class Ahnentafel:
 
                     if self.__source_status:
                         # Research help: Add the source status to the Ahnentafel
-                        self.__Chapter.append(pl.NoEscape(hlt.GetPersonNameWithReference(v_person.given_names, v_person.surname, v_person.gramps_id) + r' & ' + v_new_binary_string + r' & ' + v_source_status['b'] + r' & ' + v_source_status['m'] + r' & ' + v_source_status['d'] + r'\\'))
+                        self.__chapter.append(pl.NoEscape(hlt.GetPersonNameWithReference(v_person.given_names, v_person.surname, v_person.gramps_id) + r' & ' + v_new_binary_string + r' & ' + v_source_status['b'] + r' & ' + v_source_status['m'] + r' & ' + v_source_status['d'] + r'\\'))
                     else:
-                        self.__Chapter.append(pl.NoEscape(hlt.GetPersonNameWithReference(v_person.given_names, v_person.surname, v_person.gramps_id) + r' & ' + v_new_binary_string + r'\\'))
+                        self.__chapter.append(pl.NoEscape(hlt.GetPersonNameWithReference(v_person.given_names, v_person.surname, v_person.gramps_id) + r' & ' + v_new_binary_string + r'\\'))
 
                     v_next_generation_list.append((v_person.father_handle, v_new_binary_string))
                     v_next_generation_list.append((v_person.mother_handle, v_new_binary_string))
 
             if v_generation_started:
-                self.__Chapter.append(pl.NoEscape(r'\end{longtabu}%'))
-                v_generation_started = False
+                self.__chapter.append(pl.NoEscape(r'\end{longtabu}%'))
+                # v_generation_started = False
 
         if len(v_next_generation_list) > 0:
             self.__add_generation(v_next_generation_list)
@@ -133,7 +132,7 @@ class Ahnentafel:
         print("Writing the Ahnentafel...")
 
         # Create a new chapter for the active person
-        self.__Chapter = hlt.Chapter(title=hlg.translate('pedigree of') + ' ' + v_subject.given_names + ' ' + v_subject.surname, label=False)
+        self.__chapter = hlt.Chapter(title=hlg.translate('pedigree of') + ' ' + v_subject.given_names + ' ' + v_subject.surname, label=False)
         # self.__add_person(self.__person_handle, 'X')
         self.__add_generation([(self.__person_handle, '')])
-        self.__Chapter.generate_tex(filepath=self.__document_path + 'Ahnentafel')
+        self.__chapter.generate_tex(filepath=self.__document_path + 'Ahnentafel')

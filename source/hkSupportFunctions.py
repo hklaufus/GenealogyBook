@@ -18,7 +18,7 @@ import cartopy.feature as cfeature
 import cartopy.mpl.geoaxes as cga
 
 import os
-import pandas as pd
+import pandas
 
 from PIL import Image
 
@@ -62,8 +62,7 @@ def date_to_text(p_date_list, p_abbreviated=True):
 
         if v_modifier in v_modifier_set:
             # Before, after, about
-            v_date_string = hkl.translate(hgd.c_date_modifier_dict[v_modifier]) + ' ' + (
-                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
+            v_date_string = hkl.translate(hgd.c_date_modifier_dict[v_modifier]) + ' ' + ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
         else:
             v_date_string = ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
 
@@ -223,57 +222,56 @@ def sort_person_list_by_birth(p_person_handle_list, p_cursor):
 
 def picture_side_by_side_equal_height(p_chapter, p_image_path_1, p_image_path_2, p_image_title_1="", p_image_title_2="", p_image_rect_1=None, p_image_rect_2=None):
     """
-    Positions two pictures side by side, scaling them such that thier heights are equal.
+    Positions two pictures side by side, scaling them such that their heights are equal.
     Zoom in on a focus area in case pImageRect_# is defined
     """
 
     # Latex Debug
     p_chapter.append(pl.NoEscape("% hkSupportFunctions.picture_side_by_side_equal_height"))
 
+    c_gap = '3ex'  # 3ex gap between two pictures
+
     if p_image_rect_1 is None:
-        p_chapter.append(pl.NoEscape(
-            r'\def\imgA{\includegraphics[scale=0.1]{"' + p_image_path_1 + r'"}}'))  # Added scale to prevent overflow in scalerel package
+        p_chapter.append(pl.NoEscape(r'\def\imgA{\includegraphics[scale=0.1]{"' + p_image_path_1 + r'"}}'))  # Added scale to prevent overflow in scalerel package
     else:
-        v_left = '{' + str(p_image_rect_1[0] / 100) + r'\wd1}'
-        v_right = '{' + str(1 - p_image_rect_1[2] / 100) + r'\wd1}'
-        v_top = '{' + str(p_image_rect_1[1] / 100) + r'\ht1}'
-        v_bottom = '{' + str(1 - p_image_rect_1[3] / 100) + r'\ht1}'
+        v_left = '{' + str(p_image_rect_1[0] / 100) + r'\width}'
+        v_right = '{' + str(1 - p_image_rect_1[2] / 100) + r'\width}'
+        v_top = '{' + str(p_image_rect_1[1] / 100) + r'\height}'
+        v_bottom = '{' + str(1 - p_image_rect_1[3] / 100) + r'\height}'
 
         # Debug
         logging.debug('pImageRect1: %s, %s, %s, %s', v_left, v_top, v_right, v_bottom)
 
         v_trim = v_left + ' ' + v_bottom + ' ' + v_right + ' ' + v_top
 
-        p_chapter.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + p_image_path_1 + r'"}}'))
-        p_chapter.append(pl.NoEscape(r'\def\imgA{\includegraphics[trim=' + v_trim + ', clip, scale=0.1]{"' + p_image_path_1 + r'"}}'))
+        p_chapter.append(pl.NoEscape(r'\def\imgA{\adjincludegraphics[trim=' + v_trim + ', clip, scale=0.1]{"' + p_image_path_1 + r'"}}'))
 
     if p_image_rect_2 is None:
         p_chapter.append(pl.NoEscape(r'\def\imgB{\includegraphics[scale=0.1]{"' + p_image_path_2 + r'"}}'))  # Added scale to prevent overflow in scalerel package
     else:
-        v_left = '{' + str(p_image_rect_2[0] / 100) + r'\wd2}'
-        v_right = '{' + str(1 - p_image_rect_2[2] / 100) + r'\wd2}'
-        v_top = '{' + str(p_image_rect_2[1] / 100) + r'\ht2}'
-        v_bottom = '{' + str(1 - p_image_rect_2[3] / 100) + r'\ht2}'
+        v_left = '{' + str(p_image_rect_2[0] / 100) + r'\width}'
+        v_right = '{' + str(1 - p_image_rect_2[2] / 100) + r'\width}'
+        v_top = '{' + str(p_image_rect_2[1] / 100) + r'\height}'
+        v_bottom = '{' + str(1 - p_image_rect_2[3] / 100) + r'\height}'
 
         # Debug
         logging.debug('pImageRect2: %s, %s, %s, %s', v_left, v_top, v_right, v_bottom)
 
         v_trim = v_left + ' ' + v_bottom + ' ' + v_right + ' ' + v_top
 
-        p_chapter.append(pl.NoEscape(r'\sbox2{\includegraphics{"' + p_image_path_2 + r'"}}'))
-        p_chapter.append(pl.NoEscape(r'\def\imgB{\includegraphics[trim=' + v_trim + ', clip, scale=0.1]{"' + p_image_path_2 + r'"}}'))
+        p_chapter.append(pl.NoEscape(r'\def\imgB{\adjincludegraphics[trim=' + v_trim + ', clip, scale=0.1]{"' + p_image_path_2 + r'"}}'))
 
     # See: https://tex.stackexchange.com/questions/244635/side-by-side-figures-adjusted-to-have-equal-height
 
-    p_chapter.append(pl.NoEscape(r'\sbox\x{\scalerel{$\imgA$}{$\imgB$}}'))
-    p_chapter.append(pl.NoEscape(r'\imgwidthA=\wd\x'))
-    p_chapter.append(pl.NoEscape(r'\textwidthA=\dimexpr\textwidth-5ex'))
-    p_chapter.append(pl.NoEscape(r'\FPdiv\scaleratio{\the\textwidthA}{\the\imgwidthA}'))
-    p_chapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\scalerel*{$\imgA$}{$\imgB$}}}'))
+    p_chapter.append(pl.NoEscape(r'\sbox\x{\scalerel{$\imgA$}{$\imgB$}}'))  # Scale imgA to the same height as reference imgB and output *both* images into a savebox
+    p_chapter.append(pl.NoEscape(r'\widthImages=\wd\x'))  # Get the width of the scaled images
+    p_chapter.append(pl.NoEscape(r'\widthAvailable=\dimexpr\textwidth-'+c_gap))  # Get the available width on the page for imgA and imgB
+    p_chapter.append(pl.NoEscape(r'\FPdiv\scaleratio{\the\widthAvailable}{\the\widthImages}'))  # Calculate the scale factor for the width
+    p_chapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\scalerel*{$\imgA$}{$\imgB$}}}'))  # Scales imgA by scaleratio, and stores it in a horizontal box. Note: here the starred version of scalerel is used: this only outputs the scaled imgA
     p_chapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
     p_chapter.append(pl.NoEscape(r'\box0'))
     p_chapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(p_image_title_1) + '}'))
-    p_chapter.append(pl.NoEscape(r'\end{minipage}\kern3ex'))
+    p_chapter.append(pl.NoEscape(r'\end{minipage}\kern'+c_gap))
     p_chapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\imgB}}'))
     p_chapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
     p_chapter.append(pl.NoEscape(r'\box0'))
@@ -283,57 +281,34 @@ def picture_side_by_side_equal_height(p_chapter, p_image_path_1, p_image_path_2,
     p_chapter.append(pl.NoEscape(r'\vfill'))
 
 
-def picture_side_by_side_equal_height_old(p_chapter, p_image_data_1, p_image_data_2):
-    # See: https://tex.stackexchange.com/questions/244635/side-by-side-figures-adjusted-to-have-equal-height
-
-    p_chapter.append(pl.NoEscape(r'\def\imgA{\includegraphics[scale=0.1]{"' + p_image_data_1[2] + r'"}}'))  # Added scale to prevent overflow in scalerel package
-    p_chapter.append(pl.NoEscape(r'\def\imgB{\includegraphics[scale=0.1]{"' + p_image_data_2[2] + r'"}}'))
-    p_chapter.append(pl.NoEscape(r'\sbox\x{\scalerel{$\imgA$}{$\imgB$}}'))
-    p_chapter.append(pl.NoEscape(r'\imgwidthA=\wd\x'))
-    p_chapter.append(pl.NoEscape(r'\textwidthA=\dimexpr\textwidth-5ex'))
-    p_chapter.append(pl.NoEscape(r'\FPdiv\scaleratio{\the\textwidthA}{\the\imgwidthA}'))
-    p_chapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\scalerel*{$\imgA$}{$\imgB$}}}'))
-    p_chapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
-    p_chapter.append(pl.NoEscape(r'\box0'))
-    p_chapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(p_image_data_1[4]) + '}'))
-    p_chapter.append(pl.NoEscape(r'\end{minipage}\kern3ex'))
-    p_chapter.append(pl.NoEscape(r'\setbox0=\hbox{\scalebox{\scaleratio}{\imgB}}'))
-    p_chapter.append(pl.NoEscape(r'\begin{minipage}[t]{\wd0}'))
-    p_chapter.append(pl.NoEscape(r'\box0'))
-    p_chapter.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(p_image_data_2[4]) + '}'))
-    p_chapter.append(pl.NoEscape(r'\end{minipage}'))
-    p_chapter.append(pl.NoEscape(r'\newline\newline'))
-
-
 def wrap_figure_new(p_chapter, p_filename, p_caption=None, p_position='i', p_width=r'0.50\textwidth', p_text='', p_zoom_rect=None):
     # This is a very ugly function, but what it does:
     # 1. It simplifies the use of the wrapfigure environment
     # 2. It fills the textblock with empty line in case the figure height is longer then the text block height.
     # This happens when the text block contains too little text lines, with the result that the next section heading and following text would overlap the figure
 
+    # TODO: Work in Progress??
     # TODO: Move this to hkLatex in a pylatex format
 
     # Create a minipage
     p_chapter.append(pl.NoEscape(r'\begin{minipage}{\textwidth}'))
-
-    # Set focus area 20220328
-    v_trim = ''
-    if p_zoom_rect is not None:
-        v_left = '{' + str(p_zoom_rect[0] / 100) + r'\wd1}'
-        v_right = '{' + str(1 - p_zoom_rect[2] / 100) + r'\wd1}'
-        v_top = '{' + str(p_zoom_rect[1] / 100) + r'\ht1}'
-        v_bottom = '{' + str(1 - p_zoom_rect[3] / 100) + r'\ht1}'
-
-        v_trim = v_left + ' ' + v_bottom + ' ' + v_right + ' ' + v_top
-        p_chapter.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + p_filename + r'"}}'))
 
     # Add the figure
     p_chapter.append(pl.NoEscape(r'\begin{wrapfigure}{' + p_position + '}{' + p_width + '}'))
     p_chapter.append(pl.NoEscape(r'\centering'))
     p_chapter.append(pl.NoEscape(r'\vspace{-1em}'))
 
+    # Set focus area 20220328
+    v_trim = ''
     if p_zoom_rect is not None:
-        p_chapter.append(pl.NoEscape(r'\includegraphics[trim=' + v_trim + ', clip, width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
+        v_left = '{' + str(p_zoom_rect[0] / 100) + r'\width}'
+        v_right = '{' + str(1 - p_zoom_rect[2] / 100) + r'\width}'
+        v_top = '{' + str(p_zoom_rect[1] / 100) + r'\height}'
+        v_bottom = '{' + str(1 - p_zoom_rect[3] / 100) + r'\height}'
+
+        v_trim = v_left + ' ' + v_bottom + ' ' + v_right + ' ' + v_top
+
+        p_chapter.append(pl.NoEscape(r'\adjincludegraphics[trim=' + v_trim + ', clip, width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
     else:
         p_chapter.append(pl.NoEscape(r'\includegraphics[width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
 
@@ -359,13 +334,12 @@ def wrap_figure(p_chapter, p_filename, p_caption=None, p_position='i', p_width=r
     # Set focus area 20220328
     v_trim = ''
     if p_zoom_rect is not None:
-        v_left = '{' + str(p_zoom_rect[0] / 100) + r'\wd1}'
-        v_right = '{' + str(1 - p_zoom_rect[2] / 100) + r'\wd1}'
-        v_top = '{' + str(p_zoom_rect[1] / 100) + r'\ht1}'
-        v_bottom = '{' + str(1 - p_zoom_rect[3] / 100) + r'\ht1}'
+        v_left = '{' + str(p_zoom_rect[0] / 100) + r'\width}'
+        v_right = '{' + str(1 - p_zoom_rect[2] / 100) + r'\width}'
+        v_top = '{' + str(p_zoom_rect[1] / 100) + r'\height}'
+        v_bottom = '{' + str(1 - p_zoom_rect[3] / 100) + r'\height}'
 
         v_trim = v_left + ' ' + v_bottom + ' ' + v_right + ' ' + v_top
-        p_chapter.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + p_filename + r'"}}'))
 
     # Get the height of the figure
     p_chapter.append(pl.NoEscape(r'\newdimen\imageheightA'))
@@ -404,7 +378,7 @@ def wrap_figure(p_chapter, p_filename, p_caption=None, p_position='i', p_width=r
     p_chapter.append(pl.NoEscape(r'\vspace{-1em}'))
 
     if p_zoom_rect is not None:
-        p_chapter.append(pl.NoEscape(r'\includegraphics[trim=' + v_trim + ', clip, width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
+        p_chapter.append(pl.NoEscape(r'\adjincludegraphics[trim=' + v_trim + ', clip, width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
     else:
         p_chapter.append(pl.NoEscape(r'\includegraphics[width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
 
@@ -453,7 +427,7 @@ def create_map(p_document_path, p_country):
         v_axes.add_feature(cfeature.OCEAN.with_scale('10m'), linewidth=0.2)
 
         v_figure = v_axes.get_figure()
-        #        v_figure.show()
+        # v_figure.show()
         v_figure.savefig(fname=v_file_path, bbox_inches='tight', pad_inches=0.0, transparent=True, dpi=500)
         plt.close(v_figure)
 
@@ -464,7 +438,7 @@ def get_country_min_max_coordinates(p_country_code):
     # Load list of Countries of the world from current working directory
     v_cwd = os.getcwd()
     v_file_path = os.path.join(v_cwd, 'cow.txt')
-    v_data_frame = pd.read_csv(v_file_path, sep=';', comment='#')
+    v_data_frame = pandas.read_csv(v_file_path, sep=';', comment='#')
 
     # 20220109: Limit number of maps to Netherlands, Western Europe and the World
     if p_country_code == 'WEU':
@@ -492,7 +466,7 @@ def get_country_continent_subregion(p_country_code):
     # Load list of Countries of the world from current working directory
     v_cwd = os.getcwd()
     v_file_path = os.path.join(v_cwd, 'cow.txt')
-    v_data_frame = pd.read_csv(v_file_path, sep=';', comment='#')
+    v_data_frame = pandas.read_csv(v_file_path, sep=';', comment='#')
 
     v_data_frame = v_data_frame.loc[v_data_frame['adm0_a3'] == p_country_code, ['continent', 'subregion']]
     v_region_list = v_data_frame.values.tolist()[0]

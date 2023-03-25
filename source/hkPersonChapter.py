@@ -129,8 +129,8 @@ class Person:
         self.__mother_handle = get_mother_handle_by_person(self.__person_handle, self.__cursor)
         self.__sibling_handles_list = hsf.sort_person_list_by_birth(get_sibling_handles_old(self.__person_handle, self.__cursor), self.__cursor)
 
-        self.__create_person_event_dictionary()
-        self.__create_family_event_dictionary()
+        self.__person_event_info_dict = self.__create_person_event_dictionary()
+        self.__family_event_info_dict = self.__create_family_event_dictionary()
 
         # TODO: This is a tag list NOT related to one person; this does not belong here
         self.__tag_dictionary = get_tag_dictionary(self.__cursor)
@@ -141,7 +141,8 @@ class Person:
         # Create an event dictionary.
         # The key refers to the type of event (e.g. Profession); the value contains a list of events belonging to this event type (e.g. multiple professions within key Profession)
         # Key:[event info, event info 2, event info 3]
-        self.__PersonEventInfoDict = {}
+
+        v_person_event_info_dict = {}
         for v_event_ref in self.__event_ref_list:
             v_event_handle = v_event_ref[3]
             v_event_info = decode_event_data(v_event_handle, self.__cursor)
@@ -152,21 +153,24 @@ class Person:
                 # Create a dictionary from event data. Use event type as key, and rest of event as data
 
                 # Check whether event type already exists as key
-                if v_event_info[0] in self.__PersonEventInfoDict:
+                if v_event_info[0] in v_person_event_info_dict:
                     # if so, append event info to the dictionary entry
-                    self.__PersonEventInfoDict[v_event_info[0]].append(v_event_info[1:])
+                    v_person_event_info_dict[v_event_info[0]].append(v_event_info[1:])
                 else:
                     # Otherwise create a new entry
-                    self.__PersonEventInfoDict[v_event_info[0]] = [v_event_info[1:]]
+                    v_person_event_info_dict[v_event_info[0]] = [v_event_info[1:]]
 
                 # Add event media to personal media list
                 self.__media_list = self.__media_list + v_event_info[4]
+
+        return v_person_event_info_dict
 
     def __create_family_event_dictionary(self):
         # Create an event dictionary.
         # The key refers to the type of event (e.g. Profession); the value contains a list of events belonging to this event type (e.g. multiple professions within key Profession)
         # Key:[event info, event info 2, event info 3]
-        self.__FamilyEventInfoDict = {}
+
+        v_family_event_info_dict = {}
         for v_family_handle in self.__family_list:
             v_family_data = decode_family_data(v_family_handle, self.__cursor)
             v_family_events = v_family_data[5]
@@ -182,15 +186,17 @@ class Person:
                     # Create a dictionary from event data. Use event type as key, and rest of event as data
 
                     # Check whether event type already exists as key
-                    if v_event_info[0] in self.__FamilyEventInfoDict:
+                    if v_event_info[0] in v_family_event_info_dict:
                         # if so, append event info to the dictionary entry
-                        self.__FamilyEventInfoDict[v_event_info[0]].append(v_event_info[1:])
+                        v_family_event_info_dict[v_event_info[0]].append(v_event_info[1:])
                     else:
                         # Otherwise create a new entry
-                        self.__FamilyEventInfoDict[v_event_info[0]] = [v_event_info[1:]]
+                        v_family_event_info_dict[v_event_info[0]] = [v_event_info[1:]]
 
                     # Add event media to personal media list
                     self.__media_list = self.__media_list + v_event_info[4]
+
+        return v_family_event_info_dict
 
     def __get_source_status(self):
         """ Checks whether scans are available for the events birth, marriage and death """
@@ -199,12 +205,12 @@ class Person:
 
         # Birth / baptism
         v_media_list = []
-        if c_event_birth in self.__PersonEventInfoDict:  # Birth
-            v_event_info = self.__PersonEventInfoDict[c_event_birth]
+        if c_event_birth in self.__person_event_info_dict:  # Birth
+            v_event_info = self.__person_event_info_dict[c_event_birth]
             v_media_list.extend(v_event_info[0][3])
 
-        if c_event_baptism in self.__PersonEventInfoDict:  # Baptism
-            v_event_info = self.__PersonEventInfoDict[c_event_baptism]
+        if c_event_baptism in self.__person_event_info_dict:  # Baptism
+            v_event_info = self.__person_event_info_dict[c_event_baptism]
             v_media_list.extend(v_event_info[0][3])
 
         if len(v_media_list) > 0:
@@ -227,12 +233,12 @@ class Person:
 
         # Death / Burial
         v_media_list = []
-        if c_event_death in self.__PersonEventInfoDict:  # Death
-            v_event_info = self.__PersonEventInfoDict[c_event_death]
+        if c_event_death in self.__person_event_info_dict:  # Death
+            v_event_info = self.__person_event_info_dict[c_event_death]
             v_media_list.extend(v_event_info[0][3])
 
-        if c_event_burial in self.__PersonEventInfoDict:  # Burial
-            v_event_info = self.__PersonEventInfoDict[c_event_burial]
+        if c_event_burial in self.__person_event_info_dict:  # Burial
+            v_event_info = self.__person_event_info_dict[c_event_burial]
             v_media_list.extend(v_event_info[0][3])
 
         if len(v_media_list) > 0:
@@ -386,25 +392,25 @@ class Person:
                     v_brother_sister = hlg.translate('Sister', self.__language)
                     v_father_mother = hlg.translate('Mother', self.__language)
 
-                v_vital_events = c_vital_events_set.intersection(self.__PersonEventInfoDict.keys())
+                v_vital_events = c_vital_events_set.intersection(self.__person_event_info_dict.keys())
 
                 # Geboorte
                 if c_event_birth in v_vital_events:  # Birth
-                    v_string = hlg.translate("{0} was born on {1}", self.__language).format(pu.escape_latex(v_full_name), hsf.date_to_text(self.__PersonEventInfoDict[c_event_birth][0][0], False))
+                    v_string = hlg.translate("{0} was born on {1}", self.__language).format(pu.escape_latex(v_full_name), hsf.date_to_text(self.__person_event_info_dict[c_event_birth][0][0], False))
                     v_life_sketch = v_life_sketch + v_string
 
-                    if (len(self.__PersonEventInfoDict[c_event_birth][0][1]) > 0) and (self.__PersonEventInfoDict[c_event_birth][0][1] != '-'):
-                        v_string = hlg.translate("in {0}", self.__language).format(hsf.place_to_text(self.__PersonEventInfoDict[c_event_birth][0][1]))
+                    if (len(self.__person_event_info_dict[c_event_birth][0][1]) > 0) and (self.__person_event_info_dict[c_event_birth][0][1] != '-'):
+                        v_string = hlg.translate("in {0}", self.__language).format(hsf.place_to_text(self.__person_event_info_dict[c_event_birth][0][1]))
                         v_life_sketch = v_life_sketch + ' ' + v_string
 
                     v_life_sketch = v_life_sketch + r". "
 
                 elif c_event_baptism in v_vital_events:  # Baptism
-                    v_string = hlg.translate("{0} was born about {1}", self.__language).format(pu.escape_latex(v_full_name), hsf.date_to_text(self.__PersonEventInfoDict[c_event_baptism][0][0], False))
+                    v_string = hlg.translate("{0} was born about {1}", self.__language).format(pu.escape_latex(v_full_name), hsf.date_to_text(self.__person_event_info_dict[c_event_baptism][0][0], False))
                     v_life_sketch = v_life_sketch + v_string
 
-                    if (len(self.__PersonEventInfoDict[c_event_baptism][0][1]) > 0) and (self.__PersonEventInfoDict[c_event_baptism][0][1] != '-'):
-                        v_string = hlg.translate("in {0}", self.__language).format(hsf.place_to_text(self.__PersonEventInfoDict[c_event_baptism][0][1]))
+                    if (len(self.__person_event_info_dict[c_event_baptism][0][1]) > 0) and (self.__person_event_info_dict[c_event_baptism][0][1] != '-'):
+                        v_string = hlg.translate("in {0}", self.__language).format(hsf.place_to_text(self.__person_event_info_dict[c_event_baptism][0][1]))
                         v_life_sketch = v_life_sketch + ' ' + v_string
 
                     v_life_sketch = v_life_sketch + r". "
@@ -515,21 +521,21 @@ class Person:
 
                 # Overlijden
                 if c_event_death in v_vital_events:  # Death
-                    v_string = hlg.translate("{0} died on {1}", self.__language).format(v_he_she, hsf.date_to_text(self.__PersonEventInfoDict[c_event_death][0][0], False))
+                    v_string = hlg.translate("{0} died on {1}", self.__language).format(v_he_she, hsf.date_to_text(self.__person_event_info_dict[c_event_death][0][0], False))
                     v_life_sketch = v_life_sketch + v_string
 
-                    if (len(self.__PersonEventInfoDict[c_event_death][0][1]) > 0) and (self.__PersonEventInfoDict[c_event_death][0][1] != '-'):
-                        v_string = hlg.translate("in {0}.", self.__language).format(hsf.place_to_text(self.__PersonEventInfoDict[c_event_death][0][1]))
+                    if (len(self.__person_event_info_dict[c_event_death][0][1]) > 0) and (self.__person_event_info_dict[c_event_death][0][1] != '-'):
+                        v_string = hlg.translate("in {0}.", self.__language).format(hsf.place_to_text(self.__person_event_info_dict[c_event_death][0][1]))
                         v_life_sketch = v_life_sketch + ' ' + v_string
                     else:
                         v_life_sketch = v_life_sketch + ". "
 
                 elif c_event_burial in v_vital_events:  # Burial
-                    v_string = hlg.translate("{0} died about {1}", self.__language).format(v_he_she, hsf.date_to_text(self.__PersonEventInfoDict[c_event_burial][0][0], False))
+                    v_string = hlg.translate("{0} died about {1}", self.__language).format(v_he_she, hsf.date_to_text(self.__person_event_info_dict[c_event_burial][0][0], False))
                     v_life_sketch = v_life_sketch + v_string
 
-                    if (len(self.__PersonEventInfoDict[c_event_burial][0][1]) > 0) and (self.__PersonEventInfoDict[c_event_burial][0][1] != '-'):
-                        v_string = hlg.translate("and was buried in {0}.", self.__language).format(hsf.place_to_text(self.__PersonEventInfoDict[c_event_burial][0][1]))
+                    if (len(self.__person_event_info_dict[c_event_burial][0][1]) > 0) and (self.__person_event_info_dict[c_event_burial][0][1] != '-'):
+                        v_string = hlg.translate("and was buried in {0}.", self.__language).format(hsf.place_to_text(self.__person_event_info_dict[c_event_burial][0][1]))
                         v_life_sketch = v_life_sketch + ' ' + v_string + ' '
                     else:
                         v_life_sketch = v_life_sketch + ". "
@@ -566,13 +572,13 @@ class Person:
                 if self.__gender in c_gender_dict:
                     v_table.add_row([hlg.translate('gender', self.__language) + ":", hlg.translate(c_gender_dict[self.__gender], self.__language)])
 
-                for v_event in self.__PersonEventInfoDict.keys():
+                for v_event in self.__person_event_info_dict.keys():
                     if v_event in c_vital_events_set:
                         v_string_1 = "Date of " + c_event_type_dict[v_event]
                         v_string_2 = "Place of " + c_event_type_dict[v_event]
 
-                        v_string3 = hsf.date_to_text(self.__PersonEventInfoDict[v_event][0][0], False)
-                        v_string4 = hsf.place_to_text(self.__PersonEventInfoDict[v_event][0][1], True)
+                        v_string3 = hsf.date_to_text(self.__person_event_info_dict[v_event][0][0], False)
+                        v_string4 = hsf.place_to_text(self.__person_event_info_dict[v_event][0][1], True)
 
                         if len(v_string3) > 0:
                             v_table.add_row([hlg.translate(v_string_1, self.__language) + ":", v_string3])
@@ -891,11 +897,11 @@ class Person:
         """
 
         # Create section with Education ***
-        v_education_events = c_education_events_set.intersection(self.__PersonEventInfoDict.keys())
+        v_education_events = c_education_events_set.intersection(self.__person_event_info_dict.keys())
         if v_education_events:
             v_education_list = []
             for v_event in v_education_events:
-                v_education_list = v_education_list + self.__PersonEventInfoDict[v_event]
+                v_education_list = v_education_list + self.__person_event_info_dict[v_event]
 
             f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
             v_education_list.sort(key=f_date_func)
@@ -926,11 +932,11 @@ class Person:
         """
 
         # Create section with Working Experience ***
-        v_professional_events = c_professional_events_set.intersection(self.__PersonEventInfoDict.keys())
+        v_professional_events = c_professional_events_set.intersection(self.__person_event_info_dict.keys())
         if v_professional_events:
             v_professional_list = []
             for v_event in v_professional_events:
-                v_professional_list = v_professional_list + self.__PersonEventInfoDict[v_event]
+                v_professional_list = v_professional_list + self.__person_event_info_dict[v_event]
 
             f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
             v_professional_list.sort(key=f_date_func)
@@ -965,7 +971,7 @@ class Person:
         #
 
         # Create section with Residential Information
-        v_residential_events = c_residential_events_set.intersection(self.__PersonEventInfoDict.keys())
+        v_residential_events = c_residential_events_set.intersection(self.__person_event_info_dict.keys())
         if v_residential_events:
             # Create path name for map
             # v_path = self.__document_path + r'Figures'
@@ -980,7 +986,7 @@ class Person:
             # Compose residence list
             v_residence_list = []
             for v_event in v_residential_events:
-                v_residence_list = v_residence_list + self.__PersonEventInfoDict[v_event]
+                v_residence_list = v_residence_list + self.__person_event_info_dict[v_event]
 
             # Create minipage
             p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
@@ -1118,11 +1124,11 @@ class Person:
         """
 
         # Create section with Residential Information
-        v_residential_events = c_residential_events_set.intersection(self.__PersonEventInfoDict.keys())
+        v_residential_events = c_residential_events_set.intersection(self.__person_event_info_dict.keys())
         if v_residential_events:
             v_residence_list = []
             for v_event in v_residential_events:
-                v_residence_list = v_residence_list + self.__PersonEventInfoDict[v_event]
+                v_residence_list = v_residence_list + self.__person_event_info_dict[v_event]
 
             f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
             v_residence_list.sort(key=f_date_func)
@@ -1162,11 +1168,11 @@ class Person:
         """
 
         # Create section with Residential Information
-        v_residential_events = c_residential_events_set.intersection(self.__PersonEventInfoDict.keys())
+        v_residential_events = c_residential_events_set.intersection(self.__person_event_info_dict.keys())
         if v_residential_events:
             v_residence_list = []
             for vEvent in v_residential_events:
-                v_residence_list = v_residence_list + self.__PersonEventInfoDict[vEvent]
+                v_residence_list = v_residence_list + self.__person_event_info_dict[vEvent]
 
             f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
             v_residence_list.sort(key=f_date_func)
@@ -1191,232 +1197,138 @@ class Person:
         Create section with photos
         """
 
-        v_filtered_photo_list = self.__get_filtered_photo_list()
-        if len(v_filtered_photo_list) > 0:
-            # Allocate variables
-            v_media_path_1 = None
-            v_media_title_1 = None
-            v_media_rect_1 = None
-            v_media_path_2 = None
-            v_media_title_2 = None
-            v_media_rect_2 = None
+        v_filtered_list = self.__get_filtered_photo_list()
+        if len(v_filtered_list) > 0:
+            self.__write_media_section(p_level, v_filtered_list, p_title="photos")
 
-            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('photos', self.__language), pLabel=False) as v_sub_level:
-                #
-                # 1. All photos with notes
-                #
-                v_position = 'o'
-                v_temp_list = v_filtered_photo_list.copy()  # Use temporary list, so items can be removed while iterating
-                for vItem in v_temp_list:
-                    v_media_handle = vItem[0]
-                    v_media_rect = vItem[1]
-
-                    v_media_data = get_media_data(v_media_handle, self.__cursor)
-                    v_media_path = v_media_data[2]
-                    v_media_title = v_media_data[4]
-                    v_media_note_handles = v_media_data[8]
-                    if len(v_media_note_handles) > 0:
-                        # Picture contains notes, then special treatment
-                        v_position = 'o' if v_position == 'i' else 'i'  # Alternate position of image / text
-                        self.__picture_with_note(v_sub_level, v_media_path, v_media_title, v_media_note_handles, v_media_rect, v_position)
-
-                        # Done, remove from list
-                        v_filtered_photo_list.remove(vItem)
-
-                #
-                # 2. Remaining photos, side by side
-                #
-                v_counter = 0
-
-                v_temp_list = v_filtered_photo_list.copy()  # Use temporary list, so items can be removed while iterating
-                for vItem in v_temp_list:
-                    v_media_handle = vItem[0]
-                    v_media_rect = vItem[1]
-
-                    v_media_data = get_media_data(v_media_handle, self.__cursor)
-                    v_counter = v_counter + 1
-                    if v_counter % 2 == 1:
-                        v_media_path_1 = v_media_data[2]
-                        v_media_title_1 = v_media_data[4]
-                        v_media_rect_1 = v_media_rect
-
-                        # Remove media_1 from list
-                        v_filtered_photo_list.remove(vItem)
-                    else:
-                        v_media_path_2 = v_media_data[2]
-                        v_media_title_2 = v_media_data[4]
-                        v_media_rect_2 = v_media_rect
-
-                        hsf.picture_side_by_side_equal_height(v_sub_level, v_media_path_1, v_media_path_2, v_media_title_1, v_media_title_2)
-
-                        # Remove media_2 from list
-                        v_filtered_photo_list.remove(vItem)
-
-                        # Reset variables
-                        v_media_path_1 = None
-                        v_media_title_1 = None
-
-                        v_media_path_2 = None
-                        v_media_title_2 = None
-
-                #
-                # 3. In case temp list had an odd length, one document might be remaining
-                #
-                if v_media_path_1 is not None:
-                    # Latex Debug
-                    v_sub_level.append(pl.NoEscape("% hkPersonChapter.Person.__WritePhotoSection"))
-
-                    # 20230313: Start a minipage
-                    p_level.append(pl.NoEscape(r'\begin{minipage}{\textwidth}'))
-
-                    if v_media_rect_1 is not None:
-                        # Set focus area 20220328
-                        v_left_1 = '{' + str(v_media_rect_1[0]/100) + r'\wd1}'
-                        v_right_1 = '{' + str(1-v_media_rect_1[2]/100) + r'\wd1}'
-                        v_top_1 = '{' + str(v_media_rect_1[1]/100) + r'\ht1}'
-                        v_bottom_1 = '{' + str(1-v_media_rect[3]/100) + r'\ht1}'
-
-                        v_trim = v_left_1 + ' ' + v_bottom_1 + ' ' + v_right_1 + ' ' + v_top_1
-                        v_sub_level.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + v_media_path_1 + r'"}}'))
-                        v_sub_level.append(pl.NoEscape(r'\includegraphics[trim=' + v_trim + ', clip]{"' + v_media_path_1 + r'"}'))
-                        v_sub_level.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(v_media_title_1) + '}'))
-
-                        # v_sub_level.append(pl.NoEscape(r'\includegraphics[trim=' + v_trim + ', clip, scale=0.1]{"' + v_media_path_1 + r'"}}'))
-                        # v_sub_level.append(pl.NoEscape(r'\caption{' + pu.escape_latex(v_media_title_1) + '}'))
-                    else:
-                        # 20230313
-                        v_sub_level.append(pl.NoEscape(r'\includegraphics[width=\textwidth]{"' + v_media_path_1 + r'"}'))
-                        v_sub_level.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(v_media_title_1) + '}'))
-
-                        # with v_sub_level.create(hlt.Figure(position='htpb')) as vPhoto:
-                        #     vPhoto.add_image(pl.NoEscape(v_media_path_1))
-                        #     vPhoto.add_caption(pu.escape_latex(v_media_title_1))
-
-                    # 20230313: End the minipage
-                    p_level.append(pl.NoEscape(r'\end{minipage}'))
-
-                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_document_section(self, p_level):
         """
         Create section with document scans
         """
+        v_filtered_list = self.__get_filtered_document_list()
+        if len(v_filtered_list) > 0:
+            self.__write_media_section(p_level, v_filtered_list, p_title='documents')
 
-        v_filtered_document_list = self.__get_filtered_document_list()
-        if len(v_filtered_document_list) > 0:
-            # Allocate variables
-            v_media_path_1 = None
-            v_media_title_1 = None
-            v_media_rect_1 = None
-            v_media_path_2 = None
-            v_media_title_2 = None
-            v_media_rect_2 = None
 
-            # Debug
-            logging.debug("v_filtered_document_list: ".join(map(str, v_filtered_document_list)))
+    def __write_media_section(self, p_level, p_filtered_list, p_title='media'):
+        """
+        Create section with media
+        """
 
-            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('documents', self.__language), pLabel=False) as v_sub_level:
-                #
-                # 1. All documents with notes
-                #
-                v_position = 'o'
-                v_temp_list = v_filtered_document_list.copy()  # Use temporary list, so items can be removed while iterating
-                for v_item in v_temp_list:
-                    v_media_handle = v_item[0]
-                    v_media_rect = v_item[1]
+        # Allocate variables
+        v_media_path_1 = None
+        v_media_title_1 = None
+        v_media_rect_1 = None
+        v_media_path_2 = None
+        v_media_title_2 = None
+        v_media_rect_2 = None
 
-                    v_media_data = get_media_data(v_media_handle, self.__cursor)
-                    v_media_path = v_media_data[2]
-                    v_media_title = v_media_data[4]
-                    v_media_note_handles = self.__get_filtered_note_list(v_media_data[8])
+        # Debug
+        logging.debug("v_filtered_list: ".join(map(str, p_filtered_list)))
 
-                    # TODO: dit gaat mis als het om een note met tag 'source' gaat
-                    if len(v_media_note_handles) > 0:
-                        # Document contains notes, then treatment
-                        v_position = 'o' if v_position == 'i' else 'i'  # Alternate position of image / text
-                        self.__document_with_note(v_sub_level, v_media_path, v_media_title, v_media_note_handles, v_media_rect, v_position)  # 20220322: Added v_media_rect
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate(p_title, self.__language), pLabel=False) as v_sub_level:
+            #
+            # 1. All media with notes
+            #
+            v_position = 'o'
+            v_temp_list = p_filtered_list.copy()  # Use temporary list, so items can be removed while iterating
+            for v_item in v_temp_list:
+                v_media_handle = v_item[0]
+                v_media_rect = v_item[1]
 
-                        # Done, remove from list
-                        v_filtered_document_list.remove(v_item)
+                v_media_data = get_media_data(v_media_handle, self.__cursor)
+                v_media_path = v_media_data[2]
+                v_media_title = v_media_data[4]
+                v_media_note_handles = self.__get_filtered_note_list(v_media_data[8])
 
-                #
-                # 2. Remaining documents, side by side
-                #
-                v_counter = 0
+                # TODO: dit gaat mis als het om een note met tag 'source' gaat
+                if len(v_media_note_handles) > 0:
+                    # Media contains notes
+                    v_position = 'o' if v_position == 'i' else 'i'  # Alternate position of image / text
+                    self.__document_with_note(v_sub_level, v_media_path, v_media_title, v_media_note_handles, v_media_rect, v_position)  # 20220322: Added v_media_rect
 
-                v_temp_list = v_filtered_document_list.copy()  # Use temporary list, so items can be removed while iterating
-                for v_item in v_temp_list:
-                    v_media_handle = v_item[0]
-                    v_media_rect = v_item[1]
+                    # Done, remove from list
+                    p_filtered_list.remove(v_item)
 
-                    v_media_data = get_media_data(v_media_handle, self.__cursor)
+            #
+            # 2. Remaining media, side by side
+            #
+            v_counter = 0
 
-                    v_counter = v_counter + 1
-                    if v_counter % 2 == 1:
-                        v_media_path_1 = v_media_data[2]
-                        v_media_title_1 = v_media_data[4]
-                        v_media_rect_1 = v_media_rect
+            v_temp_list = p_filtered_list.copy()  # Use temporary list, so items can be removed while iterating
+            for v_item in v_temp_list:
+                v_media_handle = v_item[0]
+                v_media_rect = v_item[1]
 
-                        # Remove media_1 from list
-                        v_filtered_document_list.remove(v_item)
-                    else:
-                        v_media_path_2 = v_media_data[2]
-                        v_media_title_2 = v_media_data[4]
-                        v_media_rect_2 = v_media_rect
+                v_media_data = get_media_data(v_media_handle, self.__cursor)
 
-                        hsf.picture_side_by_side_equal_height(v_sub_level, v_media_path_1, v_media_path_2, v_media_title_1, v_media_title_2, v_media_rect_1, v_media_rect_2)
+                v_counter = v_counter + 1
+                if v_counter % 2 == 1:
+                    v_media_path_1 = v_media_data[2]
+                    v_media_title_1 = v_media_data[4]
+                    v_media_rect_1 = v_media_rect
 
-                        # Remove media_2 from list
-                        v_filtered_document_list.remove(v_item)
+                    # Remove media_1 from list
+                    p_filtered_list.remove(v_item)
+                else:
+                    v_media_path_2 = v_media_data[2]
+                    v_media_title_2 = v_media_data[4]
+                    v_media_rect_2 = v_media_rect
 
-                        # Reset variables
-                        v_media_path_1 = None
-                        v_media_title_1 = None
-                        v_media_rect_1 = None
+                    hsf.picture_side_by_side_equal_height(v_sub_level, v_media_path_1, v_media_path_2, v_media_title_1, v_media_title_2, v_media_rect_1, v_media_rect_2)
 
-                        v_media_path_2 = None
-                        v_media_title_2 = None
-                        v_media_rect_2 = None
+                    # Remove media_2 from list
+                    p_filtered_list.remove(v_item)
 
-                #
-                # 3. In case temp list had an odd length, one document might be remaining
-                #
-                if v_media_path_1 is not None:
-                    # Latex Debug
-                    v_sub_level.append(pl.NoEscape("% hkPersonChapter.Person.__WriteDocumentSection"))
+                    # Reset variables
+                    v_media_path_1 = None
+                    v_media_title_1 = None
+                    v_media_rect_1 = None
 
-                    # 20230313: Start a minipage
-                    p_level.append(pl.NoEscape(r'\begin{minipage}{\textwidth}'))
+                    v_media_path_2 = None
+                    v_media_title_2 = None
+                    v_media_rect_2 = None
 
-                    if v_media_rect_1 is not None:
-                        # 20220328: Set focus area
-                        v_left_1 = '{' + str(v_media_rect_1[0]/100) + r'\wd1}'
-                        v_right_1 = '{' + str(1-v_media_rect_1[2]/100) + r'\wd1}'
-                        v_top_1 = '{' + str(v_media_rect_1[1]/100) + r'\ht1}'
-                        v_bottom_1 = '{' + str(1-v_media_rect[3]/100) + r'\ht1}'
+            #
+            # 3. In case temp list had an odd length, one media might be remaining
+            #
+            if v_media_path_1 is not None:
+                # Latex Debug
+                v_sub_level.append(pl.NoEscape("% hkPersonChapter.Person.__WriteMediaSection"))
 
-                        v_trim = v_left_1 + ' ' + v_bottom_1 + ' ' + v_right_1 + ' ' + v_top_1
-                        v_sub_level.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + v_media_path_1 + r'"}}'))
-                        v_sub_level.append(pl.NoEscape(r'\includegraphics[width=\textwidth, trim=' + v_trim + ', clip]{"' + v_media_path_1 + r'"}'))
-                        v_sub_level.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(v_media_title_1) + '}'))
+                # 20230313: Start a minipage
+                p_level.append(pl.NoEscape(r'\begin{minipage}{\textwidth}'))
 
-                        # v_sub_level.append(pl.NoEscape(r'\includegraphics[trim=' + v_trim + ', clip, scale=0.1]{"' + v_media_path_1 + r'"}}'))
-                        # v_sub_level.append(pl.NoEscape(r'\caption{' + pu.escape_latex(v_media_title_1) + '}'))
-                    else:
-                        # 20230313
-                        v_sub_level.append(pl.NoEscape(r'\includegraphics[width=\textwidth]{"' + v_media_path_1 + r'"}'))
-                        v_sub_level.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(v_media_title_1) + '}'))
+                if v_media_rect_1 is not None:
+                    # 20220328: Set focus area
+                    v_left_1 = '{' + str(v_media_rect_1[0] / 100) + r'\wd1}'
+                    v_right_1 = '{' + str(1 - v_media_rect_1[2] / 100) + r'\wd1}'
+                    v_top_1 = '{' + str(v_media_rect_1[1] / 100) + r'\ht1}'
+                    v_bottom_1 = '{' + str(1 - v_media_rect[3] / 100) + r'\ht1}'
 
-#                        with v_sub_level.create(hlt.Figure(position='htpb')) as vPhoto:
-#                            vPhoto.add_image(pl.NoEscape(v_media_path_1))
-#                            vPhoto.add_caption(pu.escape_latex(v_media_title_1))
+                    v_trim = v_left_1 + ' ' + v_bottom_1 + ' ' + v_right_1 + ' ' + v_top_1
+                    v_sub_level.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + v_media_path_1 + r'"}}'))
+                    v_sub_level.append(pl.NoEscape(r'\includegraphics[width=\textwidth, trim=' + v_trim + ', clip]{"' + v_media_path_1 + r'"}'))
+                    v_sub_level.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(v_media_title_1) + '}'))
 
-                    # 20230313: End the minipage
-                    p_level.append(pl.NoEscape(r'\end{minipage}'))
+                    # v_sub_level.append(pl.NoEscape(r'\includegraphics[trim=' + v_trim + ', clip, scale=0.1]{"' + v_media_path_1 + r'"}}'))
+                    # v_sub_level.append(pl.NoEscape(r'\caption{' + pu.escape_latex(v_media_title_1) + '}'))
+                else:
+                    # 20230313
+                    v_sub_level.append(pl.NoEscape(r'\includegraphics[width=\textwidth]{"' + v_media_path_1 + r'"}'))
+                    v_sub_level.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(v_media_title_1) + '}'))
 
-                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+                    # with v_sub_level.create(hlt.Figure(position='htpb')) as vPhoto:
+                    #     vPhoto.add_image(pl.NoEscape(v_media_path_1))
+                    #     vPhoto.add_caption(pu.escape_latex(v_media_title_1))
+
+                # 20230313: End the minipage
+                p_level.append(pl.NoEscape(r'\end{minipage}'))
+
+            v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+
 
     def write_person_chapter(self):
         """
