@@ -281,124 +281,91 @@ def picture_side_by_side_equal_height(p_chapter, p_image_path_1, p_image_path_2,
     p_chapter.append(pl.NoEscape(r'\vfill'))
 
 
-def wrap_figure_new(p_chapter, p_filename, p_caption=None, p_position='i', p_width=r'0.50\textwidth', p_text='', p_zoom_rect=None):
-    # This is a very ugly function, but what it does:
-    # 1. It simplifies the use of the wrapfigure environment
-    # 2. It fills the textblock with empty line in case the figure height is longer then the text block height.
-    # This happens when the text block contains too little text lines, with the result that the next section heading and following text would overlap the figure
-
-    # TODO: Work in Progress??
-    # TODO: Move this to hkLatex in a pylatex format
-
-    # Create a minipage
-    p_chapter.append(pl.NoEscape(r'\begin{minipage}{\textwidth}'))
-
-    # Add the figure
-    p_chapter.append(pl.NoEscape(r'\begin{wrapfigure}{' + p_position + '}{' + p_width + '}'))
-    p_chapter.append(pl.NoEscape(r'\centering'))
-    p_chapter.append(pl.NoEscape(r'\vspace{-1em}'))
-
-    # Set focus area 20220328
-    v_trim = ''
-    if p_zoom_rect is not None:
-        v_left = '{' + str(p_zoom_rect[0] / 100) + r'\width}'
-        v_right = '{' + str(1 - p_zoom_rect[2] / 100) + r'\width}'
-        v_top = '{' + str(p_zoom_rect[1] / 100) + r'\height}'
-        v_bottom = '{' + str(1 - p_zoom_rect[3] / 100) + r'\height}'
-
-        v_trim = v_left + ' ' + v_bottom + ' ' + v_right + ' ' + v_top
-
-        p_chapter.append(pl.NoEscape(r'\adjincludegraphics[trim=' + v_trim + ', clip, width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
-    else:
-        p_chapter.append(pl.NoEscape(r'\includegraphics[width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
-
-    if p_caption is not None:
-        p_chapter.append(pl.NoEscape(r'\caption{' + pu.escape_latex(p_caption) + r'}'))
-
-    p_chapter.append(pl.NoEscape(r'\end{wrapfigure}'))
-
-    # Add the text
-    p_chapter.append(pl.NoEscape(p_text))
-
-    # end the minipage
-    p_chapter.append(pl.NoEscape(r'\end{minipage}'))
-    p_chapter.append(pl.NoEscape(r'\vfill'))
-
-
 def wrap_figure(p_chapter, p_filename, p_caption=None, p_position='i', p_width=r'0.50\textwidth', p_text='', p_zoom_rect=None):
     # This is a very ugly function, but what it does:
     # 1. It simplifies the use of the wrapfigure environment
     # 2. It fills the textblock with empty line in case the figure height is longer then the text block height.
     # This happens when the text block contains too little text lines, with the result that the next section heading and following text would overlap the figure
 
+    # TODO: Move this to hkLatex in a pylatex format
+
+    # Create a minipage
+    # p_chapter.append(pl.NoEscape(r'\begin{minipage}{\textwidth}'))
+
     # Set focus area 20220328
-    v_trim = ''
+    v_figure = r'\includegraphics[width=' + p_width + r'-1ex]{"' + p_filename + r'"}'
     if p_zoom_rect is not None:
         v_left = '{' + str(p_zoom_rect[0] / 100) + r'\width}'
         v_right = '{' + str(1 - p_zoom_rect[2] / 100) + r'\width}'
         v_top = '{' + str(p_zoom_rect[1] / 100) + r'\height}'
         v_bottom = '{' + str(1 - p_zoom_rect[3] / 100) + r'\height}'
-
         v_trim = v_left + ' ' + v_bottom + ' ' + v_right + ' ' + v_top
+        v_figure = r'\adjincludegraphics[trim=' + v_trim + ', clip, width=' + p_width + r'-1ex]{"' + p_filename + r'"}'
 
     # Get the height of the figure
+    p_chapter.append(pl.NoEscape(r'% Store the height of the photo in imageHeightA'))
+    p_chapter.append(pl.NoEscape(r'\savebox{1}[' + p_width + r'][l]{' + v_figure + '}'))
     p_chapter.append(pl.NoEscape(r'\newdimen\imageheightA'))
-    p_chapter.append(pl.NoEscape(r'\settoheight{\imageheightA}{\includegraphics[width=' + p_width + r'-1em]{"' + p_filename + r'"}}'))
+    p_chapter.append(pl.NoEscape(r'\imageheightA=\ht1 \advance \imageheightA by \dp1'))
 
-    # Get the height if the text
+    # Get the height of the text block
+    p_chapter.append(pl.NoEscape(r'% Store the height of the text box in textHeightA'))
+    p_chapter.append(pl.NoEscape(r'\savebox{2}{\parbox{\textwidth-' + p_width + r'}{' + p_text + '}}'))
     p_chapter.append(pl.NoEscape(r'\newdimen\textheightA'))
-    p_chapter.append(pl.NoEscape(r'\setbox0=\vbox{' + p_text + '}'))
-    p_chapter.append(pl.NoEscape(r'\textheightA=\ht0 \advance\textheightA by \dp0'))
+    p_chapter.append(pl.NoEscape(r'\textheightA=\ht2 \advance \textheightA by \dp2'))
 
     p_chapter.append(pl.NoEscape(r'\makeatletter'))
 
     # Strip 'pt' from heights
+    p_chapter.append(pl.NoEscape(r'% Strip "pt" from the heights and store heights in imageheightB and textheightB'))
     p_chapter.append(pl.NoEscape(r'\def\imageheightB{\strip@pt\imageheightA}'))
     p_chapter.append(pl.NoEscape(r'\def\textheightB{\strip@pt\textheightA}'))
     p_chapter.append(pl.NoEscape(r'\def\lineheight{\strip@pt\baselineskip}'))
 
     # Initialise variables
+    p_chapter.append(pl.NoEscape(r'% Initialise variables'))
     p_chapter.append(pl.NoEscape(r'\def\deltaheight{0}'))
     p_chapter.append(pl.NoEscape(r'\def\remaininglines{0}'))
 
     # Calculate the remaining number of lines as a float
-    p_chapter.append(pl.NoEscape(r'\FPsub\deltaheight\imageheightB\textheightB'))
-    p_chapter.append(pl.NoEscape(r'\FPdiv\remaininglines\deltaheight\lineheight'))
+    p_chapter.append(pl.NoEscape(r'% Calculate the number of empty lines to add in order to prevent wrapfigure from wrapping the next section. Store in remaininglines'))
+    p_chapter.append(pl.NoEscape(r'\FPsub{\deltaheight}{\imageheightB}{\textheightB}'))
+    p_chapter.append(pl.NoEscape(r'\FPdiv{\remaininglines}{\deltaheight}{\lineheight}'))
+    p_chapter.append(pl.NoEscape(r'\FPadd{\remaininglines}{\remaininglines}{1}'))
+    p_chapter.append(pl.NoEscape(r'\FPround{\remaininglines}{\remaininglines}{0}'))
 
     p_chapter.append(pl.NoEscape(r'\makeatother'))
 
     # Calculate the remaining number of lines as an integer
+    p_chapter.append(pl.NoEscape(r'% Store as integer'))
     p_chapter.append(pl.NoEscape(r'\setcounter{maxlines}{\intpart\remaininglines}'))
     p_chapter.append(pl.NoEscape(r'\addtocounter{maxlines}{1}'))
 
-    # TODO: Move this to hkLatex in a pylatex format
-    # Add the figure
+    # Add the figure and caption
     p_chapter.append(pl.NoEscape(r'\begin{wrapfigure}{' + p_position + '}{' + p_width + '}'))
     p_chapter.append(pl.NoEscape(r'\centering'))
-    p_chapter.append(pl.NoEscape(r'\vspace{-1em}'))
-
-    if p_zoom_rect is not None:
-        p_chapter.append(pl.NoEscape(r'\adjincludegraphics[trim=' + v_trim + ', clip, width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
-    else:
-        p_chapter.append(pl.NoEscape(r'\includegraphics[width=' + p_width + r'-1em]{"' + p_filename + r'"}'))
-
+    p_chapter.append(pl.NoEscape(r'\vspace{-1ex}'))
+    p_chapter.append(pl.NoEscape(v_figure))
     if p_caption is not None:
         p_chapter.append(pl.NoEscape(r'\caption{' + pu.escape_latex(p_caption) + r'}'))
-
     p_chapter.append(pl.NoEscape(r'\end{wrapfigure}'))
 
     # Add the text
     p_chapter.append(pl.NoEscape(p_text))
 
     # Add the empty lines
+    p_chapter.append(pl.NoEscape(r'% Add empty lines in order to prevent wrapfigure from wrapping the next section.'))
     p_chapter.append(pl.NoEscape(r'\setcounter{mycounter}{1}'))
     p_chapter.append(pl.NoEscape(r'\loop'))
-    p_chapter.append(pl.NoEscape(r'\textcolor{white}{Empty line\\}'))
-    # p_chapter.append(pl.NoEscape(r'\par'))
+    p_chapter.append(pl.NoEscape(r'\textcolor{white}{Empty line \\} % This is an empty line'))
+    # p_chapter.append(pl.NoEscape(r'\\ % This is an empty line'))
     p_chapter.append(pl.NoEscape(r'\addtocounter{mycounter}{1}'))
     p_chapter.append(pl.NoEscape(r'\ifnum \value{mycounter}<\value{maxlines}'))
     p_chapter.append(pl.NoEscape(r'\repeat'))
-    p_chapter.append(pl.NoEscape(r'\par'))
+
+    # End the minipage
+    # p_chapter.append(pl.NoEscape(r'\end{minipage}'))
+    # p_chapter.append(pl.NoEscape(r'\vfill'))
 
 
 def create_map(p_document_path, p_country):
