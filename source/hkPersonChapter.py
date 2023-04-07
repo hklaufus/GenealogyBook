@@ -1,20 +1,26 @@
-# Formatted using "python3-autopep8 --in-place --aggressive --aggressive *.py"
-
+import datetime
 import logging
-import os
 
-import hkLanguage as hlg
-import hkLatex as hlt
-
-from hkGrampsDb import *
-import hkSupportFunctions as hsf
+import hkDate
+import hkEvent
+import hkEventRef
+import hkFamily
+import hkGrampsDb
+import hkLanguage
+import hkLatex
+import hkMedia
+import hkNote
+import hkPerson
+import hkPersonRef
+import hkPlace
+import hkSupportFunctions
 
 # https://jeltef.github.io/PyLaTeX/current/index.html
 import pylatex as pl
 import pylatex.utils as pu
-import pylatex.base_classes.containers as pbc
 
 from PIL import Image
+
 # Prevents PIL.Image.DecompressionBombError: Image size (... pixels)
 # exceeds limit of .... pixels, could be decompression bomb DOS attack.
 Image.MAX_IMAGE_PIXELS = None
@@ -26,229 +32,20 @@ c_photo = 'Photo'
 c_source = 'Source'
 
 
-class Person:
+class PersonChapter:
     """A class to write a chapter about a person"""
 
-    @property
-    def person_handle(self):
-        return self.__person_handle
-
-    @property
-    def document_path(self):
-        """
-
-        @rtype: Full path of the document
-        """
-        return self.__document_path
-
-    @property
-    def gramps_id(self):
-        """
-
-        @rtype: id of the gramps database object
-        """
-        return self.__gramps_id
-
-    @property
-    def gender(self):
-        """
-
-        @rtype: the gender of the person
-        """
-        return self.__gender
-
-    @property
-    def given_names(self):
-        """
-
-        @rtype: All given names of the person
-        """
-        return self.__given_names
-
-    @property
-    def surname(self):
-        """
-
-        @rtype: The surname of the person
-        """
-        return self.__surname
-
-    @property
-    def father_handle(self):
-        """
-
-        @rtype: The Gramps ID of the father of the person
-        """
-        return self.__father_handle
-
-    @property
-    def mother_handle(self):
-        """
-
-        @rtype: Then Gramps ID of the mother of the person
-        """
-        return self.__mother_handle
-
-    @property
-    def children_handles_list(self):
-        """
-
-        @rtype: A list with the Gramps IDs of the children of the person
-        """
-        return self.__children_handles_list
-
-    @property
-    def source_status(self):
-        return self.__source_status
-
-    def __init__(self, person_handle, db_cursor, document_path='../book/', language='nl'):
-        self.__person_handle = person_handle
-        self.__cursor = db_cursor
-        self.__document_path = document_path
-        self.__language = language
+    def __init__(self, p_person_handle, p_cursor, document_path='../book/', language='nl'):
+        self.__cursor__ = p_cursor
+        self.__document_path__ = document_path
+        self.__language__ = language
 
         # Get basic person data
-        v_person_data = decode_person_data(self.__person_handle, self.__cursor)
-        self.__gramps_id = v_person_data[1]
-        self.__gender = v_person_data[2]
-        self.__surname = v_person_data[3][0]
-        self.__given_names = v_person_data[3][1]
-        self.__call_name = v_person_data[3][2]
-        self.__event_ref_list = v_person_data[7]
-        self.__family_list = v_person_data[8]
-        self.__parent_family_list = v_person_data[9]
-        self.__media_list = v_person_data[10]
-
-        self.__note_base = v_person_data[16]
-        # self.__notes_handles_list = GetPersonNotesHandles(self.__person_handle, self.__cursor)
-
-        self.__partner_handle_list = get_partner_handles(self.__person_handle, self.__cursor)
-        self.__children_handles_list = get_children_handles_by_person(self.__person_handle, self.__cursor)
-
-        self.__father_handle = get_father_handle_by_person(self.__person_handle, self.__cursor)
-        self.__mother_handle = get_mother_handle_by_person(self.__person_handle, self.__cursor)
-        self.__sibling_handles_list = hsf.sort_person_list_by_birth(get_sibling_handles_old(self.__person_handle, self.__cursor), self.__cursor)
-
-        self.__person_event_info_dict = self.__create_person_event_dictionary()
-        self.__family_event_info_dict = self.__create_family_event_dictionary()
-
-        # TODO: This is a tag list NOT related to one person; this does not belong here
-        self.__tag_dictionary = get_tag_dictionary(self.__cursor)
-
-        self.__source_status = self.__get_source_status()
-
-    def __create_person_event_dictionary(self):
-        # Create an event dictionary.
-        # The key refers to the type of event (e.g. Profession); the value contains a list of events belonging to this event type (e.g. multiple professions within key Profession)
-        # Key:[event info, event info 2, event info 3]
-
-        v_person_event_info_dict = {}
-        for v_event_ref in self.__event_ref_list:
-            v_event_handle = v_event_ref[3]
-            v_event_info = decode_event_data(v_event_handle, self.__cursor)
-            
-            # Filter on role
-            v_role_type = v_event_ref[4][0]
-            if(v_role_type == c_role_primary) or (v_role_type == c_role_family):
-                # Create a dictionary from event data. Use event type as key, and rest of event as data
-
-                # Check whether event type already exists as key
-                if v_event_info[0] in v_person_event_info_dict:
-                    # if so, append event info to the dictionary entry
-                    v_person_event_info_dict[v_event_info[0]].append(v_event_info[1:])
-                else:
-                    # Otherwise create a new entry
-                    v_person_event_info_dict[v_event_info[0]] = [v_event_info[1:]]
-
-                # Add event media to personal media list
-                self.__media_list = self.__media_list + v_event_info[4]
-
-        return v_person_event_info_dict
-
-    def __create_family_event_dictionary(self):
-        # Create an event dictionary.
-        # The key refers to the type of event (e.g. Profession); the value contains a list of events belonging to this event type (e.g. multiple professions within key Profession)
-        # Key:[event info, event info 2, event info 3]
-
-        v_family_event_info_dict = {}
-        for v_family_handle in self.__family_list:
-            v_family_data = decode_family_data(v_family_handle, self.__cursor)
-            v_family_events = v_family_data[5]
-            self.__media_list = self.__media_list + v_family_data[6]  # Add family media to personal media list
-
-            for v_event_ref in v_family_events:
-                v_event_handle = v_event_ref[3]
-                v_event_info = decode_event_data(v_event_handle, self.__cursor)
-                
-                # Filter on role
-                v_role_type = v_event_ref[4][0]
-                if(v_role_type == c_role_primary) or (v_role_type == c_role_family):
-                    # Create a dictionary from event data. Use event type as key, and rest of event as data
-
-                    # Check whether event type already exists as key
-                    if v_event_info[0] in v_family_event_info_dict:
-                        # if so, append event info to the dictionary entry
-                        v_family_event_info_dict[v_event_info[0]].append(v_event_info[1:])
-                    else:
-                        # Otherwise create a new entry
-                        v_family_event_info_dict[v_event_info[0]] = [v_event_info[1:]]
-
-                    # Add event media to personal media list
-                    self.__media_list = self.__media_list + v_event_info[4]
-
-        return v_family_event_info_dict
-
-    def __get_source_status(self):
-        """ Checks whether scans are available for the events birth, marriage and death """
-
-        v_source_status = {'b': '', 'm': '', 'd': ''}  # birth, marriage, death
-
-        # Birth / baptism
-        v_media_list = []
-        if c_event_birth in self.__person_event_info_dict:  # Birth
-            v_event_info = self.__person_event_info_dict[c_event_birth]
-            v_media_list.extend(v_event_info[0][3])
-
-        if c_event_baptism in self.__person_event_info_dict:  # Baptism
-            v_event_info = self.__person_event_info_dict[c_event_baptism]
-            v_media_list.extend(v_event_info[0][3])
-
-        if len(v_media_list) > 0:
-            v_source_status['b'] = 'b'
-
-        # Marriage
-        for v_family_handle in self.__family_list:
-            v_family_info = decode_family_data(v_family_handle, self.__cursor)
-            v_event_ref_list = v_family_info[5]
-
-            for v_event in v_event_ref_list:
-                v_event_handle = v_event[3]
-                v_event_info = decode_event_data(v_event_handle, self.__cursor)
-                v_type = v_event_info[0]
-                v_media_list = v_event_info[4]
-
-                # 1 = Marriage, 2 = Marriage Settlement, 3 = Marriage License, 4 = Marriage Contract
-                if (v_type == c_event_marriage or v_type == c_event_marriage_settlement or v_type == c_event_marriage_license or v_type == c_event_marriage_contract) and (len(v_media_list) > 0):
-                    v_source_status['m'] = 'm'
-
-        # Death / Burial
-        v_media_list = []
-        if c_event_death in self.__person_event_info_dict:  # Death
-            v_event_info = self.__person_event_info_dict[c_event_death]
-            v_media_list.extend(v_event_info[0][3])
-
-        if c_event_burial in self.__person_event_info_dict:  # Burial
-            v_event_info = self.__person_event_info_dict[c_event_burial]
-            v_media_list.extend(v_event_info[0][3])
-
-        if len(v_media_list) > 0:
-            v_source_status['d'] = 'd'
-
-        return v_source_status
+        self.__person__ = hkPerson.Person(p_person_handle, p_cursor)
 
     def __picture_with_note(self, p_level, p_image_path, p_image_title, p_image_note_handles, p_image_rect=None, p_position='i'):
         # Latex Debug
-        p_level.append(pl.NoEscape("% hkPersonChapter.Person.__picture_with_note"))
+        p_level.append(pl.NoEscape("% hkPersonChapter.PersonChapter.__picture_with_note"))
 
         self.__document_with_note(p_level, p_image_path, p_image_title, p_image_note_handles, p_image_rect, p_position)
 
@@ -256,25 +53,27 @@ class Person:
         # Add note(s)
         v_note_text = ''
         for v_note_handle in p_image_note_handles:
-            v_note_data = decode_note_data(v_note_handle, self.__cursor)
-            v_note_text = v_note_data[2][0]
+            v_note = hkNote.Note(v_note_handle, self.__cursor__)
+            v_note_text = v_note.__note_text__
 
             v_pos_1 = v_note_text.find("http")
+            # Check whether the note contains a web address
             if v_pos_1 >= 0:  # 202303113
-                # Check whether the note contains a web address
                 # ...it does, first find '//'..
-                v_pos_2 = v_note_text.find('//')
-
-                # ...from that position find the next '/'
-                v_pos_2 = v_note_text.find('/', v_pos_2+2)
+                v_pos_2 = v_note_text.find('//')+2
 
                 # ...find the end of the web address
-                v_pos_3 = v_pos_2
-                while (v_pos_3 < len(v_note_text)) and (v_note_text[v_pos_3] != ' '):
-                    v_pos_3 = v_pos_3 + 1
+                v_pos_4 = v_pos_2
+                while (v_pos_4 < len(v_note_text)) and (v_note_text[v_pos_4] != ' '):
+                    v_pos_4 = v_pos_4 + 1
 
-                v_full_web_address = v_note_text[v_pos_1:v_pos_3]
-                v_short_web_address = "<WebLink>"  # v_note_text[v_pos_1:v_pos_2]
+                # ...within the web address, find the first  '/' after '//' if it exists
+                v_pos_3 = v_note_text.find('/', v_pos_2)
+                if (v_pos_3 < 0) or (v_pos_3 > v_pos_4):
+                    v_pos_3 = v_pos_4
+
+                v_full_web_address = v_note_text[v_pos_1:v_pos_4]
+                v_short_web_address = v_note_text[v_pos_2:v_pos_3]  # "<WebLink>"
 
                 # Debug logging
                 logging.debug("v_full_web_address: %s", v_full_web_address)
@@ -303,10 +102,10 @@ class Person:
         # Create the figure
         if v_width > v_height:
             # Landscape
-            hsf.wrap_figure(p_level, p_filename=p_image_path, p_caption=p_image_title, p_position=p_position, p_width=r'0.70\textwidth', p_text=v_note_text, p_zoom_rect=p_image_rect)
+            hkSupportFunctions.wrap_figure(p_level, p_filename=p_image_path, p_caption=p_image_title, p_position=p_position, p_width=r'0.70\textwidth', p_text=v_note_text, p_zoom_rect=p_image_rect)
         else:
             # Portrait
-            hsf.wrap_figure(p_level, p_filename=p_image_path, p_caption=p_image_title, p_position=p_position, p_width=r'0.50\textwidth', p_text=v_note_text, p_zoom_rect=p_image_rect)
+            hkSupportFunctions.wrap_figure(p_level, p_filename=p_image_path, p_caption=p_image_title, p_position=p_position, p_width=r'0.50\textwidth', p_text=v_note_text, p_zoom_rect=p_image_rect)
 
         # End the minipage
         p_level.append(pl.NoEscape(r'\end{minipage}'))
@@ -315,16 +114,16 @@ class Person:
     def __get_filtered_photo_list(self):
         v_photo_list = []
 
-        for vMediaItem in self.__media_list:
+        v_person = self.__person__
+        for vMediaItem in v_person.__media_base__:
             v_media_handle = vMediaItem[4]
             v_media_rect = vMediaItem[5]  # corner1 and corner 2 in Media Reference Editor in Gramps
-            v_media_data = get_media_data(v_media_handle, self.__cursor)
-            v_media_mime = v_media_data[3]
-            v_tag_handle_list = v_media_data[11]
+            v_media = hkMedia.Media(v_media_handle, self.__cursor__)
+            v_media_mime = v_media.__mime__
+            v_tag_handle_list = v_media.__tag_base__
 
             if (v_media_mime.lower() == 'image/jpeg') or (v_media_mime.lower() == 'image/png'):
-                if (c_publishable in get_tag_list(v_tag_handle_list, self.__tag_dictionary)) and (c_photo in get_tag_list(v_tag_handle_list, self.__tag_dictionary)):
-                    # v_photo_list.append(v_media_handle) # 20220328
+                if (c_publishable in hkGrampsDb.get_tag_list(v_tag_handle_list, v_person.__tag_dictionary__)) and (c_photo in hkGrampsDb.get_tag_list(v_tag_handle_list, v_person.__tag_dictionary__)):
                     v_photo_list.append([v_media_handle, v_media_rect])
 
         return v_photo_list
@@ -332,15 +131,16 @@ class Person:
     def __get_filtered_document_list(self):
         v_document_list = []
 
-        for vMediaItem in self.__media_list:
+        v_person = self.__person__
+        for vMediaItem in v_person.__media_base__:
             v_media_handle = vMediaItem[4]
             v_media_rect = vMediaItem[5]  # corner1 and corner 2 in Media Reference Editor in Gramps
-            v_media_data = get_media_data(v_media_handle, self.__cursor)
-            v_media_mime = v_media_data[3]
-            v_tag_handle_list = v_media_data[11]
+            v_media = hkMedia.Media(v_media_handle, self.__cursor__)
+            v_media_mime = v_media.__mime__
+            v_tag_handle_list = v_media.__tag_base__
 
             if (v_media_mime.lower() == 'image/jpeg') or (v_media_mime.lower() == 'image/png'):
-                if (c_publishable in get_tag_list(v_tag_handle_list, self.__tag_dictionary)) and (c_document in get_tag_list(v_tag_handle_list, self.__tag_dictionary)):
+                if (c_publishable in hkGrampsDb.get_tag_list(v_tag_handle_list, v_person.__tag_dictionary__)) and (c_document in hkGrampsDb.get_tag_list(v_tag_handle_list, v_person.__tag_dictionary__)):
                     v_document_list.append([v_media_handle, v_media_rect])
 
         return v_document_list
@@ -352,74 +152,90 @@ class Person:
 
         v_note_list = []
 
+        v_person = self.__person__
         for v_note_handle in p_note_handle_list:
-            v_note_data = decode_note_data(v_note_handle, self.__cursor)
-            v_tag_handle_list = v_note_data[6]
-            v_type = v_note_data[4][0]
+            v_note = hkNote.Note(v_note_handle, self.__cursor__)
+            v_tag_handle_list = v_note.__note_tag_base__
+            v_type = v_note.__note_type__
 
-            if not (c_source in get_tag_list(v_tag_handle_list, self.__tag_dictionary)) and not (v_type == c_note_citation):
+            if not (c_source in hkGrampsDb.get_tag_list(v_tag_handle_list, v_person.__tag_dictionary__)) and not (v_type == hkGrampsDb.c_note_citation):
                 v_note_list.append(v_note_handle)
 
         return v_note_list
 
     def __write_life_sketch_section(self, p_level):
-        # Create section with Life Sketch
-        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        """
+        Create a section with Life Sketch
+        
+        @param p_level: level of the chapter / section
+        @return: None
+        """
+        
+        v_person = self.__person__
 
-        with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('life sketch', self.__language), pLabel=False) as v_sub_level:
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('life sketch', self.__language__), pLabel=False) as v_sub_level:
             # Create a story line
             v_life_sketch = ""
 
-            # Check whether lifestories already exist in the notes
-            for v_note in self.__note_base:
-                v_note_handle = v_note
-                v_note_data = decode_note_data(v_note_handle, self.__cursor)
-                v_note_text = v_note_data[2][0]
-                v_note_type = v_note_data[4][0]
-                if v_note_type == c_note_person:  # Person Note
+            # Check whether life stories already exist in the notes
+            for v_note_handle in v_person.__note_base__:
+                v_note = hkNote.Note(v_note_handle, self.__cursor__)
+                v_note_text = v_note.__note_text__
+                v_note_type = v_note.__note_type__
+                if v_note_type == hkGrampsDb.c_note_person:  # PersonChapter Note
                     v_life_sketch = v_life_sketch + pu.escape_latex(v_note_text)
 
             # If no specific life stories were found, then write one
             if len(v_life_sketch) == 0:
-                v_full_name = self.__given_names + ' ' + self.__surname
-                v_he_she = hlg.translate('He', self.__language)
-                v_his_her = hlg.translate('His', self.__language)
-                v_brother_sister = hlg.translate('Brother', self.__language)
-                v_father_mother = hlg.translate('Father', self.__language)
-                if self.__gender == c_gender_female:
-                    v_he_she = hlg.translate('She', self.__language)
-                    v_his_her = hlg.translate('Her', self.__language)
-                    v_brother_sister = hlg.translate('Sister', self.__language)
-                    v_father_mother = hlg.translate('Mother', self.__language)
+                v_full_name = v_person.__given_names__ + ' ' + v_person.__surname__
+                v_he_she = hkLanguage.translate('He', self.__language__)
+                v_his_her = hkLanguage.translate('His', self.__language__)
+                v_brother_sister = hkLanguage.translate('Brother', self.__language__)
+                v_father_mother = hkLanguage.translate('Father', self.__language__)
+                if v_person.__gender__ == hkGrampsDb.c_gender_female:
+                    v_he_she = hkLanguage.translate('She', self.__language__)
+                    v_his_her = hkLanguage.translate('Her', self.__language__)
+                    v_brother_sister = hkLanguage.translate('Sister', self.__language__)
+                    v_father_mother = hkLanguage.translate('Mother', self.__language__)
 
-                v_vital_events = c_vital_events_set.intersection(self.__person_event_info_dict.keys())
+                v_vital_event_keys = hkGrampsDb.c_vital_events_set.intersection(v_person.__person_event_dict__.keys())
 
                 # Geboorte
-                if c_event_birth in v_vital_events:  # Birth
-                    v_string = hlg.translate("{0} was born on {1}", self.__language).format(pu.escape_latex(v_full_name), hsf.date_to_text(self.__person_event_info_dict[c_event_birth][0][0], False))
-                    v_life_sketch = v_life_sketch + v_string
+                if hkGrampsDb.c_event_birth in v_vital_event_keys:  # Birth
+                    for v_event in v_person.__person_event_dict__[hkGrampsDb.c_event_birth]:
+                        v_date = v_event.get_date()
+                        v_place = v_event.get_place()
 
-                    if (len(self.__person_event_info_dict[c_event_birth][0][1]) > 0) and (self.__person_event_info_dict[c_event_birth][0][1] != '-'):
-                        v_string = hlg.translate("in {0}", self.__language).format(hsf.place_to_text(self.__person_event_info_dict[c_event_birth][0][1]))
-                        v_life_sketch = v_life_sketch + ' ' + v_string
+                        v_string = hkLanguage.translate("{0} was born on {1}", self.__language__).format(pu.escape_latex(v_full_name), v_date.__date_to_text__(False))
+                        v_life_sketch = v_life_sketch + v_string
 
-                    v_life_sketch = v_life_sketch + r". "
+                        if v_place is not None:
+                            v_string = hkLanguage.translate("in {0}", self.__language__).format(v_place.__place_to_text__(False))
+                            v_life_sketch = v_life_sketch + ' ' + v_string
 
-                elif c_event_baptism in v_vital_events:  # Baptism
-                    v_string = hlg.translate("{0} was born about {1}", self.__language).format(pu.escape_latex(v_full_name), hsf.date_to_text(self.__person_event_info_dict[c_event_baptism][0][0], False))
-                    v_life_sketch = v_life_sketch + v_string
+                        v_life_sketch = v_life_sketch + r". "
 
-                    if (len(self.__person_event_info_dict[c_event_baptism][0][1]) > 0) and (self.__person_event_info_dict[c_event_baptism][0][1] != '-'):
-                        v_string = hlg.translate("in {0}", self.__language).format(hsf.place_to_text(self.__person_event_info_dict[c_event_baptism][0][1]))
-                        v_life_sketch = v_life_sketch + ' ' + v_string
+                # Baptism
+                elif hkGrampsDb.c_event_baptism in v_vital_event_keys:
+                    for v_event in v_person.__person_event_dict__[hkGrampsDb.c_event_baptism]:
+                        v_date = v_event.get_date()
+                        v_place = v_event.get_place()
 
-                    v_life_sketch = v_life_sketch + r". "
+                        v_string = hkLanguage.translate("{0} was born about {1}", self.__language__).format(pu.escape_latex(v_full_name), v_date.__date_to_text__(False))
+                        v_life_sketch = v_life_sketch + v_string
+
+                        if v_place is not None:
+                            v_string = hkLanguage.translate("in {0}", self.__language__).format(v_place.__place_to_text__(False))
+                            v_life_sketch = v_life_sketch + ' ' + v_string
+
+                        v_life_sketch = v_life_sketch + r". "
 
                 # Roepnaam
-                v_use_name = self.__given_names
-                if len(self.__call_name) > 0:
-                    v_use_name = self.__call_name
-                    v_string = hlg.translate("{0} call name was {1}.", self.__language).format(v_his_her, pu.escape_latex(self.__call_name))
+                v_use_name = v_person.__given_names__
+                if len(v_person.__call_name__) > 0:
+                    v_use_name = v_person.__call_name__
+                    v_string = hkLanguage.translate("{0} call name was {1}.", self.__language__).format(v_his_her, pu.escape_latex(v_use_name))
                     v_life_sketch = v_life_sketch + v_string
 
                 if len(v_life_sketch) > 0:
@@ -429,31 +245,32 @@ class Person:
                 v_number_sisters = 0
                 v_number_brothers = 0
                 v_sibling_names = []
-                for v_sibling_handle in self.__sibling_handles_list:
-                    v_sibling_data = decode_person_data(v_sibling_handle, self.__cursor)
-                    if v_sibling_data[2] == 0:
+
+                for v_sibling_handle in hkSupportFunctions.sort_person_list_by_birth(v_person.get_siblings(), self.__cursor__):
+                    v_sibling = hkPerson.Person(v_sibling_handle, self.__cursor__)
+                    if v_sibling.__gender__ == 0:
                         v_number_sisters = v_number_sisters + 1
-                    elif v_sibling_data[2] == 1:
+                    elif v_sibling.__gender__ == 1:
                         v_number_brothers = v_number_brothers + 1
 
-                    v_sibling_names.append(v_sibling_data[3][1])
+                    v_sibling_names.append(v_sibling.__given_names__)
 
                 if v_number_sisters + v_number_brothers > 0:
                     v_string = ''
                     if v_number_sisters == 1 and v_number_brothers == 0:
-                        v_string = hlg.translate("{0} had one sister:", self.__language).format(v_use_name)
+                        v_string = hkLanguage.translate("{0} had one sister:", self.__language__).format(v_use_name)
 
                     if v_number_sisters > 1 and v_number_brothers == 0:
-                        v_string = hlg.translate("{0} had {1} sisters:", self.__language).format(v_use_name, v_number_sisters)
+                        v_string = hkLanguage.translate("{0} had {1} sisters:", self.__language__).format(v_use_name, v_number_sisters)
 
                     if v_number_sisters == 0 and v_number_brothers == 1:
-                        v_string = hlg.translate("{0} had one brother:", self.__language).format(v_use_name)
+                        v_string = hkLanguage.translate("{0} had one brother:", self.__language__).format(v_use_name)
 
                     if v_number_sisters == 0 and v_number_brothers > 1:
-                        v_string = hlg.translate("{0} had {1} brothers:", self.__language).format(v_use_name, v_number_brothers)
+                        v_string = hkLanguage.translate("{0} had {1} brothers:", self.__language__).format(v_use_name, v_number_brothers)
 
                     if v_number_sisters > 0 and v_number_brothers > 0:
-                        v_string = hlg.translate("{0} was {1} of", self.__language).format(v_use_name, v_brother_sister.lower())
+                        v_string = hkLanguage.translate("{0} was {1} of", self.__language__).format(v_use_name, v_brother_sister.lower())
 
                     v_life_sketch = v_life_sketch + v_string + ' '
 
@@ -461,7 +278,7 @@ class Person:
                         for vSiblingName in v_sibling_names[:-1]:
                             v_life_sketch = v_life_sketch + pu.escape_latex(vSiblingName) + ", "
 
-                        v_life_sketch = v_life_sketch + hlg.translate("and", self.__language) + ' ' + pu.escape_latex(v_sibling_names[-1]) + ". "
+                        v_life_sketch = v_life_sketch + hkLanguage.translate("and", self.__language__) + ' ' + pu.escape_latex(v_sibling_names[-1]) + ". "
                         v_life_sketch = v_life_sketch + r"\par "
                     elif len(v_sibling_names) == 1:
                         v_life_sketch = v_life_sketch + pu.escape_latex(v_sibling_names[-1]) + ". "
@@ -471,41 +288,41 @@ class Person:
                 v_number_daughters = 0
                 v_number_sons = 0
                 v_child_names = []
-                for v_child_handle in self.__children_handles_list:
-                    v_child_data = decode_person_data(v_child_handle, self.__cursor)
-                    if v_child_data[2] == 0:
+                for v_child_handle in v_person.get_children():
+                    v_child = hkPerson.Person(v_child_handle, self.__cursor__)
+                    if v_child.__gender__ == 0:
                         v_number_daughters = v_number_daughters + 1
-                    elif v_child_data[2] == 1:
+                    elif v_child.__gender__ == 1:
                         v_number_sons = v_number_sons + 1
 
-                    v_child_names.append(v_child_data[3][1])
+                    v_child_names.append(v_child.__given_names__)
 
                 if v_number_daughters + v_number_sons > 0:
                     v_string = ''
                     if v_number_daughters == 1 and v_number_sons == 0:
-                        v_string = hlg.translate("{0} had one daughter:", self.__language).format(v_full_name)
+                        v_string = hkLanguage.translate("{0} had one daughter:", self.__language__).format(v_full_name)
                         if len(v_life_sketch) > 0:
-                            v_string = hlg.translate("Furthermore, {0} had one daughter:", self.__language).format(v_use_name)
+                            v_string = hkLanguage.translate("Furthermore, {0} had one daughter:", self.__language__).format(v_use_name)
 
                     if v_number_daughters > 1 and v_number_sons == 0:
-                        v_string = hlg.translate("{0} had {1} daughters:", self.__language).format(v_full_name, v_number_daughters)
+                        v_string = hkLanguage.translate("{0} had {1} daughters:", self.__language__).format(v_full_name, v_number_daughters)
                         if len(v_life_sketch) > 0:
-                            v_string = hlg.translate("Furthermore, {0} had {1} daughters:", self.__language).format(v_use_name, v_number_daughters)
+                            v_string = hkLanguage.translate("Furthermore, {0} had {1} daughters:", self.__language__).format(v_use_name, v_number_daughters)
 
                     if v_number_daughters == 0 and v_number_sons == 1:
-                        v_string = hlg.translate("{0} had one son:", self.__language).format(v_full_name)
+                        v_string = hkLanguage.translate("{0} had one son:", self.__language__).format(v_full_name)
                         if len(v_life_sketch) > 0:
-                            v_string = hlg.translate("Furthermore, {0} had one son:", self.__language).format(v_use_name)
+                            v_string = hkLanguage.translate("Furthermore, {0} had one son:", self.__language__).format(v_use_name)
 
                     if v_number_daughters == 0 and v_number_sons > 1:
-                        v_string = hlg.translate("{0} had {1} sons:", self.__language).format(v_full_name, v_number_sons)
+                        v_string = hkLanguage.translate("{0} had {1} sons:", self.__language__).format(v_full_name, v_number_sons)
                         if len(v_life_sketch) > 0:
-                            v_string = hlg.translate("Furthermore, {0} had {1} sons:", self.__language).format(v_use_name, v_number_sons)
+                            v_string = hkLanguage.translate("Furthermore, {0} had {1} sons:", self.__language__).format(v_use_name, v_number_sons)
 
                     if v_number_daughters > 0 and v_number_sons > 0:
-                        v_string = hlg.translate("{0} was {1} of", self.__language).format(v_full_name, v_father_mother.lower())
+                        v_string = hkLanguage.translate("{0} was {1} of", self.__language__).format(v_full_name, v_father_mother.lower())
                         if len(v_life_sketch) > 0:
-                            v_string = hlg.translate("Furthermore, {0} was {1} of", self.__language).format(v_use_name, v_father_mother.lower())
+                            v_string = hkLanguage.translate("Furthermore, {0} was {1} of", self.__language__).format(v_use_name, v_father_mother.lower())
 
                     v_life_sketch = v_life_sketch + v_string + ' '
 
@@ -513,48 +330,52 @@ class Person:
                         for v_child_name in v_child_names[:-1]:
                             v_life_sketch = v_life_sketch + pu.escape_latex(v_child_name) + ", "
 
-                        v_life_sketch = v_life_sketch + hlg.translate("and", self.__language) + ' ' + pu.escape_latex(v_child_names[-1]) + ". "
+                        v_life_sketch = v_life_sketch + hkLanguage.translate("and", self.__language__) + ' ' + pu.escape_latex(v_child_names[-1]) + ". "
                         v_life_sketch = v_life_sketch + r"\par "
                     elif len(v_child_names) == 1:
                         v_life_sketch = v_life_sketch + pu.escape_latex(v_child_names[-1]) + ". "
                         v_life_sketch = v_life_sketch + r"\par "
 
-                # Overlijden
-                if c_event_death in v_vital_events:  # Death
-                    v_string = hlg.translate("{0} died on {1}", self.__language).format(v_he_she, hsf.date_to_text(self.__person_event_info_dict[c_event_death][0][0], False))
-                    v_life_sketch = v_life_sketch + v_string
+                # Death
+                if hkGrampsDb.c_event_death in v_vital_event_keys:
+                    for v_event in v_person.__person_event_dict__[hkGrampsDb.c_event_death]:
+                        v_date = v_event.get_date()
+                        v_place = v_event.get_place()
 
-                    if (len(self.__person_event_info_dict[c_event_death][0][1]) > 0) and (self.__person_event_info_dict[c_event_death][0][1] != '-'):
-                        v_string = hlg.translate("in {0}.", self.__language).format(hsf.place_to_text(self.__person_event_info_dict[c_event_death][0][1]))
-                        v_life_sketch = v_life_sketch + ' ' + v_string
-                    else:
-                        v_life_sketch = v_life_sketch + ". "
+                        v_string = hkLanguage.translate("{0} died on {1}", self.__language__).format(v_he_she, v_date.__date_to_text__(False))
+                        v_life_sketch = v_life_sketch + v_string
 
-                elif c_event_burial in v_vital_events:  # Burial
-                    v_string = hlg.translate("{0} died about {1}", self.__language).format(v_he_she, hsf.date_to_text(self.__person_event_info_dict[c_event_burial][0][0], False))
-                    v_life_sketch = v_life_sketch + v_string
+                        if v_place is not None:
+                            v_string = hkLanguage.translate("in {0}.", self.__language__).format(v_place.__place_to_text__(False))
+                            v_life_sketch = v_life_sketch + ' ' + v_string
+                        else:
+                            v_life_sketch = v_life_sketch + ". "
 
-                    if (len(self.__person_event_info_dict[c_event_burial][0][1]) > 0) and (self.__person_event_info_dict[c_event_burial][0][1] != '-'):
-                        v_string = hlg.translate("and was buried in {0}.", self.__language).format(hsf.place_to_text(self.__person_event_info_dict[c_event_burial][0][1]))
-                        v_life_sketch = v_life_sketch + ' ' + v_string + ' '
-                    else:
-                        v_life_sketch = v_life_sketch + ". "
+                # Burial
+                elif hkGrampsDb.c_event_burial in v_vital_event_keys:
+                    for v_event in v_person.__person_event_dict__[hkGrampsDb.c_event_burial]:
+                        v_date = v_event.get_date()
+                        v_place = v_event.get_place()
+
+                        v_string = hkLanguage.translate("{0} died about {1}", self.__language__).format(v_he_she, v_date.__date_to_text__(False))
+                        v_life_sketch = v_life_sketch + v_string
+
+                        if v_place is not None:
+                            v_string = hkLanguage.translate("and was buried in {0}.", self.__language__).format(v_place.__place_to_text__(False))
+                            v_life_sketch = v_life_sketch + ' ' + v_string + ' '
+                        else:
+                            v_life_sketch = v_life_sketch + ". "
 
             v_life_sketch = v_life_sketch.replace(r"\n\n", r"\par")  # Replace double newline characters with \par
-            v_life_sketch = v_life_sketch.replace(r"\newline%\newline", r"par")  # Replace double newline characters with \par
+            v_life_sketch = v_life_sketch.replace(r"\newline\newline", r"par")  # Replace double newline characters with \par
 
             v_portrait_found = False
-            for v_media_item in self.__media_list:
+            for v_media_item in v_person.__media_base__:
                 v_media_handle = v_media_item[4]
-                v_media_data = get_media_data(v_media_handle, self.__cursor)
-                v_media_path = v_media_data[2]
-                # v_media_mime = v_media_data[3]
-                # v_media_description = v_media_data[4]
-                v_tag_handle_list = v_media_data[11]
-
-                if 'Portrait' in get_tag_list(v_tag_handle_list, self.__tag_dictionary):
+                v_media = hkMedia.Media(v_media_handle, self.__cursor__)
+                if v_media.tag_name_in_media_tag_names('Portrait'):
                     v_portrait_found = True
-                    hsf.wrap_figure(v_sub_level, p_filename=v_media_path, p_width=r'0.35\textwidth', p_text=v_life_sketch)
+                    hkSupportFunctions.wrap_figure(v_sub_level, p_filename=v_media.__media_path__, p_width=r'0.35\textwidth', p_text=v_life_sketch)
 
             if not v_portrait_found:
                 v_sub_level.append(pl.NoEscape(v_life_sketch))
@@ -562,56 +383,76 @@ class Person:
         v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_vital_information_section(self, p_level):
-        # Create section with Vital Information
+        """
+        Create section with Vital Information
+
+        @param p_level: level of the chapter / section
+        @return: None
+        """
+
+        v_person = self.__person__
+
         p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('vital information', self.__language), pLabel=False) as v_sub_level:
+        with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('vital information', self.__language__), pLabel=False) as v_sub_level:
             with v_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
-                if len(self.__call_name) > 0:
-                    v_table.add_row([hlg.translate('call name', self.__language) + ":", self.__call_name])
+                if len(v_person.__call_name__) > 0:
+                    v_table.add_row([hkLanguage.translate('call name', self.__language__) + ":", v_person.__call_name__])
 
-                if self.__gender in c_gender_dict:
-                    v_table.add_row([hlg.translate('gender', self.__language) + ":", hlg.translate(c_gender_dict[self.__gender], self.__language)])
+                if v_person.__gender__ in hkGrampsDb.c_gender_dict:
+                    v_table.add_row([hkLanguage.translate('gender', self.__language__) + ":", hkLanguage.translate(hkGrampsDb.c_gender_dict[v_person.__gender__], self.__language__)])
 
-                for v_event in self.__person_event_info_dict.keys():
-                    if v_event in c_vital_events_set:
-                        v_string_1 = "Date of " + c_event_type_dict[v_event]
-                        v_string_2 = "Place of " + c_event_type_dict[v_event]
+                for v_event_key in v_person.__person_event_dict__.keys():
+                    if v_event_key in hkGrampsDb.c_vital_events_set:
+                        v_string_1 = "Date of " + hkGrampsDb.c_event_type_dict[v_event_key]
+                        v_string_2 = "Place of " + hkGrampsDb.c_event_type_dict[v_event_key]
 
-                        v_string3 = hsf.date_to_text(self.__person_event_info_dict[v_event][0][0], False)
-                        v_string4 = hsf.place_to_text(self.__person_event_info_dict[v_event][0][1], True)
+                        v_event_dict = v_person.__person_event_dict__[v_event_key]
+                        for v_event in v_event_dict:
+                            v_date = v_event.get_date()
+                            v_place = v_event.get_place()
 
-                        if len(v_string3) > 0:
-                            v_table.add_row([hlg.translate(v_string_1, self.__language) + ":", v_string3])
-                        if len(v_string4) > 0:
-                            v_table.add_row([hlg.translate(v_string_2, self.__language) + ":", v_string4])
+                            v_string3 = v_date.__date_to_text__(False)
+                            v_string4 = v_place.__place_to_text__(False)
+
+                            if len(v_string3) > 0:
+                                v_table.add_row([hkLanguage.translate(v_string_1, self.__language__) + ":", v_string3])
+                            if len(v_string4) > 0:
+                                v_table.add_row([hkLanguage.translate(v_string_2, self.__language__) + ":", v_string4])
 
             v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_parental_section_graph(self, p_level):
+        """
+        Creates a graphical family tree
+        
+        @param p_level: level of the chapter / section
+        @return: None
+        """
+        
+        v_person = self.__person__
+        
         # Add Family graph
         p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('parental family', self.__language), pLabel=False) as v_sub_level:
+        with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('parental family', self.__language__), pLabel=False) as v_sub_level:
             # Create a sorted list of self and siblings
-            v_sibling_list = [self.__person_handle]
-            for v_sibling_handle in self.__sibling_handles_list:
-                v_sibling_list.append(v_sibling_handle)
-
-            v_sibling_list = hsf.sort_person_list_by_birth(v_sibling_list, self.__cursor)
+            v_sibling_list = v_person.get_siblings()
+            v_sibling_list.append(v_person.__handle__)
+            v_sibling_list = hkSupportFunctions.sort_person_list_by_birth(v_sibling_list, self.__cursor__)
 
             # Create nodes
             v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
             v_sub_level.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
 
             # Parents
-            v_father_name = hlg.translate('Unknown', self.__language)
-            if self.__father_handle is not None:
-                v_father_data = decode_person_data(self.__father_handle, self.__cursor)
-                v_father_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_father_data[3][1], v_father_data[3][0], v_father_data[1]))
+            v_father_name = hkLanguage.translate('Unknown', self.__language__)
+            if v_person.get_father() is not None:
+                v_father = hkPerson.Person(v_person.get_father(), self.__cursor__)
+                v_father_name = pl.NoEscape(hkLatex.GetPersonNameWithReference(v_father.__given_names__, v_father.__surname__, v_father.__gramps_id__))
 
-            v_mother_name = hlg.translate('Unknown', self.__language)
-            if self.__mother_handle is not None:
-                v_mother_data = decode_person_data(self.__mother_handle, self.__cursor)
-                v_mother_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_mother_data[3][1], v_mother_data[3][0], v_mother_data[1]))
+            v_mother_name = hkLanguage.translate('Unknown', self.__language__)
+            if v_person.get_mother() is not None:
+                v_mother = hkPerson.Person(v_person.get_mother(), self.__cursor__)
+                v_mother_name = pl.NoEscape(hkLatex.GetPersonNameWithReference(v_mother.__given_names__, v_mother.__surname__, v_mother.__gramps_id__))
 
             # First row
             v_sub_level.append(pu.NoEscape(r'\node (father) [left, man]    {\small ' + v_father_name + r'}; &'))
@@ -626,23 +467,21 @@ class Person:
             v_counter = 0
             for v_sibling_handle in v_sibling_list:
                 v_counter = v_counter + 1
-                v_sibling_data = decode_person_data(v_sibling_handle, self.__cursor)
-                v_sibling_id = v_sibling_data[1]
-                v_sibling_gender = v_sibling_data[2]
+                v_sibling = hkPerson.Person(v_sibling_handle, self.__cursor__)
 
-                if v_sibling_id == self.__gramps_id:
-                    v_sibling_name = self.__given_names + ' ' + self.__surname
+                if v_sibling.__gramps_id__ == v_person.__gramps_id__:
+                    v_sibling_name = v_person.__given_names__ + ' ' + v_person.__surname__
                 else:
-                    v_sibling_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_sibling_data[3][1], v_sibling_data[3][0], v_sibling_data[1]))
+                    v_sibling_name = pl.NoEscape(hkLatex.GetPersonNameWithReference(v_sibling.__given_names__, v_sibling.__surname__, v_sibling.__gramps_id__))
 
-                if v_sibling_gender == 0:  # Female
+                if v_sibling.__gender__ == 0:  # Female
                     v_string = r' & & \node (p' + str(v_counter) + r') [right, woman'
-                elif v_sibling_gender == 1:  # Male
+                elif v_sibling.__gender__ == 1:  # Male
                     v_string = r' & & \node (p' + str(v_counter) + r') [right, man'
                 else:
                     v_string = r' & & \node (p' + str(v_counter) + r') [right, man'
 
-                if v_sibling_id == self.__gramps_id:
+                if v_sibling.__gramps_id__ == v_person.__gramps_id__:
                     v_string = v_string + r', self'
 
                 v_string = v_string + r'] {\small ' + v_sibling_name + r'}; \\'
@@ -661,336 +500,364 @@ class Person:
             v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
             v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-    def __write_parental_subsection_table(self, p_level):
+    def __write_parental_section_table(self, p_level):
+        """
+        Creates a tabular family tree
+
+        @param p_level: level of the chapter / section
+        @return: None
+        """
+        
+        v_person = self.__person__
+
         # Add Family table
         p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('parental family', self.__language), pLabel=False) as vSubLevel:
+        with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('parental family', self.__language__), pLabel=False) as vSubLevel:
             with vSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
-                v_father_name = hlg.translate('Unknown', self.__language)
-                if self.__father_handle is not None:
-                    v_father_data = decode_person_data(self.__father_handle, self.__cursor)
-                    v_father_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_father_data[3][1], v_father_data[3][0], v_father_data[1]))
+                v_father_name = hkLanguage.translate('Unknown', self.__language__)
+                if v_person.get_father() is not None:
+                    v_father = hkPerson.Person(v_person.get_father(), self.__cursor__)
+                    v_father_name = pl.NoEscape(hkLatex.GetPersonNameWithReference(v_father.__given_names__, v_father.__surname__, v_father.__gramps_id__))
 
-                v_table.add_row([hlg.translate('father', self.__language) + ":", v_father_name])
+                v_table.add_row([hkLanguage.translate('father', self.__language__) + ":", v_father_name])
 
-                v_mother_name = hlg.translate('Unknown', self.__language)
-                if self.__mother_handle is not None:
-                    v_mother_data = decode_person_data(self.__mother_handle, self.__cursor)
-                    v_mother_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_mother_data[3][1], v_mother_data[3][0], v_mother_data[1]))
+                v_mother_name = hkLanguage.translate('Unknown', self.__language__)
+                if v_person.get_mother() is not None:
+                    v_mother = hkPerson.Person(v_person.get_mother(), self.__cursor__)
+                    v_mother_name = pl.NoEscape(hkLatex.GetPersonNameWithReference(v_mother.__given_names__, v_mother.__surname__, v_mother.__gramps_id__))
 
-                v_table.add_row([hlg.translate('mother', self.__language) + ":", v_mother_name])
+                v_table.add_row([hkLanguage.translate('mother', self.__language__) + ":", v_mother_name])
 
-                for v_sibling_handle in self.__sibling_handles_list:
-                    v_sibling_data = decode_person_data(v_sibling_handle, self.__cursor)
-                    if v_sibling_data[1] == self.__gramps_id:
-                        v_sibling_type = hlg.translate('self', self.__language) + ":"
-                    elif v_sibling_data[2] == 0:
-                        v_sibling_type = hlg.translate('sister', self.__language) + ":"
-                    elif v_sibling_data[2] == 1:
-                        v_sibling_type = hlg.translate('brother', self.__language) + ":"
+                for v_sibling_handle in hkSupportFunctions.sort_person_list_by_birth(v_person.get_siblings(), self.__cursor__):
+                    v_sibling = hkPerson.Person(v_sibling_handle, self.__cursor__)
+                    if v_sibling.__gramps_id__ == v_person.__gramps_id__:
+                        v_sibling_type = hkLanguage.translate('self', self.__language__) + ":"
+                    elif v_sibling.__gender__ == 0:
+                        v_sibling_type = hkLanguage.translate('sister', self.__language__) + ":"
+                    elif v_sibling.__gender__ == 1:
+                        v_sibling_type = hkLanguage.translate('brother', self.__language__) + ":"
                     else:
-                        v_sibling_type = hlg.translate('unknown', self.__language) + ":"
+                        v_sibling_type = hkLanguage.translate('unknown', self.__language__) + ":"
 
-                    v_table.add_row([v_sibling_type, pl.NoEscape(hlt.GetPersonNameWithReference(v_sibling_data[3][1], v_sibling_data[3][0], v_sibling_data[1]))])
+                    v_table.add_row([v_sibling_type, pl.NoEscape(hkLatex.GetPersonNameWithReference(v_sibling.__given_names__, v_sibling.__surname__, v_sibling.__gramps_id__))])
 
             vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_partner_sections_graph(self, p_level):
+        """
+        Creates a graphical family tree
+
+        @param p_level: level of the chapter / section
+        @return: None
+        """
+
+        v_person = self.__person__
+
         # Add families with partners
-        for v_partner_handle in self.__partner_handle_list:
+        for v_family_handle in v_person.__family_list__:
+            v_family = hkFamily.Family(v_family_handle, self.__cursor__)
+
+            v_partner_handle = v_family.get_mother()
+            if v_person.__gender__ == hkGrampsDb.c_gender_female:
+                v_partner_handle = v_family.get_father()
+
             if v_partner_handle is not None:  # TODO: Also handle families with unknown partners
-                v_partner_data = decode_person_data(v_partner_handle, self.__cursor)
-                v_partner_gramps_id = v_partner_data[1]
-                v_partner_surname = v_partner_data[3][0]
-                v_partner_given_names = v_partner_data[3][1]
+                v_partner = hkPerson.Person(v_partner_handle, self.__cursor__)
 
                 # For each partner create a subsection
                 p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-                with hlt.CreateSubLevel(pLevel=p_level, pTitle=pl.NoEscape(hlt.GetPersonNameWithReference(v_partner_given_names, v_partner_surname, v_partner_gramps_id)), pLabel=False) as vSubLevel:
-                    if self.__gender == 0:
-                        v_family_handle = get_family_handle_by_father_mother(v_partner_handle, self.__person_handle, self.__cursor)
-                    else:
-                        v_family_handle = get_family_handle_by_father_mother(self.__person_handle, v_partner_handle, self.__cursor)
+                with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=pl.NoEscape(hkLatex.GetPersonNameWithReference(v_partner.__given_names__, v_partner.__surname__, v_partner.__gramps_id__)), pLabel=False) as vSubLevel:
+                    v_family_event_dict: dict[str, list[hkEvent.Event]] = {}
 
-                    if v_family_handle is not None:
-                        v_family_handle = v_family_handle[0]
+                    # Create a family event dictionary
+                    for v_family_event_ref in v_family.__event_ref_list__:
+                        v_event = hkEventRef.EventRef(v_family_event_ref, self.__cursor__).get_event()
 
-                        # Nieuw
-                        v_family_info = decode_family_data(v_family_handle, self.__cursor)
-                        # v_family_gramps_id = v_family_info[0]
-                        v_family_event_ref_list = v_family_info[5]
+                        if v_event.get_type() in v_family_event_dict:
+                            v_family_event_dict[v_event.get_type()].append(v_event)
+                        else:
+                            v_family_event_dict[v_event.get_type()] = [v_event]
 
-                        v_family_event_info_dict = {}
-                        for v_family_event_ref in v_family_event_ref_list:
-                            v_family_event_handle = v_family_event_ref[3]
-                            v_family_event_info = decode_event_data(v_family_event_handle, self.__cursor)
-                            if v_family_event_info[0] in v_family_event_info_dict:
-                                v_family_event_info_dict[v_family_event_info[0]].append(v_family_event_info[1:])
-                            else:
-                                v_family_event_info_dict[v_family_event_info[0]] = [v_family_event_info[1:]]
+                    # TODO: Sort family events on date
 
-                        # OUD
-                        v_family_events = c_family_events_set.intersection(v_family_event_info_dict.keys())
-                        if v_family_events:
-                            with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.translate('family events', self.__language), pLabel=False) as v_sub_sub_level:
-                                with v_sub_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
-                                    for vEvent in v_family_events:
-                                        v_string_1 = "Date of " + c_event_type_dict[vEvent]
-                                        v_string_2 = "Place of " + c_event_type_dict[vEvent]
-                                        v_string_3 = hsf.date_to_text(v_family_event_info_dict[vEvent][0][0], False)
-                                        v_string_4 = hsf.place_to_text(v_family_event_info_dict[vEvent][0][1], True)
+                    v_family_event_keys = hkGrampsDb.c_family_events_set.intersection(v_family_event_dict.keys())
+                    if len(v_family_event_keys) > 0:
+                        with hkLatex.CreateSubLevel(pLevel=vSubLevel, pTitle=hkLanguage.translate('family events', self.__language__), pLabel=False) as v_sub_sub_level:
+                            with v_sub_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
+                                for v_event_key in v_family_event_keys:
+                                    for v_event in v_family_event_dict[v_event_key]:
+                                        v_date: hkDate.Date = v_event.get_date()
+                                        v_place: hkPlace.Place = v_event.get_place()
+
+                                        v_string_1 = "Date of " + hkGrampsDb.c_event_type_dict[v_event_key]
+                                        v_string_2 = "Place of " + hkGrampsDb.c_event_type_dict[v_event_key]
+                                        v_string_3 = v_date.get_start_date_text(False)
+                                        v_string_4 = v_place.__place_to_text__(True)
 
                                         if len(v_string_3) > 0:
-                                            v_table.add_row([hlg.translate(v_string_1, self.__language) + ":", v_string_3])
+                                            v_table.add_row([hkLanguage.translate(v_string_1, self.__language__) + ":", v_string_3])
                                         if len(v_string_4) > 0:
-                                            v_table.add_row([hlg.translate(v_string_2, self.__language) + ":", v_string_4])
+                                            v_table.add_row([hkLanguage.translate(v_string_2, self.__language__) + ":", v_string_4])
 
-                                v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+                            v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-                            # Add subchapter for children
-                            v_children_handles = get_children_handles_by_family(v_family_handle, self.__cursor)
-                            if len(v_children_handles) > 0:
-                                # If children exist, then create subchapter and a table
-                                with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.translate('children', self.__language), pLabel=False) as v_sub_sub_level:
-                                    v_father_string = ''
-                                    v_mother_string = ''
+                    # Add subchapter for children
+                    if len(v_family.__child_ref_list__) > 0:
+                        # If children exist, then create subchapter and a table
+                        with hkLatex.CreateSubLevel(pLevel=vSubLevel, pTitle=hkLanguage.translate('children', self.__language__), pLabel=False) as v_sub_sub_level:
+                            v_sub_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
+                            v_sub_sub_level.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
 
-                                    v_sub_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
-                                    v_sub_sub_level.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
+                            v_father_string = r'\node (father) [left, man, self] {\small ' + pl.NoEscape(v_person.__given_names__ + ' ' + v_person.__surname__) + r'};'
+                            v_mother_string = r'\node (mother) [right, woman] {\small ' + pl.NoEscape(hkLatex.GetPersonNameWithReference(v_partner.__given_names__, v_partner.__surname__, v_partner.__gramps_id__)) + r'};'
+                            if v_person.__gender__ == hkGrampsDb.c_gender_female:
+                                v_father_string = r'\node (father) [left, man] {\small ' + pl.NoEscape(hkLatex.GetPersonNameWithReference(v_partner.__given_names__, v_partner.__surname__, v_partner.__gramps_id__)) + r'};'
+                                v_mother_string = r'\node (mother) [right, woman, self] {\small ' + pl.NoEscape(v_person.__given_names__ + ' ' + v_person.__surname__) + r'};'
 
-                                    # Self
-                                    v_name = pl.NoEscape(self.given_names + ' ' + self.__surname)
-                                    if self.__gender == 0:  # Female
-                                        v_mother_string = r'\node (mother) [right, woman, self] {\small ' + v_name + r'};'
-                                    else:  # Male
-                                        v_father_string = r'\node (father) [left, man, self] {\small ' + v_name + r'};'
+                            # First row
+                            v_sub_sub_level.append(pu.NoEscape(v_father_string + r' &'))
+                            v_sub_sub_level.append(pu.NoEscape(r'\node (p0)     [terminal]     {+}; &'))
+                            v_sub_sub_level.append(pu.NoEscape(v_mother_string + r' \\'))
 
-                                    # Partner
-                                    v_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_partner_data[3][1], v_partner_data[3][0], v_partner_data[1]))
-                                    if v_partner_data[2] == 0:  # Female
-                                        v_mother_string = r'\node (mother) [right, woman] {\small ' + v_name + r'};'
-                                    else:  # Male
-                                        v_father_string = r'\node (father) [left, man] {\small ' + v_name + r'};'
+                            # Empty row
+                            v_sub_sub_level.append(pu.NoEscape(r' & & \\'))
 
-                                    # First row
-                                    v_sub_sub_level.append(pu.NoEscape(v_father_string + r' &'))
-                                    v_sub_sub_level.append(pu.NoEscape(r'\node (p0)     [terminal]     {+}; &'))
-                                    v_sub_sub_level.append(pu.NoEscape(v_mother_string + r' \\'))
+                            # Next one row per child
+                            v_counter = 0
+                            for v_reference in v_family.__child_ref_list__:
+                                v_child_ref = hkPersonRef.PersonRef(v_reference, self.__cursor__)
+                                v_counter = v_counter + 1
+                                v_child = v_child_ref.get_person()
 
-                                    # Empty row
-                                    v_string = r' & & \\'
-                                    v_sub_sub_level.append(pu.NoEscape(v_string))
+                                if v_child.__gender__ == hkGrampsDb.c_gender_female:
+                                    v_string = r' & & \node (p' + str(v_counter) + r') [right, woman] {\small ' + pl.NoEscape(hkLatex.GetPersonNameWithReference(v_child.__given_names__, v_child.__surname__, v_child.__gramps_id__)) + r'}; \\'
+                                elif v_child.__gender__ == hkGrampsDb.c_gender_male:  # Male
+                                    v_string = r' & & \node (p' + str(v_counter) + r') [right, man] {\small ' + pl.NoEscape(hkLatex.GetPersonNameWithReference(v_child.__given_names__, v_child.__surname__, v_child.__gramps_id__)) + r'}; \\'
+                                else:
+                                    v_string = r' & & \node (p' + str(v_counter) + r') [right, man] {\small ' + pl.NoEscape(hkLatex.GetPersonNameWithReference(v_child.__given_names__, v_child.__surname__, v_child.__gramps_id__)) + r'}; \\'
 
-                                    # Next one row per child
-                                    v_counter = 0
+                                v_sub_sub_level.append(pu.NoEscape(v_string))
 
-                                    # Children
-                                    for vChildHandle in v_children_handles:
-                                        v_counter = v_counter + 1
-                                        v_child_data = decode_person_data(vChildHandle, self.__cursor)
-                                        v_child_name = pl.NoEscape(hlt.GetPersonNameWithReference(v_child_data[3][1], v_child_data[3][0], v_child_data[1]))
+                            v_sub_sub_level.append(pu.NoEscape(r'};'))
 
-                                        if v_child_data[2] == 0:  # Female
-                                            v_string = r' & & \node (p' + str(v_counter) + r') [right, woman] {\small ' + v_child_name + r'}; \\'
-                                        elif v_child_data[2] == 1:  # Male
-                                            v_string = r' & & \node (p' + str(v_counter) + r') [right, man] {\small ' + v_child_name + r'}; \\'
-                                        else:
-                                            v_string = r' & & \node (p' + str(v_counter) + r') [right, man] {\small ' + v_child_name + r'}; \\'
+                            # Create the graph
+                            v_sub_sub_level.append(pu.NoEscape(r'\graph [use existing nodes] {'))
+                            v_sub_sub_level.append(pu.NoEscape(r'father -- p0 -- mother;'))
 
-                                        v_sub_sub_level.append(pu.NoEscape(v_string))
+                            for v_count in range(1, v_counter + 1):
+                                v_sub_sub_level.append(pu.NoEscape(r'p0 -> [vh path] p' + str(v_count) + r';'))
 
-                                    v_sub_sub_level.append(pu.NoEscape(r'};'))
-
-                                    # Create the graph
-                                    v_sub_sub_level.append(pu.NoEscape(r'\graph [use existing nodes] {'))
-                                    v_sub_sub_level.append(pu.NoEscape(r'father -- p0 -- mother;'))
-
-                                    for v_count in range(1, v_counter + 1):
-                                        v_sub_sub_level.append(pu.NoEscape(r'p0 -> [vh path] p' + str(v_count) + r';'))
-
-                                    v_sub_sub_level.append(pu.NoEscape(r'};'))
-                                    v_sub_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
-                                    v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+                            v_sub_sub_level.append(pu.NoEscape(r'};'))
+                            v_sub_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
+                            v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_partner_sections_table(self, p_level):
+        """
+        Creates a tabular family tree
+
+        @param p_level: level of the chapter / section
+        @return: None
+        """
+
+        v_person = self.__person__
+
         # Add families with partners
-        for v_partner_handle in self.__partner_handle_list:
+        for v_family_handle in v_person.__family_list__:
+            v_family = hkFamily.Family(v_family_handle, self.__cursor__)
+
+            v_partner_handle = v_family.get_mother()
+            if v_person.__gender__ == hkGrampsDb.c_gender_female:
+                v_partner_handle = v_family.get_father()
+
             if v_partner_handle is not None:  # TODO: Also handle families with unknown partners
-                v_partner_data = decode_person_data(v_partner_handle, self.__cursor)
-                v_partner_gramps_id = v_partner_data[1]
-                v_partner_surname = v_partner_data[3][0]
-                v_partner_given_names = v_partner_data[3][1]
+                v_partner = hkPerson.Person(v_partner_handle, self.__cursor__)
 
                 # For each partner create a subsection
                 p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-                with hlt.CreateSubLevel(pLevel=p_level, pTitle=pl.NoEscape(hlt.GetPersonNameWithReference(v_partner_given_names, v_partner_surname, v_partner_gramps_id)), pLabel=False) as vSubLevel:
-                    if self.__gender == 0:
-                        v_family_handle = get_family_handle_by_father_mother(v_partner_handle, self.__person_handle, self.__cursor)
-                    else:
-                        v_family_handle = get_family_handle_by_father_mother(self.__person_handle, v_partner_handle, self.__cursor)
+                with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=pl.NoEscape(hkLatex.GetPersonNameWithReference(v_partner.__given_names__, v_partner.__surname__, v_partner.__gramps_id__)), pLabel=False) as vSubLevel:
+                    v_family_event_dict: dict[str, list[hkEvent.Event]] = {}
 
-                    if v_family_handle is not None:
-                        v_family_handle = v_family_handle[0]
+                    # Create a family event dictionary
+                    for v_family_event_ref in v_family.__event_ref_list__:
+                        v_event = hkEventRef.EventRef(v_family_event_ref, self.__cursor__).get_event()
 
-                        # Nieuw
-                        v_family_info = decode_family_data(v_family_handle, self.__cursor)
-                        # v_family_gramps_id = v_family_info[0]
-                        v_family_event_ref_list = v_family_info[5]
+                        if v_event.get_type() in v_family_event_dict:
+                            v_family_event_dict[v_event.get_type()].append(v_event)
+                        else:
+                            v_family_event_dict[v_event.get_type()] = [v_event]
 
-                        v_family_event_info_dict = {}
-                        for v_family_event_ref in v_family_event_ref_list:
-                            v_family_event_handle = v_family_event_ref[3]
-                            v_family_event_info = decode_event_data(v_family_event_handle, self.__cursor)
-                            if v_family_event_info[0] in v_family_event_info_dict:
-                                v_family_event_info_dict[v_family_event_info[0]].append(v_family_event_info[1:])
-                            else:
-                                v_family_event_info_dict[v_family_event_info[0]] = [v_family_event_info[1:]]
+                    # TODO: Sort family events on date
 
-                        # OUD
-                        v_family_events = c_family_events_set.intersection(v_family_event_info_dict.keys())
-                        if v_family_events:
-                            with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.translate('family events', self.__language), pLabel=False) as v_sub_sub_level:
-                                with v_sub_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
-                                    for vEvent in v_family_events:
-                                        v_string_1 = "Date of " + c_event_type_dict[vEvent]
-                                        v_string_2 = "Place of " + c_event_type_dict[vEvent]
-                                        v_table.add_row([hlg.translate(v_string_1, self.__language) + ":", hsf.date_to_text(v_family_event_info_dict[vEvent][0][0], False)])
-                                        v_table.add_row([hlg.translate(v_string_2, self.__language) + ":", hsf.place_to_text(v_family_event_info_dict[vEvent][0][1], True)])
+                    v_family_event_keys = hkGrampsDb.c_family_events_set.intersection(v_family_event_dict.keys())
+                    if v_family_event_keys:
+                        with hkLatex.CreateSubLevel(pLevel=vSubLevel, pTitle=hkLanguage.translate('family events', self.__language__), pLabel=False) as v_sub_sub_level:
+                            with v_sub_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
+                                for v_event_key in v_family_event_keys:
+                                    for v_event in v_family_event_dict[v_event_key]:
+                                        v_date: hkDate.Date = v_event.get_date()
+                                        v_place: hkPlace.Place = v_event.get_place()
 
-                                v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+                                        v_string_1 = "Date of " + hkGrampsDb.c_event_type_dict[v_event_key]
+                                        v_string_2 = "Place of " + hkGrampsDb.c_event_type_dict[v_event_key]
+                                        v_string_3 = v_date.get_start_date_text(False)
+                                        v_string_4 = v_place.__place_to_text__(True)
 
-                        # Add subchapter for children
-                        v_children_handles = get_children_handles_by_family(v_family_handle, self.__cursor)
-                        if len(v_children_handles) > 0:
-                            # If children exist, then create subchapter and a table
-                            with hlt.CreateSubLevel(pLevel=vSubLevel, pTitle=hlg.translate('children', self.__language), pLabel=False) as v_sub_sub_level:
-                                with v_sub_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
-                                    for v_child_handle in v_children_handles:
-                                        # For each child create a separate row
-                                        # in the table
-                                        v_child_data = decode_person_data(v_child_handle, self.__cursor)
-                                        if v_child_data[2] == 0:
-                                            v_child_type = hlg.translate('daughter', self.__language) + ":"
-                                        elif v_child_data[2] == 1:
-                                            v_child_type = hlg.translate('son', self.__language) + ":"
-                                        else:
-                                            v_child_type = hlg.translate('unknown', self.__language) + ":"
+                                        if len(v_string_3) > 0:
+                                            v_table.add_row([hkLanguage.translate(v_string_1, self.__language__) + ":", v_string_3])
+                                        if len(v_string_4) > 0:
+                                            v_table.add_row([hkLanguage.translate(v_string_2, self.__language__) + ":", v_string_4])
 
-                                        v_table.add_row([v_child_type, pl.NoEscape(hlt.GetPersonNameWithReference(v_child_data[3][1], v_child_data[3][0], v_child_data[1]))])
+                            v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-                                v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+                    # Add subchapter for children
+                    if len(v_family.__child_ref_list__) > 0:
+                        # If children exist, then create subchapter and a table
+                        with hkLatex.CreateSubLevel(pLevel=vSubLevel, pTitle=hkLanguage.translate('children', self.__language__), pLabel=False) as v_sub_sub_level:
+                            with v_sub_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
+                                for v_reference in v_family.__child_ref_list__:
+                                    v_child_ref = hkPersonRef.PersonRef(v_reference, self.__cursor__)
+                                    v_child = v_child_ref.get_person()
+
+                                    if v_child.__gender__ == hkGrampsDb.c_gender_female:
+                                        v_child_type = hkLanguage.translate('daughter', self.__language__) + ":"
+                                    elif v_child.__gender__ == hkGrampsDb.c_gender_male:
+                                        v_child_type = hkLanguage.translate('son', self.__language__) + ":"
+                                    else:
+                                        v_child_type = hkLanguage.translate('unknown', self.__language__) + ":"
+
+                                    v_table.add_row([v_child_type, pl.NoEscape(hkLatex.GetPersonNameWithReference(v_child.__given_names__, v_child.__surname__, v_child.__gramps_id__))])
+
+                            v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_family_section(self, p_level):
         """
         Create a section listing all family relationships
+
+        @param p_level: level of the chapter / section
+        @return: None
         """
 
         # Create section with Family Information
         p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with p_level.create(hlt.Section(title=hlg.translate('family', self.__language), label=False)) as vSubLevel:
+        with p_level.create(hkLatex.Section(title=hkLanguage.translate('family', self.__language__), label=False)) as vSubLevel:
             self.__write_parental_section_graph(vSubLevel)
             self.__write_partner_sections_graph(vSubLevel)
 
     def __write_education_section(self, p_level):
         """
         Create a section with a table containing education
+
+        @param p_level: level of the chapter / section
+        @return: None
         """
+        
+        v_person = self.__person__
 
-        # Create section with Education ***
-        v_education_events = c_education_events_set.intersection(self.__person_event_info_dict.keys())
-        if v_education_events:
-            v_education_list = []
-            for v_event in v_education_events:
-                v_education_list = v_education_list + self.__person_event_info_dict[v_event]
+        # Create section with Education
+        v_event_keys = hkGrampsDb.c_education_events_set.intersection(v_person.__person_event_dict__.keys())
+        if v_event_keys:
+            v_event_list = []
+            for v_event_key in v_event_keys:
+                v_event_list = v_event_list + v_person.__person_event_dict__[v_event_key]
 
-            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
-            v_education_list.sort(key=f_date_func)
+            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
+            v_event_list.sort(key=f_date_func)
 
             p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('education', self.__language), pLabel=False) as v_sub_level:
+            with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('education', self.__language__), pLabel=False) as v_sub_level:
                 with v_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
                     # Header row
-                    v_table.add_row([pu.bold(hlg.translate('date', self.__language)), pu.bold(hlg.translate('course', self.__language))])
+                    v_table.add_row([pu.bold(hkLanguage.translate('date', self.__language__)), pu.bold(hkLanguage.translate('course', self.__language__))])
                     v_table.add_hline()
                     v_table.end_table_header()
 
                     # Add row for each event
-                    for v_education in v_education_list:
-                        if len(v_education[2]) == 0:
-                            v_education[2] = '-'
+                    for v_event in v_event_list:
+                        v_description = v_event.get_description()
+                        if len(v_description) == 0:
+                            v_description = '-'
 
-                        v_date = hsf.date_to_text(v_education[0])
-                        v_course = v_education[2]
-                        v_place = hsf.place_to_text(v_education[1], True)
-                        v_table.add_row([v_date, pl.NoEscape(v_course) + pl.NoEscape(r'\newline ') + pu.escape_latex(v_place)])
+                        v_date = v_event.get_date()
+                        v_place = v_event.get_place()
+                        v_table.add_row([v_date.__date_to_text__(True), pu.escape_latex(v_description) + pl.NoEscape(r'\newline ') + pu.escape_latex(v_place.__place_to_text__())])
 
                 v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_profession_section(self, p_level):
         """
         Create a section with a table containing working experiences
+
+        @param p_level: level of the chapter / section
+        @return: None
         """
 
-        # Create section with Working Experience ***
-        v_professional_events = c_professional_events_set.intersection(self.__person_event_info_dict.keys())
-        if v_professional_events:
-            v_professional_list = []
-            for v_event in v_professional_events:
-                v_professional_list = v_professional_list + self.__person_event_info_dict[v_event]
+        v_person = self.__person__
 
-            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
-            v_professional_list.sort(key=f_date_func)
+        # Create section with Working Experience ***
+        v_event_keys = hkGrampsDb.c_professional_events_set.intersection(v_person.__person_event_dict__.keys())
+        if v_event_keys:
+            v_event_list = []
+            for v_event_key in v_event_keys:
+                v_event_list = v_event_list + v_person.__person_event_dict__[v_event_key]
+
+            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
+            v_event_list.sort(key=f_date_func)
 
             p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('occupation', self.__language), pLabel=False) as vSubLevel:
+            with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('occupation', self.__language__), pLabel=False) as vSubLevel:
                 with vSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
                     # Header row
-                    v_table.add_row([pu.bold(hlg.translate('date', self.__language)), pu.bold(hlg.translate('profession', self.__language))])
+                    v_table.add_row([pu.bold(hkLanguage.translate('date', self.__language__)), pu.bold(hkLanguage.translate('profession', self.__language__))])
                     v_table.add_hline()
                     v_table.end_table_header()
 
                     # Add row for each event
-                    for v_profession in v_professional_list:
-                        if len(v_profession[2]) == 0:
-                            v_profession[2] = '-'
+                    for v_event in v_event_list:
+                        v_description = v_event.get_description()
+                        if len(v_description) == 0:
+                            v_description = '-'
 
-                        v_date = hsf.date_to_text(v_profession[0])
-                        v_job = v_profession[2]
-                        v_place = hsf.place_to_text(v_profession[1], True)
-                        v_table.add_row([v_date, pu.escape_latex(v_job) + pl.NoEscape(r'\newline ') + pu.escape_latex(v_place)])
+                        v_date = v_event.get_date()
+                        v_place = v_event.get_place()
+                        v_table.add_row([v_date.__date_to_text__(True), pu.escape_latex(v_description) + pl.NoEscape(r'\newline ') + pu.escape_latex(v_place.__place_to_text__())])
 
                 vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_residence_section_map(self, p_level):
         """
         Create a section with maps of all residences
+
+        @param p_level: level of the chapter / section
+        @return: None
         """
+
+        v_person = self.__person__
 
         #
         # Work in Progress
         #
 
         # Create section with Residential Information
-        v_residential_events = c_residential_events_set.intersection(self.__person_event_info_dict.keys())
+        v_residential_events = hkGrampsDb.c_residential_events_set.intersection(v_person.__person_event_dict__.keys())
         if v_residential_events:
             # Create path name for map
             # v_path = self.__document_path + r'Figures'
 
-            # Compose some temporary place type labeles
-            v_city_label = c_place_type_dict[c_place_type_city]
-            v_town_label = c_place_type_dict[c_place_type_town]
-            v_village_label = c_place_type_dict[c_place_type_village]
-            v_municipality_label = c_place_type_dict[c_place_type_municipality]
-            v_country_label = c_place_type_dict[c_place_type_country]
+            # Compose some temporary place type labels
+            v_city_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_city]
+            v_town_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_town]
+            v_village_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_village]
+            v_municipality_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_municipality]
+            v_country_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_country]
 
             # Compose residence list
             v_residence_list = []
             for v_event in v_residential_events:
-                v_residence_list = v_residence_list + self.__person_event_info_dict[v_event]
+                v_residence_list = v_residence_list + v_person.__person_event_dict__[v_event]
 
             # Create minipage
             p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('residences', self.__language), pLabel=False) as v_sub_level:
+            with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('residences', self.__language__), pLabel=False) as v_sub_level:
                 # Create Tikz drawing with map as background
                 # v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
 
@@ -1043,9 +910,9 @@ class Person:
                         if len(v_country_code) == 0:
                             v_country_code = v_country
 
-                    # 20220109: Limit number of maps to Netherlands, Western Europe and the World
+                    # 20220109: Limit number of maps to The Netherlands, Western Europe and the World
                     if v_country_code != 'NLD':
-                        v_region_list = hsf.get_country_continent_subregion(v_country_code)
+                        v_region_list = hkSupportFunctions.get_country_continent_subregion(v_country_code)
                         if v_region_list[1] == 'Western Europe':
                             v_country_code = 'WEU'
                         elif v_region_list[0] == 'Europe':
@@ -1054,8 +921,8 @@ class Person:
                             v_country_code = 'WLD'
                     
                     # Create path / file name for map
-                    v_path = self.__document_path + r'Figures'
-                    v_file_path = hsf.create_map(v_path, v_country_code)
+                    v_path = self.__document_path__ + r'Figures'
+                    v_file_path = hkSupportFunctions.create_map(v_path, v_country_code)
 
                     if v_country_code not in v_done_list:
                         v_done_list.append(v_country_code)
@@ -1077,7 +944,7 @@ class Person:
                         v_scope_open = True
 
                     # width and height in degrees
-                    v_coordinates = hsf.get_country_min_max_coordinates(v_country_code)
+                    v_coordinates = hkSupportFunctions.get_country_min_max_coordinates(v_country_code)
                     v_map_lon0 = v_coordinates[0]
                     v_map_lat0 = v_coordinates[1]
                     v_map_lon1 = v_coordinates[2]
@@ -1121,30 +988,35 @@ class Person:
     def __write_residence_section_timeline(self, p_level):
         """
         Create a section with a list of all residences in a graphical timeline format
+
+        @param p_level: level of the chapter / section
+        @return: None
         """
 
-        # Create section with Residential Information
-        v_residential_events = c_residential_events_set.intersection(self.__person_event_info_dict.keys())
-        if v_residential_events:
-            v_residence_list = []
-            for v_event in v_residential_events:
-                v_residence_list = v_residence_list + self.__person_event_info_dict[v_event]
+        v_person = self.__person__
 
-            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
-            v_residence_list.sort(key=f_date_func)
+        # Create section with Residential Information
+        v_event_keys = hkGrampsDb.c_residential_events_set.intersection(v_person.__person_event_dict__.keys())
+        if v_event_keys:
+            v_event_list = []
+            for v_event_key in v_event_keys:
+                v_event_list = v_event_list + v_person.__person_event_dict__[v_event_key]
+
+            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
+            v_event_list.sort(key=f_date_func)
 
             p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('residences', self.__language), pLabel=False) as v_sub_level:
+            with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('residences', self.__language__), pLabel=False) as v_sub_level:
                 # Create nodes
                 v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
                 v_sub_level.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
 
                 v_counter = 0
-                for v_residence in v_residence_list:
+                for v_event in v_event_list:
                     v_counter = v_counter + 1
 
-                    v_start_date = hsf.get_start_date(v_residence[0])
-                    v_address = hsf.street_to_text(v_residence[1])
+                    v_start_date = v_event.get_date().get_start_date_text()
+                    v_address = v_event.get_place().__street_to_text__()
 
                     v_string = r'\node (p' + str(v_counter) + r') [date] {\small ' + v_start_date + r'}; & '
                     v_string = v_string + r'\node [text width=10cm] {\small ' + pu.escape_latex(v_address) + r'};\\'
@@ -1165,55 +1037,304 @@ class Person:
     def __write_residence_section_table(self, p_level):
         """
         Create a section with a list of all residences in a table format
+
+        @param p_level: level of the chapter / section
+        @return: None
         """
 
-        # Create section with Residential Information
-        v_residential_events = c_residential_events_set.intersection(self.__person_event_info_dict.keys())
-        if v_residential_events:
-            v_residence_list = []
-            for vEvent in v_residential_events:
-                v_residence_list = v_residence_list + self.__person_event_info_dict[vEvent]
+        v_person = self.__person__
 
-            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
-            v_residence_list.sort(key=f_date_func)
+        # Create section with Residential Information
+        v_event_keys = hkGrampsDb.c_residential_events_set.intersection(v_person.__person_event_dict__.keys())
+        if v_event_keys:
+            v_event_list = []
+            for v_event_key in v_event_keys:
+                v_event_list = v_event_list + v_person.__person_event_dict__[v_event_key]
+
+            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
+            v_event_list.sort(key=f_date_func)
 
             p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate('residences', self.__language), pLabel=False) as v_sub_level:
+            with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('residences', self.__language__), pLabel=False) as v_sub_level:
                 with v_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
                     # Header row
-                    v_table.add_row([pu.bold(hlg.translate('date', self.__language)), pu.bold(hlg.translate('residence', self.__language))])
+                    v_table.add_row([pu.bold(hkLanguage.translate('date', self.__language__)), pu.bold(hkLanguage.translate('residence', self.__language__))])
                     v_table.add_hline()
                     v_table.end_table_header()
 
-                    for v_residence in v_residence_list:
-                        v_date = hsf.date_to_text(v_residence[0])
-                        v_address = hsf.street_to_text(v_residence[1])
+                    for v_event in v_event_list:
+                        v_date = v_event.get_date().__date_to_text__()
+                        v_address = v_event.get_place().__street_to_text__()
                         v_table.add_row([v_date, pu.escape_latex(v_address)])
 
                 v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
+    def __write_timeline_section(self, p_level):
+        """
+        Create section with timeline of life
+        
+        @param p_level: the level of the section (chapter / section / subsection / etc.)
+        @return: None
+        """
+
+        # TODO: Work in Progress
+
+        def __add_to_timeline(p_person_handle, p_timeline_events, p_birth_date, p_death_date):
+            v_person = hkPerson.Person(p_person_handle, self.__cursor__)
+            for v_event_key in v_person.__person_event_dict__:
+                if v_event_key in hkGrampsDb.c_vital_events_set:
+                    for v_event in v_person.__person_event_dict__[v_event_key]:
+                        v_type = v_event.get_type()
+                        v_date = v_event.get_date()
+
+                        if isinstance(v_date, list):  # TODO: Check if we do not omit too much data sets...
+                            # Only include events that happen during the lifetime of the main person
+                            # v_date_time = datetime.date(v_date[3], v_date[2], v_date[1])
+                            v_date_time = hkSupportFunctions.gramps_date_to_python_date(v_date[1:4])  # TODO: Replcae by object method
+                            if (p_birth_date is None) or (v_date_time > p_birth_date):
+                                if (p_death_date is None) or (v_date_time < p_death_date):
+                                    v_place = v_event.get_place()
+                                    v_description = v_event.__description__
+                                    if len(v_description) == 0:
+                                        v_description = hkLanguage.translate(hkGrampsDb.c_event_type_dict[v_type]) + ' ' + v_person.__given_names__ + ' ' + v_person.__surname__
+
+                                    v_list = [v_date, v_type, v_place, v_description]
+                                    if p_timeline_events is None:
+                                        p_timeline_events = [v_list]
+                                    else:
+                                        p_timeline_events.append(v_list)
+
+        def __date_to_timeline(p_date, p_timeline_start_date, p_timeline_end_date, p_length_timeline=20):
+            v_distance = (p_date - p_timeline_start_date) * p_length_timeline / (p_timeline_end_date - p_timeline_start_date)
+
+            return v_distance
+
+        def __calculate_start_end_dates(p_birth_date, p_death_date):
+            if p_birth_date is None:
+                if p_death_date is None:
+                    v_start_date = datetime.date(datetime.date.today().year, 1, 1)
+                else:
+                    v_start_date = datetime.date(p_death_date.year - 100, 1, 1)
+            else:
+                v_start_date = datetime.date(p_birth_date.year, 1, 1)
+
+            if p_death_date is None:
+                v_end_date = datetime.date(v_start_date.year + 100, 1, 1)
+            else:
+                v_end_date = datetime.date(p_death_date.year + 1, 1, 1)
+
+            v_today = datetime.date.today()
+            if v_end_date > v_today:
+                v_end_date = datetime.date(v_today.year + 1, 1, 1)
+
+            # Round down / up to decennia
+            v_start_date = datetime.date(int(hkSupportFunctions.round_down(v_start_date.year, -1)), 1, 1)
+            v_end_date = datetime.date(int(hkSupportFunctions.round_up(v_end_date.year, -1)), 1, 1)
+
+            return v_start_date, v_end_date
+
+        # Initialise variables
+        v_person = self.__person__
+
+        v_timeline_events = []
+
+        v_birth_date = None
+        v_death_date = None
+
+        # Copy the vital and residence events from the personal events dictionary
+        for v_event_key in v_person.__person_event_dict__:
+            if (v_event_key in hkGrampsDb.c_vital_events_set) or (v_event_key in hkGrampsDb.c_residential_events_set):
+                for v_event in v_person.__person_event_dict__[v_event_key]:
+                    v_type = v_event.get_type()
+                    v_date = v_event.get_date()
+                    v_place = v_event.get_place()
+                    v_description = v_event.__description__
+                    if len(v_description) == 0:
+                        v_description = hkLanguage.translate(hkGrampsDb.c_event_type_dict[v_type]) + ' ' + v_person.__given_names__ + ' ' + v_person.__surname__
+
+                    # Store birth / baptism and death / burial separately for later comparison
+                    if v_type == hkGrampsDb.c_event_birth:
+                        v_birth_date = v_date
+                    elif v_type == hkGrampsDb.c_event_baptism and v_birth_date is None:
+                        v_birth_date = v_date
+                    elif v_type == hkGrampsDb.c_event_death:
+                        v_death_date = v_date
+                    elif v_type == hkGrampsDb.c_event_burial and v_death_date is None:
+                        v_death_date = v_date
+
+                    # Add event to list
+                    v_list = [v_date, v_type, v_place, v_description]
+                    if v_timeline_events is None:
+                        v_timeline_events = [v_list]
+                    else:
+                        v_timeline_events.append(v_list)
+
+        # Merge the family events
+        for v_event_key in v_person.__family_event_dict__:
+            v_type = v_event_key
+            for v_event in v_person.__family_event_dict__[v_event_key]:
+                v_date = v_event[0]
+                v_place = v_event[1]
+                v_description = v_event[2]
+                if len(v_description) == 0:
+                    v_description = hkLanguage.translate(hkGrampsDb.c_event_type_dict[v_type])  # TODO: extent with partner name
+
+                v_list = [v_date, v_type, v_place, v_description]
+                if v_timeline_events is None:
+                    v_timeline_events = [v_list]
+                else:
+                    v_timeline_events.append(v_list)
+
+        # Merge the vital information of partners
+        for v_partner_handle in v_person.get_partners():
+            if v_partner_handle is not None:  # TODO: Also handle families with unknown partners
+                __add_to_timeline(v_partner_handle, v_timeline_events, v_birth_date, v_death_date)
+
+        # Merge the vital information of children
+        for v_child_handle in v_person.get_children():
+            if v_child_handle is not None:
+                __add_to_timeline(v_child_handle, v_timeline_events, v_birth_date, v_death_date)
+
+        # Sort the list
+        f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
+        v_timeline_events.sort(key=f_date_func)
+
+        # Determine the start and end dates for the timeline
+        v_start_date, v_end_date = __calculate_start_end_dates(v_birth_date, v_death_date)
+
+        # Create the timeline section
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('Timeline', self.__language__), pLabel=False) as v_sub_level:
+            # Create nodes
+            v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
+
+            # Define style
+            v_sub_level.append(pu.NoEscape(r'[eventmarker/.style = {circle, draw = red!50, fill = red!20, thick, inner sep = 0 pt, minimum size = 5 pt},'))
+            v_sub_level.append(pu.NoEscape(r'eventlabel/.style = {},'))
+            v_sub_level.append(pu.NoEscape(r'residencemarker/.style = {circle, draw = green!50, fill = green!20, thick, inner sep = 0 pt, minimum size = 5 pt},'))
+            v_sub_level.append(pu.NoEscape(r'residencelink/.style = {draw = green!50},'))
+            v_sub_level.append(pu.NoEscape(r'residencelabel/.style = {},'))
+            v_sub_level.append(pu.NoEscape(r'nostyle/.style = {}]'))
+
+            # Draw the major timeline
+            v_start_point = __date_to_timeline(v_start_date, v_start_date, v_end_date)
+            v_end_point = __date_to_timeline(v_end_date, v_start_date, v_end_date)
+            v_sub_level.append(pu.NoEscape(r'\draw[->, very thick] (0cm, ' + str(v_start_point) + r'cm) -- (0cm, ' + str(v_end_point) + r'cm);'))
+
+            # Draw the decennial tick lines and display the year label
+            v_string = str(v_start_point) + r'/' + str(v_start_date.year)
+            for v_year in range(v_start_date.year + 10, v_end_date.year, 10):
+                v_date = datetime.date(v_year, 1, 1)
+                v_date_point = __date_to_timeline(v_date, v_start_date, v_end_date)
+                v_string = v_string + r',' + str(v_date_point) + r'/' + str(v_year)
+
+            v_sub_level.append(pu.NoEscape(r'\foreach \y/\ytext in {' + v_string + r'}'))
+            v_sub_level.append(pu.NoEscape(r'\draw[thick, yshift =\y cm] (-2pt, 0pt) - - (2pt, 0pt) node[left=2pt] {$\ytext$};'))
+
+            # Draw the events in the timeline
+            v_count = 0
+            for v_event in v_timeline_events:
+                v_date_label = hkSupportFunctions.date_to_text(v_event[0])  # TODO: change to object method call
+                v_type = v_event[1]
+                v_place = hkSupportFunctions.street_to_text(v_event[2])  # TODO: change to object method call
+                v_description = v_event[3]
+
+                if v_type in hkGrampsDb.c_residential_events_set:
+                    # Residence to the left
+                    if len(v_event[0]) == 4:  # Single date events
+                        v_date_1 = hkSupportFunctions.gramps_date_to_python_date(v_event[0][1:4])  # TODO: Replcae by object method
+                        v_date_point_1 = __date_to_timeline(v_date_1, v_start_date, v_end_date)
+
+                        v_count = v_count + 1
+                        v_marker_name_1 = r'marker_' + str(v_count)
+                        v_label_name_1 = r'label_' + str(v_count)
+
+                        v_label = v_place + r'\\' + v_date_label
+                        v_sub_level.append(pu.NoEscape(r'\node [residencemarker] (' + v_marker_name_1 + r') at (0 cm,' + str(v_date_point_1) + r' cm) {};'))
+                        # v_sub_level.append(pu.NoEscape(r'\node [residencelabel] (' + v_label_name_1 + r') at (-2 cm,' + str(v_date_point_1) + r' cm) [label={[align=right, rotate=0]left:' + v_label + r'}] {};'))
+                        v_sub_level.append(pu.NoEscape(r'\node [residencelabel, left=of ' + v_marker_name_1 + r', align=right, text width=5cm] (' + v_label_name_1 + r') at (-2 cm,' + str(v_date_point_1) + r' cm) {' + v_label + r'};'))
+                        v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_1 + r'.west) -- (' + v_label_name_1 + r'.east);'))
+                    elif len(v_event[0]) == 7:  # Dual date events
+                        v_date_1 = hkSupportFunctions.gramps_date_to_python_date(v_event[0][1:4])  # TODO: Replcae by object method
+                        v_date_2 = hkSupportFunctions.gramps_date_to_python_date(v_event[0][4:7])  # TODO: Replcae by object method
+
+                        v_date_point_1 = __date_to_timeline(v_date_1, v_start_date, v_end_date)
+                        v_date_point_2 = __date_to_timeline(v_date_2, v_start_date, v_end_date)
+                        v_date_point_3 = (v_date_point_1 + v_date_point_2) / 2
+
+                        v_count = v_count + 1
+                        v_marker_name_1 = r'marker_' + str(v_count)
+
+                        v_count = v_count + 1
+                        v_marker_name_2 = r'marker_' + str(v_count)
+
+                        v_count = v_count + 1
+                        v_marker_name_3 = r'marker_' + str(v_count)
+
+                        v_count = v_count + 1
+                        v_marker_name_4 = r'marker_' + str(v_count)
+
+                        v_label_name = r'label_' + str(v_count)
+
+                        v_label = v_place + r'\\' + v_date_label
+                        v_sub_level.append(pu.NoEscape(r'\node [residencemarker] (' + v_marker_name_1 + r') at (0 cm,' + str(v_date_point_1) + r' cm) {};'))
+                        v_sub_level.append(pu.NoEscape(r'\node [residencemarker] (' + v_marker_name_2 + r') at (0 cm,' + str(v_date_point_2) + r' cm) {};'))
+                        v_sub_level.append(pu.NoEscape(r'\coordinate (' + v_marker_name_3 + r') at (-2 cm,' + str(v_date_point_1) + r' cm + 3pt) {};'))
+                        v_sub_level.append(pu.NoEscape(r'\coordinate (' + v_marker_name_4 + r') at (-2 cm,' + str(v_date_point_2) + r' cm - 3pt) {};'))
+
+                        v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_1 + r'.west) -- (' + v_marker_name_3 + r');'))
+                        v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_2 + r'.west) -- (' + v_marker_name_4 + r');'))
+                        v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_3 + r') -- (' + v_marker_name_4 + r');'))
+
+                        v_sub_level.append(pu.NoEscape(r'\node [residencelabel, left=of ' + v_marker_name_1 + r', align=right, text width=5cm] (' + v_label_name + r') at (-2 cm,' + str(v_date_point_3) + r' cm) {' + v_label + r'};'))
+                else:
+                    # Life events to the right
+                    if len(v_event[0]) == 4:  # Single date events
+                        v_date_1 = hkSupportFunctions.gramps_date_to_python_date(v_event[0][1:4])  # TODO: Replcae by object method
+                        v_date_point_1 = __date_to_timeline(v_date_1, v_start_date, v_end_date)
+
+                        v_count = v_count + 1
+                        v_marker_name_1 = r'marker_' + str(v_count)
+                        v_label_name_1 = r'label_' + str(v_count)
+
+                        v_label = v_description + r'\\' + v_date_label + r', ' + v_place
+                        v_sub_level.append(pu.NoEscape(r'\node [eventmarker] (' + v_marker_name_1 + r') at (0 cm,' + str(v_date_point_1) + r' cm) {};'))
+                        v_sub_level.append(pu.NoEscape(r'\node [eventlabel, right=of ' + v_marker_name_1 + r', align=left, text width=5cm] (' + v_label_name_1 + r') at (1 cm,' + str(v_date_point_1) + r' cm) {' + v_label + r'};'))
+                        v_sub_level.append(pu.NoEscape(r'\draw (' + v_marker_name_1 + r'.east) -- (' + v_label_name_1 + r'.west);'))
+
+            v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
+            v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+
     def __write_photo_section(self, p_level):
         """
         Create section with photos
+
+        @param p_level: the level of the section (chapter / section / subsection / etc.)
+        @return: None
         """
 
         v_filtered_list = self.__get_filtered_photo_list()
         if len(v_filtered_list) > 0:
             self.__write_media_section(p_level, v_filtered_list, p_title="photos")
 
-
     def __write_document_section(self, p_level):
         """
         Create section with document scans
+
+        @param p_level: the level of the section (chapter / section / subsection / etc.)
+        @return: None
         """
+
         v_filtered_list = self.__get_filtered_document_list()
         if len(v_filtered_list) > 0:
             self.__write_media_section(p_level, v_filtered_list, p_title='documents')
 
-
     def __write_media_section(self, p_level, p_filtered_list, p_title='media'):
         """
         Create section with media
+
+        @param p_level: the level of the section (chapter / section / subsection / etc.)
+        @return: None
         """
 
         # Allocate variables
@@ -1225,10 +1346,10 @@ class Person:
         v_media_rect_2 = None
 
         # Debug
-        logging.debug("v_filtered_list: ".join(map(str, p_filtered_list)))
+        logging.debug("p_filtered_list: ".join(map(str, p_filtered_list)))
 
         p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-        with hlt.CreateSubLevel(pLevel=p_level, pTitle=hlg.translate(p_title, self.__language), pLabel=False) as v_sub_level:
+        with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate(p_title, self.__language__), pLabel=False) as v_sub_level:
             #
             # 1. All media with notes
             #
@@ -1238,10 +1359,10 @@ class Person:
                 v_media_handle = v_item[0]
                 v_media_rect = v_item[1]
 
-                v_media_data = get_media_data(v_media_handle, self.__cursor)
-                v_media_path = v_media_data[2]
-                v_media_title = v_media_data[4]
-                v_media_note_handles = self.__get_filtered_note_list(v_media_data[8])
+                v_media = hkMedia.Media(v_media_handle, self.__cursor__)
+                v_media_path = v_media.__media_path__
+                v_media_title = v_media.__description__
+                v_media_note_handles = self.__get_filtered_note_list(v_media.__note_base__)
 
                 # TODO: dit gaat mis als het om een note met tag 'source' gaat
                 if len(v_media_note_handles) > 0:
@@ -1262,22 +1383,22 @@ class Person:
                 v_media_handle = v_item[0]
                 v_media_rect = v_item[1]
 
-                v_media_data = get_media_data(v_media_handle, self.__cursor)
+                v_media = hkMedia.Media(v_media_handle, self.__cursor__)
 
                 v_counter = v_counter + 1
                 if v_counter % 2 == 1:
-                    v_media_path_1 = v_media_data[2]
-                    v_media_title_1 = v_media_data[4]
+                    v_media_path_1 = v_media.__media_path__
+                    v_media_title_1 = v_media.__description__
                     v_media_rect_1 = v_media_rect
 
                     # Remove media_1 from list
                     p_filtered_list.remove(v_item)
                 else:
-                    v_media_path_2 = v_media_data[2]
-                    v_media_title_2 = v_media_data[4]
+                    v_media_path_2 = v_media.__media_path__
+                    v_media_title_2 = v_media.__description__
                     v_media_rect_2 = v_media_rect
 
-                    hsf.picture_side_by_side_equal_height(v_sub_level, v_media_path_1, v_media_path_2, v_media_title_1, v_media_title_2, v_media_rect_1, v_media_rect_2)
+                    hkSupportFunctions.picture_side_by_side_equal_height(v_sub_level, v_media_path_1, v_media_path_2, v_media_title_1, v_media_title_2, v_media_rect_1, v_media_rect_2)
 
                     # Remove media_2 from list
                     p_filtered_list.remove(v_item)
@@ -1296,7 +1417,7 @@ class Person:
             #
             if v_media_path_1 is not None:
                 # Latex Debug
-                v_sub_level.append(pl.NoEscape("% hkPersonChapter.Person.__WriteMediaSection"))
+                v_sub_level.append(pl.NoEscape("% hkPersonChapter.PersonChapter.__WriteMediaSection"))
 
                 # 20230313: Start a minipage
                 p_level.append(pl.NoEscape(r'\begin{minipage}{\textwidth}'))
@@ -1320,7 +1441,7 @@ class Person:
                     v_sub_level.append(pl.NoEscape(r'\includegraphics[width=\textwidth]{"' + v_media_path_1 + r'"}'))
                     v_sub_level.append(pl.NoEscape(r'\captionof{figure}{' + pu.escape_latex(v_media_title_1) + '}'))
 
-                    # with v_sub_level.create(hlt.Figure(position='htpb')) as vPhoto:
+                    # with v_sub_level.create(hkLatex.Figure(position='htpb')) as vPhoto:
                     #     vPhoto.add_image(pl.NoEscape(v_media_path_1))
                     #     vPhoto.add_caption(pu.escape_latex(v_media_title_1))
 
@@ -1329,29 +1450,36 @@ class Person:
 
             v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
-
     def write_person_chapter(self):
         """
         Writes the person to a separate chapter in a subdocument
+
+        @param: None
+        @return: None
         """
 
+        v_person = self.__person__
+
         # Display progress
-        print("Writing a chapter about: ", self.given_names, self.surname)
+        print("Writing a chapter about: ", v_person.__given_names__, v_person.__surname__)
 
         # Create a new chapter for the active person
-        v_chapter = hlt.Chapter(title=self.given_names + ' ' + self.surname, label=self.gramps_id)
+        v_chapter = hkLatex.Chapter(title=v_person.__given_names__ + ' ' + v_person.__surname__, label=v_person.__gramps_id__)
 
         self.__write_life_sketch_section(v_chapter)
         self.__write_vital_information_section(v_chapter)
         # self.__WriteFamilySection(v_chapter)
         self.__write_parental_section_graph(v_chapter)
+        # self.__write_parental_section_table(v_chapter)
         self.__write_partner_sections_graph(v_chapter)
-
+        self.__write_partner_sections_table(v_chapter)
         self.__write_education_section(v_chapter)
         self.__write_profession_section(v_chapter)
         self.__write_residence_section_timeline(v_chapter)
+        self.__write_residence_section_table(v_chapter)
         # self.__WriteResidenceSection_Map(v_chapter)
         self.__write_photo_section(v_chapter)
         self.__write_document_section(v_chapter)
+        # self.__write_timeline_section(v_chapter)
 
-        v_chapter.generate_tex(filepath=self.document_path + self.gramps_id)
+        v_chapter.generate_tex(filepath=self.__document_path__ + v_person.__gramps_id__)

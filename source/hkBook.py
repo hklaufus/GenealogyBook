@@ -2,16 +2,16 @@ import sqlite3
 # import os
 import logging
 
-import hkLanguage as hlg
-import hkPersonChapter as hpc
-import hkGrampsDb as hgd
-import hkAhnentafelChapter as hac
-import hkLatex as hlt
+import hkLanguage
+import hkPersonChapter
+import hkGrampsDb
+import hkAhnentafelChapter
+import hkLatex
+import hkPerson
 
 # https://jeltef.github.io/PyLaTeX/current/index.html
 import pylatex as pl
 import pylatex.utils as pu
-import pylatex.base_classes.containers as pbc
 
 import xml.dom.minidom as mdm
 
@@ -48,26 +48,27 @@ def process_person(p_person_handle, p_cursor, p_document, p_document_path, p_don
         # Add person to Done list to prevent of processing twice
         p_done_list.append(p_person_handle)
 
-        v_person = hpc.Person(p_person_handle, p_cursor)
+        v_person_chapter = hkPersonChapter.PersonChapter(p_person_handle, p_cursor)
+        v_person = v_person_chapter.__person__
 
-        if v_person.gramps_id is not None:
+        if v_person.__gramps_id__ is not None:
             # Fetch parents + children
             v_process_list = []
-            v_process_list.append(v_person.father_handle)
-            v_process_list.append(v_person.mother_handle)
+            v_process_list.append(v_person.get_father())
+            v_process_list.append(v_person.get_mother())
 
             if len(v_filter) > 0:  # TODO: v_filter not defined
                 # Only persons with relation to vStartPersonId and surnames as per filter
-                for v_child_handle in v_person.children_handles_list:
-                    v_child = hpc.Person(v_child_handle, p_cursor)
-                    if v_child.surname in v_filter:
-                        v_process_list.append(v_child.person_handle)
+                for v_child_handle in v_person.get_children():
+                    v_child = hkPerson.Person(v_child_handle, p_cursor)
+                    if v_child.__surname__ in v_filter:
+                        v_process_list.append(v_child.__handle__)
             else:
                 # Anyone in database with relation to vStartPersonId
-                v_process_list = v_process_list + v_person.children_handles_list
+                v_process_list = v_process_list + v_person.get_children()
 
             # Create chapter in sub-document describing current person
-            p_document.append(pl.NoEscape(r'\include{' + v_person.gramps_id + '} % ' + v_person.given_names + ' ' + v_person.surname))
+            p_document.append(pl.NoEscape(r'\include{' + v_person.__gramps_id__ + '} % ' + v_person.__given_names__ + ' ' + v_person.__surname__))
             v_person.write_person_chapter()
 
             # Process stack
@@ -79,7 +80,7 @@ def process_person(p_person_handle, p_cursor, p_document, p_document_path, p_don
                 #     print("v_next_person: ", v_next_person)
         else:
             print('ERROR fetching v_person.GrampsId')
-            print("v_person.GrampsId: ", v_person.gramps_id)
+            print("v_person.GrampsId: ", v_person.__gramps_id__)
 
 
 def write_main_document(p_cursor, p_book_parameters):
@@ -95,7 +96,6 @@ def write_main_document(p_cursor, p_book_parameters):
     # v_document.packages.append(pl.Package('lipsum'))
     v_document.packages.append(pl.Package('blindtext'))
     v_document.packages.append(pl.Package('hyperref'))
-    # v_document.packages.append(pl.Package('graphicx'))  # TODO: Check no longer needed??
 
     # https://tex.stackexchange.com/questions/118602/how-to-text-wrap-an-image-in-latex#132313
     v_document.packages.append(pl.Package('wrapfig'))
@@ -152,16 +152,16 @@ def write_main_document(p_cursor, p_book_parameters):
     v_document.preamble.append(pl.NoEscape(r'\newcounter{mycounter}'))
 
     # Redefine labels fo chapters
-    v_document.preamble.append(pl.NoEscape(r'\renewcommand{\contentsname}{' + hlg.translate('table of contents') + '}'))
-    v_document.preamble.append(pl.NoEscape(r'\renewcommand{\listfigurename}{' + hlg.translate('list of figures') + '}'))
-    v_document.preamble.append(pl.NoEscape(r'\renewcommand{\partname}{' + hlg.translate('generation') + '}'))
-    v_document.preamble.append(pl.NoEscape(r'\renewcommand{\chaptername}{' + hlg.translate('chapter') + '}'))
+    v_document.preamble.append(pl.NoEscape(r'\renewcommand{\contentsname}{' + hkLanguage.translate('table of contents') + '}'))
+    v_document.preamble.append(pl.NoEscape(r'\renewcommand{\listfigurename}{' + hkLanguage.translate('list of figures') + '}'))
+    v_document.preamble.append(pl.NoEscape(r'\renewcommand{\partname}{' + hkLanguage.translate('generation') + '}'))
+    v_document.preamble.append(pl.NoEscape(r'\renewcommand{\chaptername}{' + hkLanguage.translate('chapter') + '}'))
 
     v_document.preamble.append(pl.Command('title', p_book_parameters['Title']))
     v_document.preamble.append(pl.Command('author', p_book_parameters['Author']))
     v_document.preamble.append(pl.Command('date', pu.NoEscape(r'\today')))
 
-    # Define TikZ styles 20211227
+    # Define TikZ styles
     v_document.append(pu.NoEscape(r'\usetikzlibrary{arrows.meta, graphs}'))
     v_document.append(pu.NoEscape(r'\tikzset{thick, black!50, text=black}'))
     v_document.append(pu.NoEscape(r'\tikzset{>={Stealth[round]}}'))
@@ -180,11 +180,11 @@ def write_main_document(p_cursor, p_book_parameters):
     v_document.append(pl.Command('tableofcontents'))
 
     # Find handle of root person
-    v_person_handle = hgd.get_person_handle_by_gramps_id(p_book_parameters['StartPersonId'], p_cursor)
+    v_person_handle = hkGrampsDb.get_person_handle_by_gramps_id(p_book_parameters['StartPersonId'], p_cursor)
 
     if v_person_handle is not None:
         # Write the Ahnentafel of this person
-        v_ahnentafel = hac.Ahnentafel(v_person_handle, p_cursor, p_book_parameters['Path'], True)
+        v_ahnentafel = hkAhnentafelChapter.Ahnentafel(v_person_handle, p_cursor, p_book_parameters['Path'], True)
         v_ahnentafel.create_ahnentafel_chapter()
         v_document.append(pl.NoEscape(r'\include{Ahnentafel}'))
 
@@ -192,7 +192,7 @@ def write_main_document(p_cursor, p_book_parameters):
         # Build a book consisting of parts for each generation.
         # Each part will contain chapters for all persons in the Ahnentafel
         #
-        v_multi_generation_list = v_ahnentafel.generation_list
+        v_multi_generation_list = v_ahnentafel.__generation_list__
 
         # Create sub list for first generation
         v_generation_index = 1
@@ -200,8 +200,8 @@ def write_main_document(p_cursor, p_book_parameters):
 
         while len(v_generation_list) > 0:
             # Create a new part for this generation
-            # v_part = hlt.Part(title=hlg.translate('generation') + ' ' + str(v_generation_index), label=False)
-            v_part = hlt.Part(title=' ', label=False)
+            # v_part = hkLatex.Part(title=hkLanguage.translate('generation') + ' ' + str(v_generation_index), label=False)
+            v_part = hkLatex.Part(title=' ', label=False)
             v_part.generate_tex(filepath=p_book_parameters['Path'] + 'Part_' + str(v_generation_index))
 
             # Include the part to the document
@@ -209,9 +209,10 @@ def write_main_document(p_cursor, p_book_parameters):
 
             # Create a detailed chapter for each person in this generation
             for v_person_handle in v_generation_list:
-                v_person = hpc.Person(v_person_handle, p_cursor, p_book_parameters['Path'], p_book_parameters['Language'])
-                v_document.append(pl.NoEscape(r'\include{' + v_person.gramps_id + '} % ' + v_person.given_names + ' ' + v_person.surname))
-                v_person.write_person_chapter()
+                v_person_chapter = hkPersonChapter.PersonChapter(v_person_handle, p_cursor, p_book_parameters['Path'], p_book_parameters['Language'])
+                v_person = v_person_chapter.__person__
+                v_document.append(pl.NoEscape(r'\include{' + v_person.__gramps_id__ + '} % ' + v_person.__given_names__ + ' ' + v_person.__surname__))
+                v_person_chapter.write_person_chapter()
 
             #  Create new sub list for next generation
             v_generation_index = v_generation_index + 1

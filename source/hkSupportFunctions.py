@@ -1,8 +1,10 @@
-import hkGrampsDb as hgd
-import hkLanguage as hkl
+import hkGrampsDb
+import hkLanguage
 
 import calendar
+import datetime
 import logging
+import math
 
 import pylatex as pl
 import pylatex.utils as pu
@@ -22,24 +24,7 @@ import pandas
 
 from PIL import Image
 
-
-def get_start_date(p_date_list, p_abbreviated=True):
-    v_date_string = '-'
-
-    if (len(p_date_list) == 4) or (len(p_date_list) == 7):
-        v_day1 = p_date_list[1]
-        v_month1 = p_date_list[2]
-        v_year1 = p_date_list[3]
-
-        v_month_string1 = calendar.month_name[v_month1]
-        if p_abbreviated:
-            v_month_string1 = calendar.month_abbr[v_month1]
-
-        v_month_string1 = hkl.translate(v_month_string1)
-
-        v_date_string = ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
-
-    return v_date_string
+import hkPerson
 
 
 def date_to_text(p_date_list, p_abbreviated=True):
@@ -58,11 +43,11 @@ def date_to_text(p_date_list, p_abbreviated=True):
         if p_abbreviated:
             v_month_string1 = calendar.month_abbr[v_month1]
 
-        v_month_string1 = hkl.translate(v_month_string1)
+        v_month_string1 = hkLanguage.translate(v_month_string1)
 
         if v_modifier in v_modifier_set:
             # Before, after, about
-            v_date_string = hkl.translate(hgd.c_date_modifier_dict[v_modifier]) + ' ' + ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
+            v_date_string = hkLanguage.translate(hkGrampsDb.c_date_modifier_dict[v_modifier]) + ' ' + ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
         else:
             v_date_string = ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
 
@@ -77,7 +62,7 @@ def date_to_text(p_date_list, p_abbreviated=True):
         if p_abbreviated:
             v_month_string1 = calendar.month_abbr[v_month1]
 
-        v_month_string1 = hkl.translate(v_month_string1)
+        v_month_string1 = hkLanguage.translate(v_month_string1)
 
         v_day2 = p_date_list[4]
         v_month2 = p_date_list[5]
@@ -87,24 +72,24 @@ def date_to_text(p_date_list, p_abbreviated=True):
         if p_abbreviated:
             v_month_string2 = calendar.month_abbr[v_month2]
 
-        v_month_string2 = hkl.translate(v_month_string2)
+        v_month_string2 = hkLanguage.translate(v_month_string2)
 
         if v_modifier == 4:
             # Range
-            v_date_string = hkl.translate('between') + ' ' + (
-                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1) + ' ' + hkl.translate(
+            v_date_string = hkLanguage.translate('between') + ' ' + (
+                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1) + ' ' + hkLanguage.translate(
                 'and') + ' ' + ((str(v_day2) + ' ') if v_day2 != 0 else '') + v_month_string2 + ' ' + str(v_year2)
         elif v_modifier == 5:
             # Span
-            v_date_string = hkl.translate('from') + ' ' + (
-                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1) + ' ' + hkl.translate(
+            v_date_string = hkLanguage.translate('from') + ' ' + (
+                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1) + ' ' + hkLanguage.translate(
                 'until') + ' ' + ((str(v_day2) + ' ') if v_day2 != 0 else '') + v_month_string2 + ' ' + str(v_year2)
 
     return v_date_string
 
 
 def street_to_text(p_place_list, p_long_style=False):
-    v_street_label = hgd.c_place_type_dict[hgd.c_place_type_street]
+    v_street_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_street]
 
     v_string = ''
     if p_long_style:
@@ -129,65 +114,6 @@ def street_to_text(p_place_list, p_long_style=False):
     return v_string
 
 
-def place_to_text(p_place_list, p_long_style=False):
-    v_city_label = hgd.c_place_type_dict[hgd.c_place_type_city]
-    v_town_label = hgd.c_place_type_dict[hgd.c_place_type_town]
-    v_village_label = hgd.c_place_type_dict[hgd.c_place_type_village]
-    v_municipality_label = hgd.c_place_type_dict[hgd.c_place_type_municipality]
-
-    v_string = ''
-    if p_long_style:
-        for v_place in p_place_list:
-            v_string = v_string + ', ' + p_place_list[v_place][0]
-
-        v_string = v_string[2:].strip()
-    else:
-        v_found = True
-        if v_city_label in p_place_list:
-            v_string = v_string + p_place_list[v_city_label][0]
-        elif v_town_label in p_place_list:
-            v_string = v_string + p_place_list[v_town_label][0]
-        elif v_village_label in p_place_list:
-            v_string = v_string + p_place_list[v_village_label][0]
-        elif v_municipality_label in p_place_list:
-            v_string = v_string + p_place_list[v_municipality_label][0]
-        else:
-            v_found = False
-
-        if v_found:
-            v_country_string = country_to_text(p_place_list, p_long_style)
-            if len(v_country_string) > 0:
-                v_string = v_string + ', ' + v_country_string
-        else:
-            v_string = v_string + country_to_text(p_place_list, p_long_style)
-
-    # Debug
-    # logging.debug('p_place_list: '.join(map(str, p_place_list)))
-    logging.debug('v_string = %s', v_string)
-
-    return v_string
-
-
-def country_to_text(p_place_list, p_long_style=False):
-    v_country_label = hgd.c_place_type_dict[hgd.c_place_type_country]
-
-    v_string = ''
-    if p_long_style:
-        for v_place in p_place_list:
-            v_string = v_string + ', ' + p_place_list[v_place][0]
-
-        v_string = v_string[2:].strip()
-    else:
-        if v_country_label in p_place_list:
-            v_string = v_string + p_place_list[v_country_label][0]
-
-    # Debug
-    # logging.debug('p_place_list: '.join(map(str, p_place_list)))
-    logging.debug('v_string = %s', v_string)
-
-    return v_string
-
-
 def sort_person_list_by_birth(p_person_handle_list, p_cursor):
     # Sort ID of persons in pPersonIdList by birth date
 
@@ -197,20 +123,11 @@ def sort_person_list_by_birth(p_person_handle_list, p_cursor):
     # Retrieve person info
     v_new_person_list = []
     for v_person_handle in p_person_handle_list:
-        v_person_data = hgd.decode_person_data(v_person_handle, p_cursor)
-        v_birth_ref_index = v_person_data[6]
-        if v_birth_ref_index >= 0:
-            v_event_ref_list = v_person_data[7]
-            v_birth_event_ref = v_event_ref_list[v_birth_ref_index]
-            v_birth_event_handle = v_birth_event_ref[3]
-            v_birth_event_info = hgd.decode_event_data(v_birth_event_handle, p_cursor)
-            v_birth_date = v_birth_event_info[1]
-        else:
-            v_birth_date = '-'
-
+        v_person = hkPerson.Person(v_person_handle, p_cursor)
+        v_birth_date = v_person.get_birth_date()
         v_new_person_list.append([v_birth_date, v_person_handle])
 
-    f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
+    f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0].year, x[0].month, x[0].day) if (x[0] is not None) else '-'
     v_new_person_list.sort(key=f_date_func)
     p_person_handle_list = [item[1] for item in v_new_person_list]
 
@@ -442,3 +359,37 @@ def get_country_continent_subregion(p_country_code):
     logging.debug('get_country_continent_subregion: '.join(map(str, v_region_list)))
 
     return v_region_list
+
+
+def round_up(p_value, p_decimals=0):
+    v_multiplier = 10 ** p_decimals
+    return math.ceil(p_value * v_multiplier) / v_multiplier
+
+
+def round_down(p_value, p_decimals=0):
+    v_multiplier = 10 ** p_decimals
+    return math.floor(p_value * v_multiplier) / v_multiplier
+
+def gramps_date_to_python_date(p_date):
+    """
+    Converts a Gramps date format to a python date
+
+    @param p_date: list: [DD, MM, YYYY]
+    @return: date as python object otherwise none
+    """
+
+    # Debug
+    # print("p_date = {}".format(p_date))
+
+    if isinstance(p_date, list):
+        if p_date[0] == 0:  # day not set
+            p_date[0] = 1
+
+        if p_date[1] == 0:  # month not set
+            p_date[1] = 1
+
+        v_date = datetime.date(p_date[2], p_date[1], p_date[0])
+    else:
+        v_date = None
+
+    return v_date

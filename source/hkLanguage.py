@@ -1,4 +1,7 @@
 # Dictionary of dictionaries containing string to several languages
+
+import logging
+
 # gLanguage = 'nl'
 gStrings = {}
 
@@ -22,6 +25,7 @@ gStrings['occupation'] = {'en': "Occupation", 'nl': "Werk"}
 gStrings['residences'] = {'en': "Residences", 'nl': "Verblijfplaatsen"}
 gStrings['photos'] = {'en': "Photos", 'nl': "Foto's"}
 gStrings['documents'] = {'en': "Documents", 'nl': "Documenten"}
+gStrings['timeline'] = {'en': "Timeline", 'nl': "Tijdlijn"}
 
 # Table fields
 gStrings['call name'] = {'en': "Call name", 'nl': "Roepnaam"}
@@ -82,7 +86,7 @@ gStrings['in {0}'] = {'en': "in {0}", 'nl': "in {0}"}
 gStrings['{0} call name was {1}.'] = {'en': "{0} call name was {1}.", 'nl': "{0} roepnaam was {1}."}
 
 gStrings['{0} had one sister:'] = {'en': "{0} had one sister", 'nl': "{0} had een zus"}
-gStrings['{0} had {1} sisters:'] = {'en': "{0} had {1} sisters", 'nl': "{0} had {1} zussen"}
+gStrings['{0} had {1} sisters:'] = {'en': "{0} had {1} sisters:", 'nl': "{0} had {1} zussen:"}
 gStrings['and one brother:'] = {'en': "and one brother:", 'nl': "en een broer:"}
 gStrings['and {0} brothers:'] = {'en': "and {0} brothers:", 'nl': "en {0} broers:"}
 gStrings['{0} had one brother:'] = {'en': "{0} had one brother:", 'nl': "{0} had een broer:"}
@@ -145,6 +149,15 @@ gStrings['and'] = {'en': 'en', 'nl': 'en'}
 gStrings['from'] = {'en': 'from', 'nl': 'van'}
 gStrings['until'] = {'en': 'until', 'nl': 'tot'}
 
+# Events
+gStrings['birth'] = {'en': 'birth', 'nl': 'geboorte'}
+gStrings['baptism'] = {'en': 'baptism', 'nl': 'doop'}
+gStrings['death'] = {'en': 'death', 'nl': 'overlijden'}
+gStrings['burial'] = {'en': 'burial', 'nl': 'begravenis'}
+gStrings['engagement'] = {'en': 'engagement', 'nl': 'verloving'}
+gStrings['marriage'] = {'en': 'marriage', 'nl': 'huwelijk'}
+
+
 
 def translate(p_string, p_language='nl'):
     v_return_string = ''
@@ -153,7 +166,7 @@ def translate(p_string, p_language='nl'):
         try:
             v_return_string = gStrings[p_string.strip().lower()][p_language]
         except KeyError:
-            print('KEY ERROR in hkLanguage.translate: ', p_string)
+            logging.warning("KEY ERROR in hkLanguage.translate: %s", p_string)
 
         if p_string[0].isupper():
             v_return_string = v_return_string.capitalize()
