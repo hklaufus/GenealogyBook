@@ -152,10 +152,19 @@ gStrings['until'] = {'en': 'until', 'nl': 'tot'}
 # Events
 gStrings['birth'] = {'en': 'birth', 'nl': 'geboorte'}
 gStrings['baptism'] = {'en': 'baptism', 'nl': 'doop'}
+gStrings['christening'] = {'en': 'christening', 'nl': 'doop'}
 gStrings['death'] = {'en': 'death', 'nl': 'overlijden'}
 gStrings['burial'] = {'en': 'burial', 'nl': 'begravenis'}
 gStrings['engagement'] = {'en': 'engagement', 'nl': 'verloving'}
 gStrings['marriage'] = {'en': 'marriage', 'nl': 'huwelijk'}
+gStrings['property'] = {'en': 'property', 'nl': 'eigendom'}
+gStrings['graduation'] = {'en': 'graduation', 'nl': 'afstuderen'}
+gStrings['retirement'] = {'en': 'retirement', 'nl': 'pensioen'}
+gStrings['military service'] = {'en': 'military service', 'nl': 'militaire dienst'}
+gStrings['cremation'] = {'en': 'cremation', 'nl': 'crematie'}
+gStrings['medical information'] = {'en': 'medical information', 'nl': 'medische informatie'}
+gStrings['census'] = {'en': 'census', 'nl': 'volkstelling'}
+gStrings['confirmation'] = {'en': 'confirmation', 'nl': 'vormsel'}
 
 
 

@@ -6,6 +6,7 @@ import hkEvent
 import hkEventRef
 import hkFamily
 import hkGrampsDb
+import hkLanguage
 import hkMedia
 import hkNote
 import hkTag
@@ -36,8 +37,6 @@ class Person:
     __private__: bool = None
     __person_ref_list__: [str] = None  # TODO: Check
 
-    __person_event_dict__: dict[int, list[hkEvent.Event]]
-
     def __init__(self, p_person_handle, p_cursor):
         self.__cursor__ = p_cursor
 
@@ -45,9 +44,6 @@ class Person:
         v_record = self.__cursor__.fetchone()
 
         if v_record is not None:
-            # self.__given_name = v_record[0]
-            # self.__surname = v_record[1]
-
             v_blob_data = v_record[2]
             if v_blob_data is not None:
                 # See https://www.gramps-project.org/wiki/index.php/Using_database_API#1._Person
@@ -81,81 +77,24 @@ class Person:
                 self.__private__ = v_person_data[19]
                 self.__person_ref_list__ = v_person_data[20]
 
-        self.__person_event_dict__ = self.__create_person_event_dict()
-        self.__family_event_dict__ = self.__create_family_event_dict()
-
-        self.__source_status__ = self.__get_source_status()
-
         # TODO: This is a tag list NOT related to one person; this does not belong here
         self.__tag_dictionary__ = hkGrampsDb.get_tag_dictionary(self.__cursor__)
 
-    def __create_person_event_dict(self):
+    def get_source_status(self):
         """
-        Creates a dictionary of personal events
-        The key refers to the type of event (e.g. Profession); the value contains a list of events belonging to this event type (e.g. multiple professions within key Profession)
-        Key:[event info, event info 2, event info 3]
+        Checks whether scans are available for the events birth, marriage and death
+
+        @return: v_source_status
         """
 
-        v_person_event_dict = {}
-        for v_event_ref in self.__event_ref_list__:
-            v_event_handle = v_event_ref[3]
-            v_event = hkEvent.Event(v_event_handle, self.__cursor__)
-
-            # Filter on role
-            v_role_type = v_event_ref[4][0]
-            if (v_role_type == hkGrampsDb.c_role_primary) or (v_role_type == hkGrampsDb.c_role_family):
-                # Check whether event type already exists as key...
-                if v_event.get_type() in v_person_event_dict:
-                    # ...if so, append event info to the dictionary entry
-                    v_person_event_dict[v_event.get_type()].append(v_event)
-                else:
-                    # ...otherwise create a new entry
-                    v_person_event_dict[v_event.get_type()] = [v_event]
-
-                # Add event media to personal media list
-                # self.__event_media_list__ = self.__event_media_list__ + v_event.__media_base__
-                self.__media_base__ = self.__media_base__ + v_event.__media_base__
-
-        return v_person_event_dict
-
-    def __create_family_event_dict(self):
-        v_family_event_dict = {}
-        for v_family_handle in self.__family_list__:
-            v_family = hkFamily.Family(v_family_handle, self.__cursor__)
-            v_family_events = v_family.__event_ref_list__
-            self.__media_base__ = self.__media_base__ + v_family.__media_base__  # Add family media to personal media list
-
-            for v_family_event_ref in v_family_events:
-                v_event_ref = hkEventRef.EventRef(v_family_event_ref, self.__cursor__)
-                v_event = v_event_ref.get_event()
-
-                # Filter on role
-                v_role_type = v_event_ref.__role__  # v_event_ref[4][0]
-                if (v_role_type == hkGrampsDb.c_role_primary) or (v_role_type == hkGrampsDb.c_role_family):
-                    # Check whether event type already exists as key...
-                    if v_event.get_type() in v_family_event_dict:
-                        # ...if so, append event info to the dictionary entry
-                        v_family_event_dict[v_event.get_type()].append(v_event)
-                    else:
-                        # ...otherwise create a new entry
-                        v_family_event_dict[v_event.get_type()] = [v_event]
-
-        return v_family_event_dict
-
-    def __get_source_status(self):
-        """ Checks whether scans are available for the events birth, marriage and death """
         v_source_status = {'b': '', 'm': '', 'd': ''}  # birth, marriage, death
 
         # Birth / baptism
         v_media_list = []
-        if hkGrampsDb.c_event_birth in self.__person_event_dict__:  # Birth
-            v_event_list = self.__person_event_dict__[hkGrampsDb.c_event_birth]
-            v_event = v_event_list[0]
+        for v_event in self.get_events(hkGrampsDb.c_event_birth):  # Birth
             v_media_list.extend(v_event.__media_base__)
 
-        if hkGrampsDb.c_event_baptism in self.__person_event_dict__:  # Baptism
-            v_event_list = self.__person_event_dict__[hkGrampsDb.c_event_baptism]
-            v_event = v_event_list[0]
+        for v_event in self.get_events(hkGrampsDb.c_event_baptism):  # Baptism
             v_media_list.extend(v_event.__media_base__)
 
         if len(v_media_list) > 0:
@@ -164,26 +103,21 @@ class Person:
         # Marriage
         for v_family_handle in self.__family_list__:
             v_family = hkFamily.Family(v_family_handle, self.__cursor__)
-            v_event_ref_list = v_family.__event_ref_list__
 
-            for v_event_ref in v_event_ref_list:
-                v_event = hkEventRef.EventRef(v_event_ref, self.__cursor__).get_event()
+            for v_event in v_family.get_events():
+                v_type = v_event.get_type()
                 v_media_list = v_event.__media_base__
 
                 # 1 = Marriage, 2 = Marriage Settlement, 3 = Marriage License, 4 = Marriage Contract
-                if (v_event.get_type() == hkGrampsDb.c_event_marriage or v_event.get_type() == hkGrampsDb.c_event_marriage_settlement or v_event.get_type() == hkGrampsDb.c_event_marriage_license or v_event.get_type() == hkGrampsDb.c_event_marriage_contract) and (len(v_media_list) > 0):
+                if ((v_type == hkGrampsDb.c_event_marriage) or (v_type == hkGrampsDb.c_event_marriage_settlement) or (v_type == hkGrampsDb.c_event_marriage_license) or (v_type == hkGrampsDb.c_event_marriage_contract)) and (len(v_media_list) > 0):
                     v_source_status['m'] = 'm'
 
         # Death / Burial
         v_media_list = []
-        if hkGrampsDb.c_event_death in self.__person_event_dict__:  # Death
-            v_event_list = self.__person_event_dict__[hkGrampsDb.c_event_death]
-            v_event = v_event_list[0]
+        for v_event in self.get_events(hkGrampsDb.c_event_death):  # Death
             v_media_list.extend(v_event.__media_base__)
 
-        if hkGrampsDb.c_event_burial in self.__person_event_dict__:  # Burial
-            v_event_list = self.__person_event_dict__[hkGrampsDb.c_event_burial]
-            v_event = v_event_list[0]
+        for v_event in self.get_events(hkGrampsDb.c_event_burial):  # Burial
             v_media_list.extend(v_event.__media_base__)
 
         if len(v_media_list) > 0:
@@ -316,6 +250,56 @@ class Person:
             v_child_handles = v_child_handles + v_family.get_children()
 
         return v_child_handles
+
+    def get_events(self, p_type=None, p_role=None):
+        """
+        Creates a generator list object
+
+        @param: p_type: set of types to filter on
+        @param: p_role: set of roles to filter on
+
+        @return: v_event
+        """
+
+        # Convert parameters to set
+        if (p_type is not None) and isinstance(p_type, int):
+            v_use_type = {p_type}
+        else:
+            v_use_type = p_type
+
+        if (p_role is not None) and isinstance(p_role, int):
+            v_use_role = {p_role}
+        else:
+            v_use_role = p_role
+
+        for v_reference in self.__event_ref_list__:
+            v_event_ref = hkEventRef.EventRef(v_reference, self.__cursor__)
+
+            if (p_role is None) or (v_event_ref.get_role() in v_use_role):
+                v_event = v_event_ref.get_event()
+                if len(v_event.__description__) == 0:
+                    v_type_string = hkGrampsDb.c_event_type_dict[v_event.get_type()]
+                    v_name_string = self.__given_names__ + ' ' + self.__surname__
+
+                    v_date_place_string = '['
+                    v_date = v_event.get_date()
+                    v_place = v_event.get_place()
+                    if v_place is not None:
+                        v_place_string = v_place.__place_to_text__()
+                        if len(v_place_string) > 0:
+                            v_date_place_string = v_date_place_string + v_place_string + ', '
+
+                    if v_date is not None:
+                        v_date_string = v_date.__date_to_text__()
+                        if len(v_date_string) > 0:
+                            v_date_place_string = v_date_place_string + v_date_string
+
+                    v_date_place_string = v_date_place_string + ']'
+
+                    v_event.__description__ = hkLanguage.translate(v_type_string) + ' ' + v_name_string + ' ' + v_date_place_string
+
+                if (p_type is None) or (v_event.get_type() in v_use_type):
+                    yield v_event
 
     def ___log__(self):
         """

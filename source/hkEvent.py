@@ -12,7 +12,7 @@ class Event:
     __type__: int = None
     __date_base__: [hkDate.Date] = None
     __description__: str = None
-    __place__: hkPlace.Place = None
+    __place__: str = None
     __citation_base__: [str] = None
     __note_base__: [hkNote.Note] = None
     __media_base__: [hkMedia.Media] = None
@@ -36,7 +36,7 @@ class Event:
 
             v_place_handle = v_event_data[5]
             if v_place_handle is not None:
-                self.__event_place__ = hkPlace.Place(v_place_handle, p_cursor)
+                self.__event_place__ = hkPlace.Place(v_place_handle, p_cursor)  # TODO: remove in favour of __place__
 
             self.__cursor__ = p_cursor
 
@@ -70,7 +70,9 @@ class Event:
         @return: v_place: hkPlace.Place object
         """
 
-        v_place = hkPlace.Place(self.__place__, self.__cursor__)
+        v_place = None
+        if (self.__place__ is not None) and (len(self.__place__) > 0):
+            v_place = hkPlace.Place(self.__place__, self.__cursor__)
 
         return v_place
 
@@ -89,7 +91,7 @@ class Event:
         """
         Returns the event description.
 
-        @return: self.__description: str
+        @return: self.__description__: str
         """
 
         return self.__description__

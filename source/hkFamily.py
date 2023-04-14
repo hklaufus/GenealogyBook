@@ -1,3 +1,7 @@
+import hkEventRef
+import hkGrampsDb
+import hkLanguage
+import hkPerson
 import hkPersonRef
 
 import pickle
@@ -58,6 +62,55 @@ class Family:
             v_child_handles.append(v_child.__handle__)
 
         return v_child_handles
+
+    def get_events(self, p_type=None, p_role=None):
+        """
+        Creates a generator list object
+
+        @param: p_type: set of types to filter on
+        @param: p_role: set of roles to filter on
+
+        @return: v_event
+        """
+
+        # Convert parameters to set
+        if (p_type is not None) and isinstance(p_type, int):
+            v_use_type = {p_type}
+        else:
+            v_use_type = p_type
+
+        if (p_role is not None) and isinstance(p_role, int):
+            v_use_role = {p_role}
+        else:
+            v_use_role = p_role
+
+        for v_reference in self.__event_ref_list__:
+            v_event_ref = hkEventRef.EventRef(v_reference, self.__cursor__)
+
+            if (p_role is None) or (v_event_ref.get_role() in v_use_role):
+                v_event = v_event_ref.get_event()
+
+                if len(v_event.__description__) == 0:
+                    v_type_string = hkGrampsDb.c_event_type_dict[v_event.get_type()]
+
+                    v_father = hkPerson.Person(self.get_father(), self.__cursor__)
+                    v_mother = hkPerson.Person(self.get_mother(), self.__cursor__)
+                    v_name_string = v_father.__given_names__ + ' ' + v_father.__surname__ + " & " + v_mother.__given_names__ + ' ' + v_mother.__surname__
+
+                    # v_date_place_string = '[' + v_event.get_place().__place_to_text__() + ', ' + v_event.get_date().__date_to_text__() + ']'
+                    v_date_place_string = '['
+                    if v_event.get_place() is not None:
+                        v_place_string = v_event.get_place().__place_to_text__()
+                        if len(v_place_string) > 0:
+                            v_date_place_string = v_date_place_string + v_place_string + ', '
+
+                    if v_event.get_date() is not None:
+                        v_date_place_string = v_date_place_string + v_event.get_date().__date_to_text__() + ']'
+
+                    v_event.__description__ = hkLanguage.translate(v_type_string) + ' ' + v_name_string + ' ' + v_date_place_string
+
+                if (p_type is None) or (v_event.get_type() in v_use_type):
+                    yield v_event
 
     def __log__(self):
         """

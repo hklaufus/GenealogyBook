@@ -34,3 +34,16 @@ class EventRef:
 
     def get_event(self):
         return hkEvent.Event(self.__ref_base__, self.__cursor__)
+
+    def get_role(self):
+        """
+        Return the value indicating the role
+
+        @return: v_role: int
+        """
+
+        v_role = None
+        if self.__role__ is not None:
+            v_role = self.__role__[0]
+
+        return v_role

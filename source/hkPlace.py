@@ -1,10 +1,14 @@
+import inspect
+import logging
 import pickle
 
 import hkGrampsDb
 import hkNote
 import hkTag
 
+
 class Place:
+    __enclosed_by__: str = ''
     __handle__: str = ''
     __gramps_id__: str = ''
     __title__: str = ''
@@ -36,10 +40,14 @@ class Place:
 
         self.__cursor__ = p_cursor
 
-        p_cursor.execute('SELECT blob_data FROM place WHERE handle=?', [p_place_handle])
-        v_blob_data = p_cursor.fetchone()
-        if v_blob_data is not None:
-            v_place_data = pickle.loads(v_blob_data[0])
+        p_cursor.execute('SELECT enclosed_by, blob_data FROM place WHERE handle=?', [p_place_handle])
+        v_return_value = p_cursor.fetchone()
+        if v_return_value is not None:
+            v_enclosed_by = v_return_value[0]
+            v_blob_data = v_return_value[1]
+            v_place_data = pickle.loads(v_blob_data)
+
+            self.__enclosed_by__ = v_enclosed_by
 
             self.__handle__ = v_place_data[0]
             self.__gramps_id__ = v_place_data[1]
@@ -60,111 +68,227 @@ class Place:
             self.__tag_base__ = v_place_data[16]
             self.__private__ = v_place_data[17]
 
+            if len(self.__place_name__) == 0:
+                logging.warning("__place_name__ is empty for handle: {}".format(p_place_handle))
+
+        # self.__log__()
+
     def __create_place_dict__(self):
+        """
+        Creates a dictionary of the hierarchy of a given place by recursively retrieving data of its enclosing places
+
+        @return: v_place_dict
+        """
         v_place_dict = {}
 
-        v_place_handle = self.__handle__
-        while len(v_place_handle) > 0:
-            self.__cursor__.execute('SELECT enclosed_by, blob_data FROM place WHERE handle=?', [v_place_handle])
-            v_record = self.__cursor__.fetchone()
-            if v_record is not None:
-                v_place_handle = v_record[0]
-                v_blob_data = v_record[1]
-                v_place_data = pickle.loads(v_blob_data)
+        v_enclosed_by = self.__enclosed_by__
+        v_place_dict[self.get_type()] = self.__handle__
 
-                if len(v_place_data[3]) == 0:
-                    v_place_longitude = 0.
-                else:
-                    v_place_longitude = float(v_place_data[3])
+        while len(v_enclosed_by) > 0:
+            v_place = Place(v_enclosed_by, self.__cursor__)
 
-                if len(v_place_data[4]) == 0:
-                    v_place_latitude = 0.
-                else:
-                    v_place_latitude = float(v_place_data[4])
-
-                v_place_name = v_place_data[6][0]
-                v_place_type = hkGrampsDb.c_place_type_dict[v_place_data[8][0]]
-                v_place_code = v_place_data[9]
-
-                v_place_dict[v_place_type] = [v_place_name, (v_place_latitude, v_place_longitude), v_place_code]
+            v_enclosed_by = v_place.__enclosed_by__
+            v_place_dict[v_place.get_type()] = v_place.__handle__
 
         return v_place_dict
 
+    def get_type(self):
+        """
+        Return the type of the place
+
+        @return: self.__place_type__[0]
+        """
+
+        v_return_value = -1
+
+        if isinstance(self.__place_type__, tuple):
+            v_return_value = self.__place_type__[0]
+        elif isinstance(self.__place_type__, int):
+            v_return_value = self.__place_type__
+        else:
+            logging.warning("Unknown place type: {}".format(self.__place_type__))
+
+        return v_return_value
+
+    def get_place_name(self):
+        """
+        Returns the place name
+
+        @return: v_place_name: str
+        """
+
+        v_place_name = None
+
+        if isinstance(self.__place_name__, str):
+            v_place_name = self.__place_name__
+        elif isinstance(self.__place_name__, tuple):
+            v_place_name = self.__place_name__[0]
+        else:
+            logging.warning("Check type of self.__place_name: {}".format(self.__place_name__))
+
+        return v_place_name
+
+    def get_location(self, p_place_type):
+        """
+        Returns the location
+
+        @param: p_place_type: int. Code for type of place. Refer to hkGramps.
+        @return: v_place: hkPlace
+        """
+
+        v_place = None
+
+        v_enclosed_by = self.__enclosed_by__
+        v_type = self.get_type()
+
+        while (v_type != p_place_type) and (len(v_enclosed_by) > 0):
+            v_place = Place(v_enclosed_by, self.__cursor__)
+            v_enclosed_by = v_place.__enclosed_by__
+            v_type = v_place.get_type()
+
+        return v_place
+
+    def get_country(self):
+        """
+        Returns the city
+
+        @return: v_place: hkPlace
+        """
+
+        v_place = self.get_location(hkGrampsDb.c_place_type_country)
+
+        return v_place
+
+    def get_city(self):
+        """
+        Returns the city
+
+        @return: v_place: hkPlace
+        """
+
+        v_place = self.get_location(hkGrampsDb.c_place_type_city)
+        if v_place is None:
+            v_place = self.get_location(hkGrampsDb.c_place_type_town)
+        if v_place is None:
+            v_place = self.get_location(hkGrampsDb.c_place_type_village)
+        if v_place is None:
+            v_place = self.get_location(hkGrampsDb.c_place_type_municipality)
+
+        return v_place
+
+    def get_street(self):
+        """
+        Returns the city
+
+        @return: v_place: hkPlace
+        """
+
+        v_place = self.get_location(hkGrampsDb.c_place_type_street)
+
+        return v_place
+
     def __street_to_text__(self, p_long_style=False):
-        v_street_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_street]
+        """
+        Returns the name of the street.
 
-        v_place_dict = self.__create_place_dict__()
+        :param p_long_style: Boolean. If True, recursively add names of higher hierarchy levels
+        :return: v_string: str.
+        """
 
-        v_string = ''
-        if p_long_style:
-            for v_place in v_place_dict:
-                v_string = v_string + ', ' + v_place_dict[v_place][0]
+        v_place_type = hkGrampsDb.c_place_type_street
 
-            v_string = v_string[2:].strip()
-        else:
-            if v_street_label in v_place_dict:
-                v_string = v_string + v_place_dict[v_street_label][0]
+        return self.__location_to_text__(v_place_type, p_long_style)
 
-                v_place_string = self.__place_to_text__(p_long_style)
-                if len(v_place_string) > 0:
-                    v_string = v_string + ', ' + v_place_string
-            else:
-                v_string = v_string + self.__place_to_text__(p_long_style)
+    def __city_to_text__(self, p_long_style=False):
+        """
+        Returns the name of the city / town / village / municipality.
 
-        return v_string
+        :param p_long_style: Boolean. If True, recursively add names of higher hierarchy levels
+        :return: v_string: str.
+        """
 
-    def __place_to_text__(self, p_long_style=False):
-        v_city_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_city]
-        v_town_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_town]
-        v_village_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_village]
-        v_municipality_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_municipality]
+        v_string = self.__location_to_text__(hkGrampsDb.c_place_type_city, p_long_style)
 
-        v_place_dict = self.__create_place_dict__()
+        if len(v_string) == 0:
+            v_string = self.__location_to_text__(hkGrampsDb.c_place_type_town, p_long_style)
 
-        v_string = ''
-        if p_long_style:
-            for v_place in v_place_dict:
-                v_string = v_string + ', ' + v_place_dict[v_place][0]
+        if len(v_string) == 0:
+            v_string = self.__location_to_text__(hkGrampsDb.c_place_type_village, p_long_style)
 
-            v_string = v_string[2:].strip()
-        else:
-            v_found = True
-            if v_city_label in v_place_dict:
-                v_string = v_string + v_place_dict[v_city_label][0]
-            elif v_town_label in v_place_dict:
-                v_string = v_string + v_place_dict[v_town_label][0]
-            elif v_village_label in v_place_dict:
-                v_string = v_string + v_place_dict[v_village_label][0]
-            elif v_municipality_label in v_place_dict:
-                v_string = v_string + v_place_dict[v_municipality_label][0]
-            else:
-                v_found = False
-
-            if v_found:
-                v_country_string = self.__country_to_text__(p_long_style)
-                if len(v_country_string) > 0:
-                    v_string = v_string + ', ' + v_country_string
-            else:
-                v_string = v_string + self.__country_to_text__(p_long_style)
+        if len(v_string) == 0:
+            v_string = self.__location_to_text__(hkGrampsDb.c_place_type_municipality, p_long_style)
 
         return v_string
 
     def __country_to_text__(self, p_long_style=False):
-        v_country_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_country]
+        """
+        Returns the name of the country.
 
-        v_place_dict = self.__create_place_dict__()
+        @param: p_long_style: Boolean. If True, recursively add names of higher hierarchy levels
+        @return: v_string: str.
+
+        """
+
+        v_place_type = hkGrampsDb.c_place_type_country
+
+        return self.__location_to_text__(v_place_type, p_long_style)
+
+    def __location_to_text__(self, p_place_type, p_long_style=False):
+        """
+        Returns the name of the location
+
+        @param: p_place_type: int. Code for type of place. Refer to hkGramps.
+        @param: p_long_style: Boolean. If True, recursively add names of higher hierarchy levels
+        @return: v_string: str.
+        """
 
         v_string = ''
-        if p_long_style:
-            for v_place in v_place_dict:
-                v_string = v_string + ', ' + v_place_dict[v_place][0]
 
-            v_string = v_string[2:].strip()
+        if p_place_type is not None:
+            v_place_dict = self.__create_place_dict__()
+
+            if p_place_type in v_place_dict:
+                v_place = Place(v_place_dict[p_place_type], self.__cursor__)
+                v_type = v_place.get_type()
+                v_enclosed_by = v_place.__enclosed_by__
+
+                v_string = v_string + v_place.__place_name__[0]
+
+                if p_long_style:
+                    while (v_type != p_place_type) and (len(v_enclosed_by) > 0):
+                        v_place = Place(v_enclosed_by, self.__cursor__)
+                        v_type = v_place.get_type()
+                        v_enclosed_by = v_place.__enclosed_by__
+                        v_string = v_string + ', ' + v_place.__place_name__[0]
         else:
-            if v_country_label in v_place_dict:
-                v_string = v_string + v_place_dict[v_country_label][0]
+            logging.warning("Invalid p_place_type: {}".format(p_place_type))
 
-        return v_string
+        return v_string.strip()
+
+    def __place_to_text__(self, p_long_style=False):
+        """
+        Returns the name of the city / town / village / municipality.
+
+        :param p_long_style: Boolean. If True, recursively add names of higher hierarchy levels
+        :return: v_string: str.
+        """
+
+        v_string = ''
+        if len(self.__place_name__) == 0:
+            print("This function: {}".format(inspect.stack()[1][3]))
+            print("Calling function: {}".format(inspect.stack()[2][3]))
+            logging.warning("__place_name__ is empty for GrampsId: {}..".format(self.__gramps_id__))
+        else:
+            v_enclosed_by = self.__enclosed_by__
+            v_string = self.__place_name__[0]
+
+            if p_long_style:
+                while len(v_enclosed_by) > 0:
+                    v_place = Place(v_enclosed_by, self.__cursor__)
+                    v_enclosed_by = v_place.__enclosed_by__
+                    v_string = v_string + ', ' + v_place.__place_name__[0]
+
+        return v_string.strip()
 
     def __log__(self):
         """

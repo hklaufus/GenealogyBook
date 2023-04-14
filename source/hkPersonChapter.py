@@ -199,37 +199,39 @@ class PersonChapter:
                     v_brother_sister = hkLanguage.translate('Sister', self.__language__)
                     v_father_mother = hkLanguage.translate('Mother', self.__language__)
 
-                v_vital_event_keys = hkGrampsDb.c_vital_events_set.intersection(v_person.__person_event_dict__.keys())
-
                 # Geboorte
-                if hkGrampsDb.c_event_birth in v_vital_event_keys:  # Birth
-                    for v_event in v_person.__person_event_dict__[hkGrampsDb.c_event_birth]:
-                        v_date = v_event.get_date()
-                        v_place = v_event.get_place()
+                v_found = False
+                for v_event in v_person.get_events(hkGrampsDb.c_event_birth):
+                    v_found = True
 
+                    v_date = v_event.get_date()
+                    v_place = v_event.get_place()
+
+                    if v_date is not None:
                         v_string = hkLanguage.translate("{0} was born on {1}", self.__language__).format(pu.escape_latex(v_full_name), v_date.__date_to_text__(False))
                         v_life_sketch = v_life_sketch + v_string
 
                         if v_place is not None:
-                            v_string = hkLanguage.translate("in {0}", self.__language__).format(v_place.__place_to_text__(False))
+                            v_string = hkLanguage.translate("in {0}", self.__language__).format(v_place.__city_to_text__(False))
                             v_life_sketch = v_life_sketch + ' ' + v_string
 
                         v_life_sketch = v_life_sketch + r". "
 
                 # Baptism
-                elif hkGrampsDb.c_event_baptism in v_vital_event_keys:
-                    for v_event in v_person.__person_event_dict__[hkGrampsDb.c_event_baptism]:
+                if not v_found:
+                    for v_event in v_person.get_events(hkGrampsDb.c_event_baptism):
                         v_date = v_event.get_date()
                         v_place = v_event.get_place()
 
-                        v_string = hkLanguage.translate("{0} was born about {1}", self.__language__).format(pu.escape_latex(v_full_name), v_date.__date_to_text__(False))
-                        v_life_sketch = v_life_sketch + v_string
+                        if v_date is not None:
+                            v_string = hkLanguage.translate("{0} was born about {1}", self.__language__).format(pu.escape_latex(v_full_name), v_date.__date_to_text__(False))
+                            v_life_sketch = v_life_sketch + v_string
 
-                        if v_place is not None:
-                            v_string = hkLanguage.translate("in {0}", self.__language__).format(v_place.__place_to_text__(False))
-                            v_life_sketch = v_life_sketch + ' ' + v_string
+                            if v_place is not None:
+                                v_string = hkLanguage.translate("in {0}", self.__language__).format(v_place.__city_to_text__(False))
+                                v_life_sketch = v_life_sketch + ' ' + v_string
 
-                        v_life_sketch = v_life_sketch + r". "
+                            v_life_sketch = v_life_sketch + r". "
 
                 # Roepnaam
                 v_use_name = v_person.__given_names__
@@ -337,34 +339,38 @@ class PersonChapter:
                         v_life_sketch = v_life_sketch + r"\par "
 
                 # Death
-                if hkGrampsDb.c_event_death in v_vital_event_keys:
-                    for v_event in v_person.__person_event_dict__[hkGrampsDb.c_event_death]:
-                        v_date = v_event.get_date()
-                        v_place = v_event.get_place()
+                v_found = False
+                for v_event in v_person.get_events(hkGrampsDb.c_event_death):
+                    v_found = True
 
+                    v_date = v_event.get_date()
+                    v_place = v_event.get_place()
+
+                    if v_date is not None:
                         v_string = hkLanguage.translate("{0} died on {1}", self.__language__).format(v_he_she, v_date.__date_to_text__(False))
                         v_life_sketch = v_life_sketch + v_string
 
                         if v_place is not None:
-                            v_string = hkLanguage.translate("in {0}.", self.__language__).format(v_place.__place_to_text__(False))
+                            v_string = hkLanguage.translate("in {0}.", self.__language__).format(v_place.__city_to_text__(False))
                             v_life_sketch = v_life_sketch + ' ' + v_string
                         else:
                             v_life_sketch = v_life_sketch + ". "
 
                 # Burial
-                elif hkGrampsDb.c_event_burial in v_vital_event_keys:
-                    for v_event in v_person.__person_event_dict__[hkGrampsDb.c_event_burial]:
+                if not v_found:
+                    for v_event in v_person.get_events(hkGrampsDb.c_event_burial):
                         v_date = v_event.get_date()
                         v_place = v_event.get_place()
 
-                        v_string = hkLanguage.translate("{0} died about {1}", self.__language__).format(v_he_she, v_date.__date_to_text__(False))
-                        v_life_sketch = v_life_sketch + v_string
+                        if v_date is not None:
+                            v_string = hkLanguage.translate("{0} died about {1}", self.__language__).format(v_he_she, v_date.__date_to_text__(False))
+                            v_life_sketch = v_life_sketch + v_string
 
-                        if v_place is not None:
-                            v_string = hkLanguage.translate("and was buried in {0}.", self.__language__).format(v_place.__place_to_text__(False))
-                            v_life_sketch = v_life_sketch + ' ' + v_string + ' '
-                        else:
-                            v_life_sketch = v_life_sketch + ". "
+                            if v_place is not None:
+                                v_string = hkLanguage.translate("and was buried in {0}.", self.__language__).format(v_place.__city_to_text__(False))
+                                v_life_sketch = v_life_sketch + ' ' + v_string + ' '
+                            else:
+                                v_life_sketch = v_life_sketch + ". "
 
             v_life_sketch = v_life_sketch.replace(r"\n\n", r"\par")  # Replace double newline characters with \par
             v_life_sketch = v_life_sketch.replace(r"\newline\newline", r"par")  # Replace double newline characters with \par
@@ -401,23 +407,23 @@ class PersonChapter:
                 if v_person.__gender__ in hkGrampsDb.c_gender_dict:
                     v_table.add_row([hkLanguage.translate('gender', self.__language__) + ":", hkLanguage.translate(hkGrampsDb.c_gender_dict[v_person.__gender__], self.__language__)])
 
-                for v_event_key in v_person.__person_event_dict__.keys():
-                    if v_event_key in hkGrampsDb.c_vital_events_set:
-                        v_string_1 = "Date of " + hkGrampsDb.c_event_type_dict[v_event_key]
-                        v_string_2 = "Place of " + hkGrampsDb.c_event_type_dict[v_event_key]
+                for v_event in v_person.get_events(hkGrampsDb.c_vital_events_set):
+                    v_type = v_event.get_type()
+                    v_date = v_event.get_date()
+                    v_place = v_event.get_place()
 
-                        v_event_dict = v_person.__person_event_dict__[v_event_key]
-                        for v_event in v_event_dict:
-                            v_date = v_event.get_date()
-                            v_place = v_event.get_place()
+                    v_string_1 = "Date of " + hkGrampsDb.c_event_type_dict[v_type]
+                    v_string_2 = "Place of " + hkGrampsDb.c_event_type_dict[v_type]
 
-                            v_string3 = v_date.__date_to_text__(False)
-                            v_string4 = v_place.__place_to_text__(False)
+                    if v_date is not None:
+                        v_string3 = v_date.__date_to_text__(False)
+                        if len(v_string3) > 0:
+                            v_table.add_row([hkLanguage.translate(v_string_1, self.__language__) + ":", v_string3])
 
-                            if len(v_string3) > 0:
-                                v_table.add_row([hkLanguage.translate(v_string_1, self.__language__) + ":", v_string3])
-                            if len(v_string4) > 0:
-                                v_table.add_row([hkLanguage.translate(v_string_2, self.__language__) + ":", v_string4])
+                    if v_place is not None:
+                        v_string4 = v_place.__place_to_text__(True)
+                        if len(v_string4) > 0:
+                            v_table.add_row([hkLanguage.translate(v_string_2, self.__language__) + ":", v_string4])
 
             v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
@@ -586,18 +592,20 @@ class PersonChapter:
                             with v_sub_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
                                 for v_event_key in v_family_event_keys:
                                     for v_event in v_family_event_dict[v_event_key]:
-                                        v_date: hkDate.Date = v_event.get_date()
-                                        v_place: hkPlace.Place = v_event.get_place()
+                                        v_date = v_event.get_date()
+                                        v_place = v_event.get_place()
 
                                         v_string_1 = "Date of " + hkGrampsDb.c_event_type_dict[v_event_key]
                                         v_string_2 = "Place of " + hkGrampsDb.c_event_type_dict[v_event_key]
-                                        v_string_3 = v_date.get_start_date_text(False)
-                                        v_string_4 = v_place.__place_to_text__(True)
 
-                                        if len(v_string_3) > 0:
-                                            v_table.add_row([hkLanguage.translate(v_string_1, self.__language__) + ":", v_string_3])
-                                        if len(v_string_4) > 0:
-                                            v_table.add_row([hkLanguage.translate(v_string_2, self.__language__) + ":", v_string_4])
+                                        if v_date is not None:
+                                            v_string_3 = v_date.get_start_date_text(False)
+                                            if len(v_string_3) > 0:
+                                                v_table.add_row([hkLanguage.translate(v_string_1, self.__language__) + ":", v_string_3])
+                                        if v_place is not None:
+                                            v_string_4 = v_place.__place_to_text__(True)
+                                            if len(v_string_4) > 0:
+                                                v_table.add_row([hkLanguage.translate(v_string_2, self.__language__) + ":", v_string_4])
 
                             v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
@@ -699,13 +707,15 @@ class PersonChapter:
 
                                         v_string_1 = "Date of " + hkGrampsDb.c_event_type_dict[v_event_key]
                                         v_string_2 = "Place of " + hkGrampsDb.c_event_type_dict[v_event_key]
-                                        v_string_3 = v_date.get_start_date_text(False)
-                                        v_string_4 = v_place.__place_to_text__(True)
 
-                                        if len(v_string_3) > 0:
-                                            v_table.add_row([hkLanguage.translate(v_string_1, self.__language__) + ":", v_string_3])
-                                        if len(v_string_4) > 0:
-                                            v_table.add_row([hkLanguage.translate(v_string_2, self.__language__) + ":", v_string_4])
+                                        if v_date is not None:
+                                            v_string_3 = v_date.get_start_date_text(False)
+                                            if len(v_string_3) > 0:
+                                                v_table.add_row([hkLanguage.translate(v_string_1, self.__language__) + ":", v_string_3])
+                                        if v_place is not None:
+                                            v_string_4 = v_place.__place_to_text__(True)
+                                            if len(v_string_4) > 0:
+                                                v_table.add_row([hkLanguage.translate(v_string_2, self.__language__) + ":", v_string_4])
 
                             v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
@@ -753,35 +763,42 @@ class PersonChapter:
         
         v_person = self.__person__
 
+        # Create temporary list and sort
+        v_event_list = []
+        for v_event in v_person.get_events(hkGrampsDb.c_education_events_set):
+            v_event_list.append(v_event)
+
+        f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
+        v_event_list.sort(key=f_date_func)
+
         # Create section with Education
-        v_event_keys = hkGrampsDb.c_education_events_set.intersection(v_person.__person_event_dict__.keys())
-        if v_event_keys:
-            v_event_list = []
-            for v_event_key in v_event_keys:
-                v_event_list = v_event_list + v_person.__person_event_dict__[v_event_key]
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('education', self.__language__), pLabel=False) as v_sub_level:
+            with v_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
+                # Header row
+                v_table.add_row([pu.bold(hkLanguage.translate('date', self.__language__)), pu.bold(hkLanguage.translate('course', self.__language__))])
+                v_table.add_hline()
+                v_table.end_table_header()
 
-            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
-            v_event_list.sort(key=f_date_func)
+                # Add row for each event
+                for v_event in v_event_list:
+                    v_description = v_event.get_description()
+                    if len(v_description) == 0:
+                        v_description = '-'
 
-            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('education', self.__language__), pLabel=False) as v_sub_level:
-                with v_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
-                    # Header row
-                    v_table.add_row([pu.bold(hkLanguage.translate('date', self.__language__)), pu.bold(hkLanguage.translate('course', self.__language__))])
-                    v_table.add_hline()
-                    v_table.end_table_header()
+                    v_string_1 = ''
+                    v_date = v_event.get_date()
+                    if v_date is not None:
+                        v_string_1 = v_date.__date_to_text__(True)
 
-                    # Add row for each event
-                    for v_event in v_event_list:
-                        v_description = v_event.get_description()
-                        if len(v_description) == 0:
-                            v_description = '-'
+                    v_string_2 = ''
+                    v_place = v_event.get_place()
+                    if v_place is not None:
+                        v_string_2 = v_place.__place_to_text__()
 
-                        v_date = v_event.get_date()
-                        v_place = v_event.get_place()
-                        v_table.add_row([v_date.__date_to_text__(True), pu.escape_latex(v_description) + pl.NoEscape(r'\newline ') + pu.escape_latex(v_place.__place_to_text__())])
+                    v_table.add_row([v_string_1, pu.escape_latex(v_description) + pl.NoEscape(r'\newline ') + pu.escape_latex(v_string_2)])
 
-                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+            v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_profession_section(self, p_level):
         """
@@ -793,35 +810,42 @@ class PersonChapter:
 
         v_person = self.__person__
 
-        # Create section with Working Experience ***
-        v_event_keys = hkGrampsDb.c_professional_events_set.intersection(v_person.__person_event_dict__.keys())
-        if v_event_keys:
-            v_event_list = []
-            for v_event_key in v_event_keys:
-                v_event_list = v_event_list + v_person.__person_event_dict__[v_event_key]
+        # Create temporary list and sort
+        v_event_list = []
+        for v_event in v_person.get_events(hkGrampsDb.c_professional_events_set):
+            v_event_list.append(v_event)
 
-            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
-            v_event_list.sort(key=f_date_func)
+        f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
+        v_event_list.sort(key=f_date_func)
 
-            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('occupation', self.__language__), pLabel=False) as vSubLevel:
-                with vSubLevel.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
-                    # Header row
-                    v_table.add_row([pu.bold(hkLanguage.translate('date', self.__language__)), pu.bold(hkLanguage.translate('profession', self.__language__))])
-                    v_table.add_hline()
-                    v_table.end_table_header()
+        # Create section with Working Experience
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('occupation', self.__language__), pLabel=False) as v_sub_level:
+            with v_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
+                # Header row
+                v_table.add_row([pu.bold(hkLanguage.translate('date', self.__language__)), pu.bold(hkLanguage.translate('profession', self.__language__))])
+                v_table.add_hline()
+                v_table.end_table_header()
 
-                    # Add row for each event
-                    for v_event in v_event_list:
-                        v_description = v_event.get_description()
-                        if len(v_description) == 0:
-                            v_description = '-'
+                # Add row for each event
+                for v_event in v_event_list:
+                    v_description = v_event.get_description()
+                    if len(v_description) == 0:
+                        v_description = '-'
 
-                        v_date = v_event.get_date()
-                        v_place = v_event.get_place()
-                        v_table.add_row([v_date.__date_to_text__(True), pu.escape_latex(v_description) + pl.NoEscape(r'\newline ') + pu.escape_latex(v_place.__place_to_text__())])
+                    v_string_1 = ''
+                    v_date = v_event.get_date()
+                    if v_date is not None:
+                        v_string_1 = v_date.__date_to_text__(True)
 
-                vSubLevel.append(pl.NoEscape(r'\FloatBarrier'))
+                    v_string_2 = ''
+                    v_place = v_event.get_place()
+                    if v_place is not None:
+                        v_string_2 = v_place.__place_to_text__()
+
+                    v_table.add_row([v_string_1, pu.escape_latex(v_description) + pl.NoEscape(r'\newline ') + pu.escape_latex(v_string_2)])
+
+            v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_residence_section_map(self, p_level):
         """
@@ -837,153 +861,114 @@ class PersonChapter:
         # Work in Progress
         #
 
-        # Create section with Residential Information
-        v_residential_events = hkGrampsDb.c_residential_events_set.intersection(v_person.__person_event_dict__.keys())
-        if v_residential_events:
-            # Create path name for map
-            # v_path = self.__document_path + r'Figures'
+        # Create path name for map
+        # v_path = self.__document_path + r'Figures'
 
-            # Compose some temporary place type labels
-            v_city_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_city]
-            v_town_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_town]
-            v_village_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_village]
-            v_municipality_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_municipality]
-            v_country_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_country]
+        # Create minipage
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('residences', self.__language__), pLabel=False) as v_sub_level:
+            # Create Tikz drawing with map as background
+            # v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
 
-            # Compose residence list
-            v_residence_list = []
-            for v_event in v_residential_events:
-                v_residence_list = v_residence_list + v_person.__person_event_dict__[v_event]
+            # Create nodes
+            v_scope_open = False
+            v_done_list = []
+            v_counter = 0
 
-            # Create minipage
-            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('residences', self.__language__), pLabel=False) as v_sub_level:
-                # Create Tikz drawing with map as background
-                # v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
+            for v_residence in v_person.get_events(hkGrampsDb.c_residential_events_set):
+                v_counter = v_counter + 1
 
-                # Create nodes
-                v_scope_open = False
-                v_done_list = []
-                v_counter = 0
-                for v_residence in v_residence_list:
-                    v_counter = v_counter + 1
+                # Split date from place
+                # v_date = v_residence.get_date()
+                v_place = v_residence.get_place()
 
-                    # Split date from place
-                    # v_date = v_residence[0]
-                    v_place = v_residence[1]
+                # Find place name and coordinates
+                v_name = v_place.__city_to_text__()
+                v_latitude = v_place.__latitude__
+                v_longitude = v_place.__longitude__
 
-                    # Find place name and coordinates
-                    v_name: str = '-'
-                    v_latitude: float = 0.
-                    v_longitude: float = 0.
-                    # v_code: str = ''
-                    if v_city_label in v_place:
-                        v_name = v_place[v_city_label][0]
-                        v_latitude = float(v_place[v_city_label][1][0])
-                        v_longitude = float(v_place[v_city_label][1][1])
-                        # v_code = v_place[v_city_label][2]
-                    elif v_town_label in v_place:
-                        v_name = v_place[v_town_label][0]
-                        v_latitude = float(v_place[v_town_label][1][0])
-                        v_longitude = float(v_place[v_town_label][1][1])
-                        # v_code = v_place[v_town_label][2]
-                    elif v_village_label in v_place:
-                        v_name = v_place[v_village_label][0]
-                        v_latitude = float(v_place[v_village_label][1][0])
-                        v_longitude = float(v_place[v_village_label][1][1])
-                        # v_code = v_place[v_village_label][2]
-                    elif v_municipality_label in v_place:
-                        v_name = v_place[v_municipality_label][0]
-                        v_latitude = float(v_place[v_municipality_label][1][0])
-                        v_longitude = float(v_place[v_municipality_label][1][1])
-                        # v_code = v_place[v_municipality_label][2]
+                # Debug
+                logging.debug('v_name, v_longitude, v_latitude: %s, %5.3f. %5.3f', v_name, v_longitude, v_latitude)
+
+                v_country = v_place.get_country()
+                v_country_code = v_country.__place_code__
+                if len(v_country_code) == 0:
+                    v_country_code = v_country.__place_name__
+
+                # 20220109: Limit number of maps to The Netherlands, Western Europe and the World
+                if v_country_code != 'NLD':
+                    v_region_list = hkSupportFunctions.get_country_continent_subregion(v_country_code)
+                    if v_region_list[1] == 'Western Europe':
+                        v_country_code = 'WEU'
+                    elif v_region_list[0] == 'Europe':
+                        v_country_code = 'EUR'
                     else:
-                        print('Warning in hkPersonChapter.__WriteResidenceSection_Map: No valid city/village found in v_place: ', v_place)
+                        v_country_code = 'WLD'
 
-                    # Debug
-                    logging.debug('v_name, v_longitude, v_latititude: %s, %5.3f. %5.3f', v_name, v_longitude, v_latitude)
-                    
-                    if v_country_label in v_place:
-                        v_country = v_place[v_country_label][0]
-                        v_country_code = v_place[v_country_label][2]
+                # Create path / file name for map
+                v_path = self.__document_path__ + r'Figures'
+                v_file_path = hkSupportFunctions.create_map(v_path, v_country_code)
 
-                        if len(v_country_code) == 0:
-                            v_country_code = v_country
+                if v_country_code not in v_done_list:
+                    v_done_list.append(v_country_code)
 
-                    # 20220109: Limit number of maps to The Netherlands, Western Europe and the World
-                    if v_country_code != 'NLD':
-                        v_region_list = hkSupportFunctions.get_country_continent_subregion(v_country_code)
-                        if v_region_list[1] == 'Western Europe':
-                            v_country_code = 'WEU'
-                        elif v_region_list[0] == 'Europe':
-                            v_country_code = 'EUR'
-                        else:
-                            v_country_code = 'WLD'
-                    
-                    # Create path / file name for map
-                    v_path = self.__document_path__ + r'Figures'
-                    v_file_path = hkSupportFunctions.create_map(v_path, v_country_code)
+                    # Check if scope is still open
+                    if v_scope_open:
+                        v_sub_level.append(pu.NoEscape(r'\end{scope}'))
+                        v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))  # 20220109
+                        v_scope_open = False
 
-                    if v_country_code not in v_done_list:
-                        v_done_list.append(v_country_code)
-
-                        # Check if scope is still open
-                        if v_scope_open:
-                            v_sub_level.append(pu.NoEscape(r'\end{scope}'))
-                            v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))  # 20220109
-                            v_scope_open = False
-
-                        # Create node for background map
-                        v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))  # 20220109
-                        v_string = r'\node [inner sep=0] (' + v_country_code + r') {\includegraphics[width=10cm]{' + v_file_path + r'}};'
-                        v_sub_level.append(pu.NoEscape(v_string))
-
-                        # Create new scope with lower left corner (0,0) and upper right corner (1,1)
-                        v_string = r'\begin{scope}[x={(' + v_country_code + r'.south east)},y={(' + v_country_code + r'.north west)}]'
-                        v_sub_level.append(pu.NoEscape(v_string))
-                        v_scope_open = True
-
-                    # width and height in degrees
-                    v_coordinates = hkSupportFunctions.get_country_min_max_coordinates(v_country_code)
-                    v_map_lon0 = v_coordinates[0]
-                    v_map_lat0 = v_coordinates[1]
-                    v_map_lon1 = v_coordinates[2]
-                    v_map_lat1 = v_coordinates[3]
-
-                    # Debug
-                    logging.debug('v_map_lon0, v_map_lat0, v_map_lon1, v_map_lat1: %5.3f, %5.3f, %5.3f, %5.3f', v_map_lon0, v_map_lat0, v_map_lon1, v_map_lat1)
-
-                    # width and height in pixels
-                    v_map_width = 0
-                    v_map_height = 0
-                    with Image.open(v_file_path, mode='r') as vImage:
-                        v_map_width, v_map_height = vImage.size
-
-                    # Debug
-                    logging.debug('v_map_width, v_map_height: %d, %d', v_map_width, v_map_height)
-
-                    # Convert to image coordinates
-                    v_x = (v_longitude - v_map_lon0)/(v_map_lon1 - v_map_lon0)
-                    v_y = (v_latitude - v_map_lat0)/(v_map_lat1 - v_map_lat0)
-                    if v_x < 0 or v_y < 0:
-                        logging.warning('Place off map. v_x, v_y: %5.3f, %5.3f', v_x, v_y)
-
-                    v_string = r'\node (p' + str(v_counter) + r') at (' + str(v_x) + r', ' + str(v_y) + r') [point] {};'
+                    # Create node for background map
+                    v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))  # 20220109
+                    v_string = r'\node [inner sep=0] (' + v_country_code + r') {\includegraphics[width=10cm]{' + v_file_path + r'}};'
                     v_sub_level.append(pu.NoEscape(v_string))
 
-                # Create graph
-                # v_sub_level.append(pu.NoEscape(r'\graph [use existing nodes] {'))
-                #
-                # for vCount in range(2, v_counter + 1):
-                #     v_sub_level.append(pu.NoEscape(r'p' + str(vCount-1) + ' -> p' + str(vCount) + r';'))
-                #
-                # v_sub_level.append(pu.NoEscape(r'};'))
-                if v_scope_open:
-                    v_sub_level.append(pu.NoEscape(r'\end{scope}'))
-                    v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
-                    v_scope_open = False
+                    # Create new scope with lower left corner (0,0) and upper right corner (1,1)
+                    v_string = r'\begin{scope}[x={(' + v_country_code + r'.south east)},y={(' + v_country_code + r'.north west)}]'
+                    v_sub_level.append(pu.NoEscape(v_string))
+                    v_scope_open = True
 
-                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+                # width and height in degrees
+                v_coordinates = hkSupportFunctions.get_country_min_max_coordinates(v_country_code)
+                v_map_lon0 = v_coordinates[0]
+                v_map_lat0 = v_coordinates[1]
+                v_map_lon1 = v_coordinates[2]
+                v_map_lat1 = v_coordinates[3]
+
+                # Debug
+                logging.debug('v_map_lon0, v_map_lat0, v_map_lon1, v_map_lat1: %5.3f, %5.3f, %5.3f, %5.3f', v_map_lon0, v_map_lat0, v_map_lon1, v_map_lat1)
+
+                # width and height in pixels
+                v_map_width = 0
+                v_map_height = 0
+                with Image.open(v_file_path, mode='r') as vImage:
+                    v_map_width, v_map_height = vImage.size
+
+                # Debug
+                logging.debug('v_map_width, v_map_height: %d, %d', v_map_width, v_map_height)
+
+                # Convert to image coordinates
+                v_x = (v_longitude - v_map_lon0)/(v_map_lon1 - v_map_lon0)
+                v_y = (v_latitude - v_map_lat0)/(v_map_lat1 - v_map_lat0)
+                if v_x < 0 or v_y < 0:
+                    logging.warning('Place off map. v_x, v_y: %5.3f, %5.3f', v_x, v_y)
+
+                v_string = r'\node (p' + str(v_counter) + r') at (' + str(v_x) + r', ' + str(v_y) + r') [point] {};'
+                v_sub_level.append(pu.NoEscape(v_string))
+
+            # Create graph
+            # v_sub_level.append(pu.NoEscape(r'\graph [use existing nodes] {'))
+            #
+            # for vCount in range(2, v_counter + 1):
+            #     v_sub_level.append(pu.NoEscape(r'p' + str(vCount-1) + ' -> p' + str(vCount) + r';'))
+            #
+            # v_sub_level.append(pu.NoEscape(r'};'))
+            if v_scope_open:
+                v_sub_level.append(pu.NoEscape(r'\end{scope}'))
+                v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
+                v_scope_open = False
+
+            v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_residence_section_timeline(self, p_level):
         """
@@ -995,44 +980,54 @@ class PersonChapter:
 
         v_person = self.__person__
 
+        # Create temporary list and sort
+        v_event_list = []
+        for v_event in v_person.get_events(hkGrampsDb.c_residential_events_set):
+            v_event_list.append(v_event)
+
+        f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
+        v_event_list.sort(key=f_date_func)
+
         # Create section with Residential Information
-        v_event_keys = hkGrampsDb.c_residential_events_set.intersection(v_person.__person_event_dict__.keys())
-        if v_event_keys:
-            v_event_list = []
-            for v_event_key in v_event_keys:
-                v_event_list = v_event_list + v_person.__person_event_dict__[v_event_key]
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('residences', self.__language__), pLabel=False) as v_sub_level:
+            # Create nodes
+            v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
+            v_sub_level.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
 
-            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
-            v_event_list.sort(key=f_date_func)
+            v_counter = 0
+            for v_event in v_event_list:
+                v_counter = v_counter + 1
 
-            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('residences', self.__language__), pLabel=False) as v_sub_level:
-                # Create nodes
-                v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
-                v_sub_level.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
+                v_string_1 = ''
+                v_date = v_event.get_date()
+                if v_date is not None:
+                    v_string_1 = v_date.get_start_date_text()
 
-                v_counter = 0
-                for v_event in v_event_list:
-                    v_counter = v_counter + 1
+                v_string_2 = ''
+                v_place = v_event.get_place()
+                if v_place is not None:
+                    v_string_2 = v_place.__street_to_text__()
+                    if len(v_string_2) > 0:
+                        v_string_2 = v_string_2 + ", " + v_place.__city_to_text__()
+                    else:
+                        v_string_2 = v_place.__city_to_text__()
 
-                    v_start_date = v_event.get_date().get_start_date_text()
-                    v_address = v_event.get_place().__street_to_text__()
+                v_string_3 = r'\node (p' + str(v_counter) + r') [date] {\small ' + v_string_1 + r'}; & '
+                v_string_3 = v_string_3 + r'\node [text width=10cm] {\small ' + pu.escape_latex(v_string_2) + r'};\\'
+                v_sub_level.append(pu.NoEscape(v_string_3))
 
-                    v_string = r'\node (p' + str(v_counter) + r') [date] {\small ' + v_start_date + r'}; & '
-                    v_string = v_string + r'\node [text width=10cm] {\small ' + pu.escape_latex(v_address) + r'};\\'
-                    v_sub_level.append(pu.NoEscape(v_string))
+            v_sub_level.append(pu.NoEscape(r'};'))
 
-                v_sub_level.append(pu.NoEscape(r'};'))
+            # Create graph
+            v_sub_level.append(pu.NoEscape(r'\graph [use existing nodes] {'))
 
-                # Create graph
-                v_sub_level.append(pu.NoEscape(r'\graph [use existing nodes] {'))
+            for v_count in range(2, v_counter + 1):
+                v_sub_level.append(pu.NoEscape(r'p' + str(v_count-1) + ' -> p' + str(v_count) + r';'))
 
-                for v_count in range(2, v_counter + 1):
-                    v_sub_level.append(pu.NoEscape(r'p' + str(v_count-1) + ' -> p' + str(v_count) + r';'))
-
-                v_sub_level.append(pu.NoEscape(r'};'))
-                v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
-                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+            v_sub_level.append(pu.NoEscape(r'};'))
+            v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
+            v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_residence_section_table(self, p_level):
         """
@@ -1044,30 +1039,41 @@ class PersonChapter:
 
         v_person = self.__person__
 
+        # Create temporary list and sort
+        v_event_list = []
+        for v_event in v_person.get_events(hkGrampsDb.c_residential_events_set):
+            v_event_list.append(v_event)
+
+        f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
+        v_event_list.sort(key=f_date_func)
+
         # Create section with Residential Information
-        v_event_keys = hkGrampsDb.c_residential_events_set.intersection(v_person.__person_event_dict__.keys())
-        if v_event_keys:
-            v_event_list = []
-            for v_event_key in v_event_keys:
-                v_event_list = v_event_list + v_person.__person_event_dict__[v_event_key]
+        p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
+        with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('residences', self.__language__), pLabel=False) as v_sub_level:
+            with v_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
+                # Header row
+                v_table.add_row([pu.bold(hkLanguage.translate('date', self.__language__)), pu.bold(hkLanguage.translate('residence', self.__language__))])
+                v_table.add_hline()
+                v_table.end_table_header()
 
-            f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
-            v_event_list.sort(key=f_date_func)
+                for v_event in v_event_list:
+                    v_string_1 = ''
+                    v_date = v_event.get_date()
+                    if v_date is not None:
+                        v_string_1 = v_date.__date_to_text__()
 
-            p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
-            with hkLatex.CreateSubLevel(pLevel=p_level, pTitle=hkLanguage.translate('residences', self.__language__), pLabel=False) as v_sub_level:
-                with v_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
-                    # Header row
-                    v_table.add_row([pu.bold(hkLanguage.translate('date', self.__language__)), pu.bold(hkLanguage.translate('residence', self.__language__))])
-                    v_table.add_hline()
-                    v_table.end_table_header()
+                    v_string_2 = ''
+                    v_place = v_event.get_place()
+                    if v_place is not None:
+                        v_string_2 = v_place.__street_to_text__(True)
+                        if len(v_string_2) > 0:
+                            v_string_2 = v_string_2 + ", " + v_place.__city_to_text__()
+                        else:
+                            v_string_2 = v_place.__city_to_text__()
 
-                    for v_event in v_event_list:
-                        v_date = v_event.get_date().__date_to_text__()
-                        v_address = v_event.get_place().__street_to_text__()
-                        v_table.add_row([v_date, pu.escape_latex(v_address)])
+                    v_table.add_row([v_string_1, pu.escape_latex(v_string_2)])
 
-                v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
+            v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
     def __write_timeline_section(self, p_level):
         """
@@ -1079,49 +1085,24 @@ class PersonChapter:
 
         # TODO: Work in Progress
 
-        def __add_to_timeline(p_person_handle, p_timeline_events, p_birth_date, p_death_date):
-            v_person = hkPerson.Person(p_person_handle, self.__cursor__)
-            for v_event_key in v_person.__person_event_dict__:
-                if v_event_key in hkGrampsDb.c_vital_events_set:
-                    for v_event in v_person.__person_event_dict__[v_event_key]:
-                        v_type = v_event.get_type()
-                        v_date = v_event.get_date()
-
-                        if isinstance(v_date, list):  # TODO: Check if we do not omit too much data sets...
-                            # Only include events that happen during the lifetime of the main person
-                            # v_date_time = datetime.date(v_date[3], v_date[2], v_date[1])
-                            v_date_time = hkSupportFunctions.gramps_date_to_python_date(v_date[1:4])  # TODO: Replcae by object method
-                            if (p_birth_date is None) or (v_date_time > p_birth_date):
-                                if (p_death_date is None) or (v_date_time < p_death_date):
-                                    v_place = v_event.get_place()
-                                    v_description = v_event.__description__
-                                    if len(v_description) == 0:
-                                        v_description = hkLanguage.translate(hkGrampsDb.c_event_type_dict[v_type]) + ' ' + v_person.__given_names__ + ' ' + v_person.__surname__
-
-                                    v_list = [v_date, v_type, v_place, v_description]
-                                    if p_timeline_events is None:
-                                        p_timeline_events = [v_list]
-                                    else:
-                                        p_timeline_events.append(v_list)
-
         def __date_to_timeline(p_date, p_timeline_start_date, p_timeline_end_date, p_length_timeline=20):
             v_distance = (p_date - p_timeline_start_date) * p_length_timeline / (p_timeline_end_date - p_timeline_start_date)
 
             return v_distance
 
         def __calculate_start_end_dates(p_birth_date, p_death_date):
-            if p_birth_date is None:
-                if p_death_date is None:
+            if (p_birth_date is None) or (p_birth_date.get_start_date() is None):
+                if (p_death_date is None) or (p_death_date.get_start_date() is None):
                     v_start_date = datetime.date(datetime.date.today().year, 1, 1)
                 else:
-                    v_start_date = datetime.date(p_death_date.year - 100, 1, 1)
+                    v_start_date = datetime.date(p_death_date.get_start_date().year - 100, 1, 1)
             else:
-                v_start_date = datetime.date(p_birth_date.year, 1, 1)
+                v_start_date = datetime.date(p_birth_date.get_start_date().year, 1, 1)
 
-            if p_death_date is None:
+            if (p_death_date is None) or (p_death_date.get_start_date() is None):
                 v_end_date = datetime.date(v_start_date.year + 100, 1, 1)
             else:
-                v_end_date = datetime.date(p_death_date.year + 1, 1, 1)
+                v_end_date = datetime.date(p_death_date.get_start_date().year + 1, 1, 1)
 
             v_today = datetime.date.today()
             if v_end_date > v_today:
@@ -1136,67 +1117,93 @@ class PersonChapter:
         # Initialise variables
         v_person = self.__person__
 
-        v_timeline_events = []
-
         v_birth_date = None
         v_death_date = None
 
-        # Copy the vital and residence events from the personal events dictionary
-        for v_event_key in v_person.__person_event_dict__:
-            if (v_event_key in hkGrampsDb.c_vital_events_set) or (v_event_key in hkGrampsDb.c_residential_events_set):
-                for v_event in v_person.__person_event_dict__[v_event_key]:
-                    v_type = v_event.get_type()
-                    v_date = v_event.get_date()
-                    v_place = v_event.get_place()
-                    v_description = v_event.__description__
-                    if len(v_description) == 0:
-                        v_description = hkLanguage.translate(hkGrampsDb.c_event_type_dict[v_type]) + ' ' + v_person.__given_names__ + ' ' + v_person.__surname__
+        # Store vital events in a list
+        v_timeline_events = []
+        v_number_vital_events = 0
+        v_number_residential_events = 0
 
-                    # Store birth / baptism and death / burial separately for later comparison
-                    if v_type == hkGrampsDb.c_event_birth:
-                        v_birth_date = v_date
-                    elif v_type == hkGrampsDb.c_event_baptism and v_birth_date is None:
-                        v_birth_date = v_date
-                    elif v_type == hkGrampsDb.c_event_death:
-                        v_death_date = v_date
-                    elif v_type == hkGrampsDb.c_event_burial and v_death_date is None:
-                        v_death_date = v_date
+        v_generator = v_person.get_events(hkGrampsDb.c_vital_events_set.union(hkGrampsDb.c_residential_events_set), {hkGrampsDb.c_role_primary, hkGrampsDb.c_role_family})
+        for v_event in v_generator:
+            # Add event to list
+            if v_event.get_date() is not None:
+                if v_event.get_date().get_start_date() is not None:
+                    v_timeline_events.append(v_event)
 
-                    # Add event to list
-                    v_list = [v_date, v_type, v_place, v_description]
-                    if v_timeline_events is None:
-                        v_timeline_events = [v_list]
-                    else:
-                        v_timeline_events.append(v_list)
+                    if v_event.get_type() in hkGrampsDb.c_vital_events_set:
+                        v_number_vital_events = v_number_vital_events + 1
+
+                    elif v_event.get_type() in hkGrampsDb.c_residential_events_set:
+                        v_number_residential_events = v_number_residential_events + 1
+
+            # Store birth / baptism and death / burial separately for later comparison
+            v_type = v_event.get_type()
+            v_date = v_event.get_date()
+
+            if v_type == hkGrampsDb.c_event_birth:
+                v_birth_date = v_date
+            elif (v_type == hkGrampsDb.c_event_baptism) and (v_birth_date is None):
+                v_birth_date = v_date
+            elif v_type == hkGrampsDb.c_event_death:
+                v_death_date = v_date
+            elif (v_type == hkGrampsDb.c_event_burial) and (v_death_date is None):
+                v_death_date = v_date
 
         # Merge the family events
-        for v_event_key in v_person.__family_event_dict__:
-            v_type = v_event_key
-            for v_event in v_person.__family_event_dict__[v_event_key]:
-                v_date = v_event[0]
-                v_place = v_event[1]
-                v_description = v_event[2]
-                if len(v_description) == 0:
-                    v_description = hkLanguage.translate(hkGrampsDb.c_event_type_dict[v_type])  # TODO: extent with partner name
+        for v_family_handle in v_person.__family_list__:
+            v_family = hkFamily.Family(v_family_handle, self.__cursor__)
 
-                v_list = [v_date, v_type, v_place, v_description]
-                if v_timeline_events is None:
-                    v_timeline_events = [v_list]
-                else:
-                    v_timeline_events.append(v_list)
+            for v_event in v_family.get_events(hkGrampsDb.c_family_events_set.union(hkGrampsDb.c_residential_events_set)):
+                if v_event.get_date() is not None:
+                    if v_event.get_date().get_start_date() is not None:
+                        v_timeline_events.append(v_event)
+
+                        if v_event.get_type() in hkGrampsDb.c_family_events_set:
+                            v_number_vital_events = v_number_vital_events + 1
+
+                        elif v_event.get_type() in hkGrampsDb.c_residential_events_set:
+                            v_number_residential_events = v_number_residential_events + 1
 
         # Merge the vital information of partners
         for v_partner_handle in v_person.get_partners():
             if v_partner_handle is not None:  # TODO: Also handle families with unknown partners
-                __add_to_timeline(v_partner_handle, v_timeline_events, v_birth_date, v_death_date)
+                v_partner = hkPerson.Person(v_partner_handle, self.__cursor__)
+
+                for v_event in v_partner.get_events({hkGrampsDb.c_event_birth, hkGrampsDb.c_event_death}):
+                    if v_event.get_date() is not None:
+                        v_start_date = v_event.get_date().get_start_date()
+
+                        if v_start_date is not None:
+                            if v_death_date is not None:
+                                if v_start_date < v_death_date.get_start_date():
+                                    v_timeline_events.append(v_event)
+                                    v_number_vital_events = v_number_vital_events + 1
+                            else:
+                                v_timeline_events.append(v_event)
+                                v_number_vital_events = v_number_vital_events + 1
 
         # Merge the vital information of children
         for v_child_handle in v_person.get_children():
             if v_child_handle is not None:
-                __add_to_timeline(v_child_handle, v_timeline_events, v_birth_date, v_death_date)
+                v_child = hkPerson.Person(v_child_handle, self.__cursor__)
+
+                for v_event in v_child.get_events({hkGrampsDb.c_event_birth, hkGrampsDb.c_event_death}):
+                    if v_event.get_date() is not None:
+                        v_start_date = v_event.get_date().get_start_date()
+
+                        if v_start_date is not None:
+                            if v_death_date is not None:
+                                if v_start_date < v_death_date.get_start_date():
+                                    v_timeline_events.append(v_event)
+                                    v_number_vital_events = v_number_vital_events + 1
+                            else:
+                                v_timeline_events.append(v_event)
+                                v_number_vital_events = v_number_vital_events + 1
 
         # Sort the list
-        f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x[0][3], x[0][2], x[0][1]) if (x[0] != '-') else '-'
+        f_date_func = lambda x: "{0:0>4}{1:0>2}{2:0>2}".format(x.get_date().get_start_date().year, x.get_date().get_start_date().month, x.get_date().get_start_date().day) if (x.get_date().get_start_date() is not None) else '-'
         v_timeline_events.sort(key=f_date_func)
 
         # Determine the start and end dates for the timeline
@@ -1208,20 +1215,130 @@ class PersonChapter:
             # Create nodes
             v_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
 
+            # v_sub_level.append(pu.NoEscape(r'\linespread{0.5}'))
+
             # Define style
             v_sub_level.append(pu.NoEscape(r'[eventmarker/.style = {circle, draw = red!50, fill = red!20, thick, inner sep = 0 pt, minimum size = 5 pt},'))
             v_sub_level.append(pu.NoEscape(r'eventlabel/.style = {},'))
-            v_sub_level.append(pu.NoEscape(r'residencemarker/.style = {circle, draw = green!50, fill = green!20, thick, inner sep = 0 pt, minimum size = 5 pt},'))
-            v_sub_level.append(pu.NoEscape(r'residencelink/.style = {draw = green!50},'))
+            v_sub_level.append(pu.NoEscape(r'residencemarker/.style = {circle, draw = blue!50, fill = blue!20, thick, inner sep = 0 pt, minimum size = 5 pt},'))
+            v_sub_level.append(pu.NoEscape(r'residenceperiod/.style = {rounded corners, draw = blue!50, fill = blue!20, thick, inner sep = 0 pt, minimum size = 5 pt},'))
+            v_sub_level.append(pu.NoEscape(r'residencelink/.style = {draw = blue!50},'))
             v_sub_level.append(pu.NoEscape(r'residencelabel/.style = {},'))
             v_sub_level.append(pu.NoEscape(r'nostyle/.style = {}]'))
 
-            # Draw the major timeline
+            # Calculate the start and end points of the timeline
             v_start_point = __date_to_timeline(v_start_date, v_start_date, v_end_date)
             v_end_point = __date_to_timeline(v_end_date, v_start_date, v_end_date)
-            v_sub_level.append(pu.NoEscape(r'\draw[->, very thick] (0cm, ' + str(v_start_point) + r'cm) -- (0cm, ' + str(v_end_point) + r'cm);'))
 
-            # Draw the decennial tick lines and display the year label
+            # Draw the events in the timeline
+            v_count = 0
+            v_count_left = 0
+            v_count_right = 0
+            c_text_width = 6.5
+
+            # First all Residents...
+            for v_event in v_timeline_events:
+                v_date = v_event.get_date()
+                v_type = v_event.get_type()
+                v_place = v_event.get_place()
+                # v_description = v_event.get_description()
+
+                if (v_date is not None) and (v_place is not None):
+                    v_place_text = v_place.__street_to_text__()
+                    if len(v_place_text) > 0:
+                        v_place_text = v_place_text + ", " + v_place.__city_to_text__()
+                    else:
+                        v_place_text = v_place.__city_to_text__()
+
+                    if v_type in hkGrampsDb.c_residential_events_set:
+                        # Residence to the right
+                        if (v_date.get_start_date() is not None) and (v_date.get_end_date() is None):  # Single date events
+                            v_date_1 = v_event.get_date().get_start_date()
+                            v_date_point_1 = __date_to_timeline(v_date_1, v_start_date, v_end_date)
+
+                            v_label_point_1 = v_start_point + v_count_right * (v_end_point - v_start_point) / v_number_residential_events
+                            v_count_right = v_count_right + 1
+
+                            v_count = v_count + 1
+                            v_marker_name_1 = r'marker_' + str(v_count)
+                            v_label_name_1 = r'label_' + str(v_count)
+
+                            v_label = v_place_text + r'\\' + v_date.__date_to_text__()
+                            v_sub_level.append(pu.NoEscape(r'\node [residencemarker] (' + v_marker_name_1 + r') at (0 cm,' + str(v_date_point_1) + r' cm) {};'))
+                            v_sub_level.append(pu.NoEscape(r'\node [residencelabel, right=of ' + v_marker_name_1 + r', align=left, text width=' + str(c_text_width) + r' cm] (' + v_label_name_1 + r') at (+1.0 cm,' + str(v_date_point_1) + r' cm) {\tiny ' + v_label + r'};'))
+                            v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_1 + r'.east) -- (' + v_label_name_1 + r'.west);'))
+                            v_sub_level.append(pu.NoEscape(r'%'))
+
+                        elif (v_date.get_start_date() is not None) and (v_date.get_end_date() is not None):  # Dual date events
+                            v_date_1 = v_date.get_start_date()
+                            v_date_2 = v_date.get_end_date()
+
+                            v_date_point_1 = __date_to_timeline(v_date_1, v_start_date, v_end_date)
+                            v_date_point_2 = __date_to_timeline(v_date_2, v_start_date, v_end_date)
+                            v_date_point_3 = (v_date_point_1 + v_date_point_2) / 2
+
+                            v_label_point_1 = v_start_point + v_count_right * (v_end_point - v_start_point) / v_number_residential_events
+                            v_count_right = v_count_right + 1
+
+                            v_hor_point = 0.0  # 1.0 if v_count_right % 2 == 0 else 2.0 # TODO: Remove?
+
+                            v_count = v_count + 1
+                            v_marker_name_1 = r'marker_' + str(v_count)
+
+                            v_count = v_count + 1
+                            v_marker_name_2 = r'marker_' + str(v_count)
+
+                            v_count = v_count + 1
+                            v_marker_name_3 = r'marker_' + str(v_count)
+
+                            v_count = v_count + 1
+                            v_label_name = r'label_' + str(v_count)
+
+                            v_label = v_place_text + r'\\' + v_date.__date_to_text__()
+
+                            # Coordinates for time span
+                            v_sub_level.append(pu.NoEscape(r'\coordinate (' + v_marker_name_1 + r') at (' + str(v_hor_point) + 'cm - 0.1cm,' + str(v_date_point_1) + r' cm) {};'))
+                            v_sub_level.append(pu.NoEscape(r'\coordinate (' + v_marker_name_2 + r') at (' + str(v_hor_point) + 'cm + 0.1cm,' + str(v_date_point_2) + r' cm) {};'))
+                            v_sub_level.append(pu.NoEscape(r'\coordinate (' + v_marker_name_3 + r') at (' + str(v_hor_point) + 'cm + 0.1cm,' + str(v_date_point_3) + r' cm) {};'))
+
+                            v_sub_level.append(pu.NoEscape(r'\draw [residenceperiod] (' + v_marker_name_1 + r') rectangle (' + v_marker_name_2 + r');'))
+                            # v_sub_level.append(pu.NoEscape(r'\node [residencelabel, right=of ' + v_marker_name_3 + r'align=left, text width=' + str(c_text_width) + r' cm] (' + v_label_name + r') at (+1.0 cm,' + str(v_date_point_3) + r' cm) {\tiny ' + v_label + r'};'))
+                            v_sub_level.append(pu.NoEscape(r'\node [residencelabel, right=of ' + v_marker_name_3 + r'align=left, text width=' + str(c_text_width) + r' cm, anchor=west] (' + v_label_name + r') at (+1.0 cm,' + str(v_date_point_3) + r' cm) {\tiny ' + v_label + r'};'))
+                            v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_3 + r') -- (' + v_label_name + r'.west);'))
+
+                            v_sub_level.append(pu.NoEscape(r'%'))
+
+            # ...next all Life Events...
+            for v_event in v_timeline_events:
+                v_date = v_event.get_date()
+                v_type = v_event.get_type()
+                # v_place = v_event.get_place().__street_to_text__()
+                v_description = v_event.get_description()
+
+                if (v_date is not None) and (v_place is not None):
+                    if v_type in hkGrampsDb.c_vital_events_set.union(hkGrampsDb.c_family_events_set):
+                        # Life events to the left
+                        v_date_1 = v_date.get_start_date()
+                        v_date_point_1 = __date_to_timeline(v_date_1, v_start_date, v_end_date)
+                        v_label_point_1 = v_start_point + v_count_left * (v_end_point - v_start_point) / v_number_vital_events
+
+                        v_count_left = v_count_left + 1
+
+                        v_count = v_count + 1
+                        v_marker_name_1 = r'marker_' + str(v_count)
+                        v_label_name_1 = r'label_' + str(v_count)
+                        v_label = pu.escape_latex(v_description)
+
+                        v_sub_level.append(pu.NoEscape(r'\node [eventmarker] (' + v_marker_name_1 + r') at (0 cm,' + str(v_date_point_1) + r' cm) {};'))
+                        v_sub_level.append(pu.NoEscape(r'\node [eventlabel, left=of ' + v_marker_name_1 + r', align=right, text width=' + str(c_text_width) + r' cm] (' + v_label_name_1 + r') at (-1.0 cm,' + str(v_label_point_1) + r' cm) {\tiny ' + v_label + r'};'))
+                        v_sub_level.append(pu.NoEscape(r'\draw (' + v_marker_name_1 + r'.west) -- (' + v_label_name_1 + r'.east);'))
+                        v_sub_level.append(pu.NoEscape(r'%'))
+
+            # ...then the major timeline...
+            v_sub_level.append(pu.NoEscape(r'\draw[->, very thick] (0cm, ' + str(v_start_point) + r'cm) -- (0cm, ' + str(v_end_point) + r'cm);'))
+            v_sub_level.append(pu.NoEscape(r'%'))
+
+            # ... and finally the decennial tick lines and the year labels
             v_string = str(v_start_point) + r'/' + str(v_start_date.year)
             for v_year in range(v_start_date.year + 10, v_end_date.year, 10):
                 v_date = datetime.date(v_year, 1, 1)
@@ -1229,78 +1346,8 @@ class PersonChapter:
                 v_string = v_string + r',' + str(v_date_point) + r'/' + str(v_year)
 
             v_sub_level.append(pu.NoEscape(r'\foreach \y/\ytext in {' + v_string + r'}'))
-            v_sub_level.append(pu.NoEscape(r'\draw[thick, yshift =\y cm] (-2pt, 0pt) - - (2pt, 0pt) node[left=2pt] {$\ytext$};'))
-
-            # Draw the events in the timeline
-            v_count = 0
-            for v_event in v_timeline_events:
-                v_date_label = hkSupportFunctions.date_to_text(v_event[0])  # TODO: change to object method call
-                v_type = v_event[1]
-                v_place = hkSupportFunctions.street_to_text(v_event[2])  # TODO: change to object method call
-                v_description = v_event[3]
-
-                if v_type in hkGrampsDb.c_residential_events_set:
-                    # Residence to the left
-                    if len(v_event[0]) == 4:  # Single date events
-                        v_date_1 = hkSupportFunctions.gramps_date_to_python_date(v_event[0][1:4])  # TODO: Replcae by object method
-                        v_date_point_1 = __date_to_timeline(v_date_1, v_start_date, v_end_date)
-
-                        v_count = v_count + 1
-                        v_marker_name_1 = r'marker_' + str(v_count)
-                        v_label_name_1 = r'label_' + str(v_count)
-
-                        v_label = v_place + r'\\' + v_date_label
-                        v_sub_level.append(pu.NoEscape(r'\node [residencemarker] (' + v_marker_name_1 + r') at (0 cm,' + str(v_date_point_1) + r' cm) {};'))
-                        # v_sub_level.append(pu.NoEscape(r'\node [residencelabel] (' + v_label_name_1 + r') at (-2 cm,' + str(v_date_point_1) + r' cm) [label={[align=right, rotate=0]left:' + v_label + r'}] {};'))
-                        v_sub_level.append(pu.NoEscape(r'\node [residencelabel, left=of ' + v_marker_name_1 + r', align=right, text width=5cm] (' + v_label_name_1 + r') at (-2 cm,' + str(v_date_point_1) + r' cm) {' + v_label + r'};'))
-                        v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_1 + r'.west) -- (' + v_label_name_1 + r'.east);'))
-                    elif len(v_event[0]) == 7:  # Dual date events
-                        v_date_1 = hkSupportFunctions.gramps_date_to_python_date(v_event[0][1:4])  # TODO: Replcae by object method
-                        v_date_2 = hkSupportFunctions.gramps_date_to_python_date(v_event[0][4:7])  # TODO: Replcae by object method
-
-                        v_date_point_1 = __date_to_timeline(v_date_1, v_start_date, v_end_date)
-                        v_date_point_2 = __date_to_timeline(v_date_2, v_start_date, v_end_date)
-                        v_date_point_3 = (v_date_point_1 + v_date_point_2) / 2
-
-                        v_count = v_count + 1
-                        v_marker_name_1 = r'marker_' + str(v_count)
-
-                        v_count = v_count + 1
-                        v_marker_name_2 = r'marker_' + str(v_count)
-
-                        v_count = v_count + 1
-                        v_marker_name_3 = r'marker_' + str(v_count)
-
-                        v_count = v_count + 1
-                        v_marker_name_4 = r'marker_' + str(v_count)
-
-                        v_label_name = r'label_' + str(v_count)
-
-                        v_label = v_place + r'\\' + v_date_label
-                        v_sub_level.append(pu.NoEscape(r'\node [residencemarker] (' + v_marker_name_1 + r') at (0 cm,' + str(v_date_point_1) + r' cm) {};'))
-                        v_sub_level.append(pu.NoEscape(r'\node [residencemarker] (' + v_marker_name_2 + r') at (0 cm,' + str(v_date_point_2) + r' cm) {};'))
-                        v_sub_level.append(pu.NoEscape(r'\coordinate (' + v_marker_name_3 + r') at (-2 cm,' + str(v_date_point_1) + r' cm + 3pt) {};'))
-                        v_sub_level.append(pu.NoEscape(r'\coordinate (' + v_marker_name_4 + r') at (-2 cm,' + str(v_date_point_2) + r' cm - 3pt) {};'))
-
-                        v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_1 + r'.west) -- (' + v_marker_name_3 + r');'))
-                        v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_2 + r'.west) -- (' + v_marker_name_4 + r');'))
-                        v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_3 + r') -- (' + v_marker_name_4 + r');'))
-
-                        v_sub_level.append(pu.NoEscape(r'\node [residencelabel, left=of ' + v_marker_name_1 + r', align=right, text width=5cm] (' + v_label_name + r') at (-2 cm,' + str(v_date_point_3) + r' cm) {' + v_label + r'};'))
-                else:
-                    # Life events to the right
-                    if len(v_event[0]) == 4:  # Single date events
-                        v_date_1 = hkSupportFunctions.gramps_date_to_python_date(v_event[0][1:4])  # TODO: Replcae by object method
-                        v_date_point_1 = __date_to_timeline(v_date_1, v_start_date, v_end_date)
-
-                        v_count = v_count + 1
-                        v_marker_name_1 = r'marker_' + str(v_count)
-                        v_label_name_1 = r'label_' + str(v_count)
-
-                        v_label = v_description + r'\\' + v_date_label + r', ' + v_place
-                        v_sub_level.append(pu.NoEscape(r'\node [eventmarker] (' + v_marker_name_1 + r') at (0 cm,' + str(v_date_point_1) + r' cm) {};'))
-                        v_sub_level.append(pu.NoEscape(r'\node [eventlabel, right=of ' + v_marker_name_1 + r', align=left, text width=5cm] (' + v_label_name_1 + r') at (1 cm,' + str(v_date_point_1) + r' cm) {' + v_label + r'};'))
-                        v_sub_level.append(pu.NoEscape(r'\draw (' + v_marker_name_1 + r'.east) -- (' + v_label_name_1 + r'.west);'))
+            v_sub_level.append(pu.NoEscape(r'\draw[thick, yshift =\y cm] (-2pt, 0pt) - - (2pt, 0pt) node[left=2pt, fill=white] {$\ytext$};'))
+            v_sub_level.append(pu.NoEscape(r'%'))
 
             v_sub_level.append(pu.NoEscape(r'\end{tikzpicture}'))
             v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
@@ -1480,6 +1527,6 @@ class PersonChapter:
         # self.__WriteResidenceSection_Map(v_chapter)
         self.__write_photo_section(v_chapter)
         self.__write_document_section(v_chapter)
-        # self.__write_timeline_section(v_chapter)
+        self.__write_timeline_section(v_chapter)
 
         v_chapter.generate_tex(filepath=self.__document_path__ + v_person.__gramps_id__)

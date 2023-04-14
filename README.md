@@ -12,8 +12,8 @@ The project consists of three folders:
 
 ## Usage
 ### Start programme
-To start, open a terminal window, `cd` to the project folder `...\GenealogyBook\source` and start python3 environment with `python`.
-Next `import hkGenealogyBook` and start with `hkGenealogyBook.Main()`
+To start, open a terminal window, `cd` to the project folder `...\GenealogyBook\source`.
+From there, execute `python hkBook.py`.
 
 ### Book
 The python scripts will create a LaTeX book, for which the file name of the main document can be set in `hkGenealogyBook.py`, and is by deafult set to `MyBook.tex`.

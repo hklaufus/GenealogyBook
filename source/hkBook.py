@@ -232,7 +232,7 @@ def write_main_document(p_cursor, p_book_parameters):
 
 def main():
     # Set logging level
-    logging.basicConfig(filename='debug.log', format='%(module)s:%(funcName)s:%(levelname)s:%(message)s', level=logging.DEBUG)
+    logging.basicConfig(filename='debug.log', format='%(module)s:%(funcName)s:%(levelname)s:%(message)s', level=logging.WARNING)
 
     # ReadDatabase()
     v_book_parameters = read_config_xml()

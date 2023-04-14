@@ -70,7 +70,7 @@ class Ahnentafel:
                                 self.__chapter__.append(pl.NoEscape(r'\begin{longtabu}{p{\dimexpr.7\textwidth} p{\dimexpr.3\textwidth}}%'))
 
                     v_person = hkPerson.Person(v_person_handle, self.__cursor__)
-                    v_source_status = v_person.__source_status__
+                    v_source_status = v_person.get_source_status()
 
                     if v_generation_index == 1:
                         v_new_binary_string = 'X'
