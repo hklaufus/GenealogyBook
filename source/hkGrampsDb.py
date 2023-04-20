@@ -93,6 +93,7 @@ c_education_events_set = {
     c_event_graduation}
 
 c_professional_events_set = {
+    c_event_military_service,
     c_event_occupation}  # , c_event_retirement}
 
 c_residential_events_set = {

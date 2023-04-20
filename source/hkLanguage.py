@@ -142,7 +142,7 @@ gStrings['dec'] = {'en': 'Dec', 'nl': 'dec'}
 
 # Date ranges
 gStrings['about'] = {'en': 'about', 'nl': 'omstreeks'}
-gStrings['before'] = {'en': 'before', 'nl': 'voo'}
+gStrings['before'] = {'en': 'before', 'nl': 'voor'}
 gStrings['after'] = {'en': 'after', 'nl': 'na'}
 gStrings['between'] = {'en': 'between', 'nl': 'tussen'}
 gStrings['and'] = {'en': 'en', 'nl': 'en'}

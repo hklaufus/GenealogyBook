@@ -74,6 +74,26 @@ class Date:
 
         return self.__date_2__
 
+    def get_mid_date(self):
+        """
+        Returns the mid-date of a time span, or the start date of en single date event
+
+        @return: datetime.date: v_date
+        """
+
+        v_date = None
+        if self.__date_1__ is not None:
+            if self.__date_2__ is not None:
+                v_time_delta = self.__date_2__ - self.__date_1__
+                v_date = self.__date_1__ + v_time_delta / 2
+
+                # Debug
+                # print("self.__date_1__ / self.__date_1__ / v_date: {} / {} / {}".format(self.__date_1__, self.__date_2__, v_date))
+            else:
+                v_date = self.__date_1__
+
+        return v_date
+
     def get_start_date_text(self, p_abbreviated=True):
         """
         Returns the start date as text.

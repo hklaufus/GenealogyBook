@@ -5,6 +5,7 @@ import calendar
 import datetime
 import logging
 import math
+import numpy
 
 import pylatex as pl
 import pylatex.utils as pu
