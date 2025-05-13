@@ -24,15 +24,15 @@ The book starts with a chapter describing the *Ahnentafel* (familytree), for whi
 
 Next, each generation of the *Ahnentafel* is described in a book *Part*.
 
-Each person in a generation of the *Ahnentafel* is then described in a *Chapter*. The chapter is written to a separate file and will be `included` in the main document. The name of the chapter files is set to the Gramps ID of that person (e.g. `I0001.tex`).
+Each person in a generation of the *Ahnentafel* is then described in a *Chapter*. The chapter is written to a separate file and will be `included` in the main document. The names of the chapter files are set to the Gramps ID of that person (e.g. `I0001.tex`).
 
 ### Fields
-| Variable | Comment | Default value |
-| :-- | :-- | :-- |
-| vBookAuthor | Name of the author | \<Author\> |
-| vBookTitle | Title of the LaTeX book | \<Title\> |
-| vBookFilename | Filename of the main LaTeX document | MyBook |
-| vStartPersonId | Subject of the family tree | I0000 |
+| Variable       | Comment                             | Default value |
+|:---------------|:------------------------------------|:--------------|
+| vBookAuthor    | Name of the author                  | \<Author\>    |
+| vBookTitle     | Title of the LaTeX book             | \<Title\>     |
+| vBookFilename  | Filename of the main LaTeX document | MyBook        |
+| vStartPersonId | Subject of the family tree          | I0000         |
 
 ### Tags
 In Gramps, tag photo's and documents as follows:
@@ -43,3 +43,14 @@ In Gramps, tag photo's and documents as follows:
 
 ### Language
 The option for the language is set in the file `hkLanguage.py`; the translation strings are described in the *dictionary of dictionaries* named `gStrings`.
+
+### Configuration file
+The file `config.xml` allows for setting default values:
+* `<Author> ... </Author>`: Set name of author
+* `<Title> ... </Title>`: Set the title of the book
+* `<Filename> ... </Filename>`: Set the file name of the main LaTeX file
+* `<StartPersonId> ... </StartPersonId>`: Set the Id of the first person
+* `<Language> ... </Language>`: Set the language
+* `<Path> ... </Path>`: Set the path to where the LaTeX files are to be stored
+* `<Exclude> ... </Exclude>`: A list of Person ID's *NOT* to (over-)write a chapter for; the main LaTeX file will however still do an `\include`. This is to prevent overwriting chapter that were manually changed.
+* `<Appendix> ... </Appendix>`: A list of file names to be included as an Appendix

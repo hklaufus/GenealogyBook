@@ -1,3 +1,7 @@
+import logging
+
+import tag
+
 # Niet zo chique hier...
 
 # Constants
@@ -341,13 +345,13 @@ def get_tag_dictionary(p_cursor):
     return v_tag_dictionary
 
 
-def get_tag_list(p_tag_handle_list, p_tag_dictionary):
-    v_tag_list = []
+def get_tag_list(p_tag_list: list[tag.Tag], p_tag_dictionary: dict):
+    v_tag_list: list[tag.Tag] = []
 
-    for v_tag_handle in p_tag_handle_list:
-        v_tag_list.append(p_tag_dictionary[v_tag_handle])
+    for v_tag in p_tag_list:
+        v_tag_list.append(p_tag_dictionary[v_tag.__handle__])
 
     # Debug
-    # logging.debug("v_tag_list: ".join(map(str, v_tag_list)))
+    logging.debug("v_tag_list: ".join(map(str, v_tag_list)))
 
     return v_tag_list

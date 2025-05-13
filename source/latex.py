@@ -1,7 +1,6 @@
 # https://jeltef.github.io/PyLaTeX/current/index.html
 import pylatex as pl
 import pylatex.utils as pu
-import pylatex.base_classes.containers as pbc
 
 
 class Part(pl.Section):
@@ -81,40 +80,40 @@ class WrapFigure(pl.base_classes.Environment):
     content_separator = "\n"
 
 
-def GetPersonNameWithReference(pGivenNames, pSurname, pGrampsId):
-    return r'\personref[chap:' + pGrampsId + ']{' + pGivenNames + " " + pSurname + '}'
+def get_person_name_with_reference(p_given_names, p_surname, p_gramps_id):
+    return r'\personref[chap:' + p_gramps_id + ']{' + p_given_names + " " + p_surname + '}'
 
 
-def CreateSubLevel(pLevel=Chapter, pTitle="Title", pLabel=False):
-    if(type(pLevel) is Part):
+def create_sub_level(p_level=Chapter, p_title="Title", p_label=False):
+    if type(p_level) is Part:
         # Current level is Part, create Chapter
-        vSubLevel = pLevel.create(Chapter(title=pTitle, label=pLabel))
+        v_sub_level = p_level.create(Chapter(title=p_title, label=p_label))
 
-    elif(type(pLevel) is Chapter):
+    elif type(p_level) is Chapter:
         # Current level is Chapter, create Section
-        vSubLevel = pLevel.create(Section(title=pTitle, label=pLabel))
+        v_sub_level = p_level.create(Section(title=p_title, label=p_label))
 
-    elif(type(pLevel) is Section):
+    elif type(p_level) is Section:
         # Current level is Section, create Subsection
-        vSubLevel = pLevel.create(Subsection(title=pTitle, label=pLabel))
+        v_sub_level = p_level.create(Subsection(title=p_title, label=p_label))
 
-    elif(type(pLevel) is Subsection):
+    elif type(p_level) is Subsection:
         # Current level is Subsection, create Subsubsection
-        vSubLevel = pLevel.create(Subsubsection(title=pTitle, label=pLabel))
+        v_sub_level = p_level.create(Subsubsection(title=p_title, label=p_label))
 
-    elif(type(pLevel) is Subsubsection):
+    elif type(p_level) is Subsubsection:
         # Current level is Subsubsection, create Paragraph
-        vSubLevel = pLevel.create(Paragraph(title=pTitle, label=pLabel))
+        v_sub_level = p_level.create(Paragraph(title=p_title, label=p_label))
 
-    elif(type(pLevel) is Paragraph):
+    elif type(p_level) is Paragraph:
         # Current level is Paragraph, create Subparagraph
-        vSubLevel = pLevel.create(Subparagraph(title=pTitle, label=pLabel))
+        v_sub_level = p_level.create(Subparagraph(title=p_title, label=p_label))
 
-    elif(type(pLevel) is Subparagraph):
-        # Current level is Subparagraph, no further level down
+    elif type(p_level) is Subparagraph:
+        # The current level is Subparagraph, no further level down
         pass
 
     else:
-       print("ERROR in hkLatex.CreateSubLevelTextPart: pLevel not recognised: ", type(pLevel)) 
+       print("ERROR in hkLatex.CreateSubLevelTextPart: p_level not recognised: ", type(p_level))
 
-    return vSubLevel
+    return v_sub_level

@@ -1,31 +1,25 @@
-import hkGrampsDb
-import hkLanguage
-
 import calendar
 import datetime
 import logging
 import math
-import numpy
 
+import matplotlib.axes
 import pylatex as pl
 import pylatex.utils as pu
 
 # https://matplotlib.org/basemap/index.html
-# from mpl_toolkits.basemap import Basemap
+import matplotlib.axes as axes
 import matplotlib.pyplot as plt
-# import matplotlib.axes as axs
-import matplotlib.figure as fig
 
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-import cartopy.mpl.geoaxes as cga
 
 import os
 import pandas
 
-from PIL import Image
-
-import hkPerson
+import gramps_db
+import language
+import person
 
 
 def date_to_text(p_date_list, p_abbreviated=True):
@@ -44,11 +38,11 @@ def date_to_text(p_date_list, p_abbreviated=True):
         if p_abbreviated:
             v_month_string1 = calendar.month_abbr[v_month1]
 
-        v_month_string1 = hkLanguage.translate(v_month_string1)
+        v_month_string1 = language.translate(v_month_string1)
 
         if v_modifier in v_modifier_set:
             # Before, after, about
-            v_date_string = hkLanguage.translate(hkGrampsDb.c_date_modifier_dict[v_modifier]) + ' ' + ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
+            v_date_string = language.translate(gramps_db.c_date_modifier_dict[v_modifier]) + ' ' + ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
         else:
             v_date_string = ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
 
@@ -63,7 +57,7 @@ def date_to_text(p_date_list, p_abbreviated=True):
         if p_abbreviated:
             v_month_string1 = calendar.month_abbr[v_month1]
 
-        v_month_string1 = hkLanguage.translate(v_month_string1)
+        v_month_string1 = language.translate(v_month_string1)
 
         v_day2 = p_date_list[4]
         v_month2 = p_date_list[5]
@@ -73,46 +67,20 @@ def date_to_text(p_date_list, p_abbreviated=True):
         if p_abbreviated:
             v_month_string2 = calendar.month_abbr[v_month2]
 
-        v_month_string2 = hkLanguage.translate(v_month_string2)
+        v_month_string2 = language.translate(v_month_string2)
 
         if v_modifier == 4:
             # Range
-            v_date_string = hkLanguage.translate('between') + ' ' + (
-                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1) + ' ' + hkLanguage.translate(
+            v_date_string = language.translate('between') + ' ' + (
+                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1) + ' ' + language.translate(
                 'and') + ' ' + ((str(v_day2) + ' ') if v_day2 != 0 else '') + v_month_string2 + ' ' + str(v_year2)
         elif v_modifier == 5:
             # Span
-            v_date_string = hkLanguage.translate('from') + ' ' + (
-                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1) + ' ' + hkLanguage.translate(
+            v_date_string = language.translate('from') + ' ' + (
+                (str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1) + ' ' + language.translate(
                 'until') + ' ' + ((str(v_day2) + ' ') if v_day2 != 0 else '') + v_month_string2 + ' ' + str(v_year2)
 
     return v_date_string
-
-
-def street_to_text(p_place_list, p_long_style=False):
-    v_street_label = hkGrampsDb.c_place_type_dict[hkGrampsDb.c_place_type_street]
-
-    v_string = ''
-    if p_long_style:
-        for v_place in p_place_list:
-            v_string = v_string + ', ' + p_place_list[v_place][0]
-
-        v_string = v_string[2:].strip()
-    else:
-        if v_street_label in p_place_list:
-            v_string = v_string + p_place_list[v_street_label][0]
-
-            v_place_string = place_to_text(p_place_list, p_long_style)
-            if len(v_place_string) > 0:
-                v_string = v_string + ', ' + v_place_string
-        else:
-            v_string = v_string + place_to_text(p_place_list, p_long_style)
-
-    # Debug
-    # logging.debug('p_place_list: '.join(map(str, p_place_list)))
-    logging.debug('v_string = %s', v_string)
-
-    return v_string
 
 
 def sort_person_list_by_birth(p_person_handle_list, p_cursor):
@@ -124,7 +92,7 @@ def sort_person_list_by_birth(p_person_handle_list, p_cursor):
     # Retrieve person info
     v_new_person_list = []
     for v_person_handle in p_person_handle_list:
-        v_person = hkPerson.Person(v_person_handle, p_cursor)
+        v_person = person.Person(v_person_handle, p_cursor)
         v_birth_date = v_person.get_birth_date()
         v_new_person_list.append([v_birth_date, v_person_handle])
 
@@ -304,7 +272,7 @@ def create_map(p_document_path, p_country):
         # Draw map
         # v_figure = fig.Figure()
         # v_axes = cga.GeoAxes(rect=[0, 1, 0, 1], fig=v_figure, map_projection=ccrs.Mercator())
-        v_axes = plt.axes(projection=ccrs.Mercator())
+        v_axes: matplotlib.axes.Axes = plt.axes(projection=ccrs.Mercator())
         v_axes.set_extent([v_lon_0, v_lon_1, v_lat_0, v_lat_1])
         v_axes.add_feature(cfeature.LAND.with_scale('10m'))  # , color='Bisque')
         v_axes.add_feature(cfeature.LAKES.with_scale('10m'), alpha=0.5)

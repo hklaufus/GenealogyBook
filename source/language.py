@@ -1,6 +1,6 @@
 # Dictionary of dictionaries containing string to several languages
 
-import logging
+import logging as log
 
 # gLanguage = 'nl'
 gStrings = {}
@@ -175,7 +175,7 @@ def translate(p_string, p_language='nl'):
         try:
             v_return_string = gStrings[p_string.strip().lower()][p_language]
         except KeyError:
-            logging.warning("KEY ERROR in hkLanguage.translate: %s", p_string)
+            log.warning("KEY ERROR in hkLanguage.translate: %s", p_string)
 
         if p_string[0].isupper():
             v_return_string = v_return_string.capitalize()
