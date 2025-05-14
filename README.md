@@ -3,6 +3,9 @@ These python scripts create a LaTeX book from a Gramps SQLite database.
 
 Gramps is Genealogical Research Software; for more information, please refer to the [Gramps Project website](https://gramps-project.org/).
 
+## Version
+The python scripts are compatible with the Gramps Database for Gramps version 6.0.3
+
 ## Folder structure
 The project consists of three folders:
 
