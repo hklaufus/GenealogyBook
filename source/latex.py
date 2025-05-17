@@ -1,4 +1,6 @@
 # https://jeltef.github.io/PyLaTeX/current/index.html
+import logging
+
 import pylatex as pl
 import pylatex.utils as pu
 
@@ -85,6 +87,8 @@ def get_person_name_with_reference(p_given_names, p_surname, p_gramps_id):
 
 
 def create_sub_level(p_level=Chapter, p_title="Title", p_label=False):
+    v_sub_level = None
+
     if type(p_level) is Part:
         # Current level is Part, create Chapter
         v_sub_level = p_level.create(Chapter(title=p_title, label=p_label))
@@ -114,6 +118,6 @@ def create_sub_level(p_level=Chapter, p_title="Title", p_label=False):
         pass
 
     else:
-       print("ERROR in hkLatex.CreateSubLevelTextPart: p_level not recognised: ", type(p_level))
+       logging.error(f"p_level type not recognised: {type(p_level)}", )
 
     return v_sub_level

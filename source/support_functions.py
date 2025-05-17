@@ -8,7 +8,6 @@ import pylatex as pl
 import pylatex.utils as pu
 
 # https://matplotlib.org/basemap/index.html
-import matplotlib.axes as axes
 import matplotlib.pyplot as plt
 
 import cartopy.crs as ccrs
@@ -84,10 +83,10 @@ def date_to_text(p_date_list, p_abbreviated=True):
 
 
 def sort_person_list_by_birth(p_person_handle_list, p_cursor):
-    # Sort ID of persons in pPersonIdList by birth date
+    # Sort ID of persons in pPersonIdList by birthdate
 
     # Debug
-    # logging.debug('Before: '.join(map(str, p_person_handle_list)))
+    logging.debug('Before: '.join(map(str, p_person_handle_list)))
 
     # Retrieve person info
     v_new_person_list = []
@@ -101,7 +100,7 @@ def sort_person_list_by_birth(p_person_handle_list, p_cursor):
     p_person_handle_list = [item[1] for item in v_new_person_list]
 
     # Debug
-    # logging.debug('After: '.join(map(str, p_person_handle_list)))
+    logging.debug('After: '.join(map(str, p_person_handle_list)))
 
     return p_person_handle_list
 
@@ -260,7 +259,7 @@ def create_map(p_document_path, p_country):
         os.mkdir(p_document_path)
 
     # Create file name for figure
-    v_file_path = os.path.join(p_document_path, 'Map_' + p_country + '.png')
+    v_file_path = str(os.path.join(p_document_path, 'Map_' + p_country + '.png'))
     if not os.path.exists(v_file_path):
         # Get country latitude / longitudes
         v_coordinates = get_country_min_max_coordinates(p_country)
@@ -293,7 +292,7 @@ def get_country_min_max_coordinates(p_country_code):
     v_file_path = os.path.join(v_cwd, 'cow.txt')
     v_data_frame = pandas.read_csv(v_file_path, sep=';', comment='#')
 
-    # 20220109: Limit number of maps to Netherlands, Western Europe and the World
+    # 20220109: Limit number of maps to The Netherlands, Western Europe and the World
     if p_country_code == 'WEU':
         # Western Europe
         v_data_frame = v_data_frame.loc[v_data_frame['subregion'] == 'Western Europe', ['min_lon', 'min_lat', 'max_lon', 'max_lat']]

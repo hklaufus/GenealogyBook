@@ -5,7 +5,6 @@ import person
 
 
 class PersonRef:
-    __ref__: str = None
     __private__: bool = None
     __citation_list__: str = None
     __note_list__: list[note.Note] = None

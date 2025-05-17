@@ -1,7 +1,5 @@
 import logging
 
-import tag
-
 
 class StyledText:
     __string__: str = None
