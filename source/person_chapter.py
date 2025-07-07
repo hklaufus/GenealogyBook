@@ -1403,10 +1403,9 @@ class PersonChapter:
                             else:
                                 v_label: str = v_place_text + r'\\' + v_date.__date_to_text__()
 
-                            v_sub_level.append(pu.NoEscape(r'\node [residencemarker] (' + v_marker_name_1 + r') at (0 cm,' + str(v_date_point_1) + r' cm) {};'))
-                            # v_sub_level.append(pu.NoEscape(r'\node [residencelabel, right=of ' + v_marker_name_1 + r', align=left, text width=' + str(c_text_width) + r' cm] (' + v_label_name_1 + r') at (+1.0 cm,' + str(v_date_point_1) + r' cm) {\small ' + v_label + r'};'))
-                            v_sub_level.append(pu.NoEscape(r'\node [residencelabel, right=of ' + v_marker_name_1 + r', align=left, text width=' + str(c_text_width) + r' cm] (' + v_label_name_1 + r') at (+1.0 cm,' + str(v_label_point_1) + r' cm) {\small ' + v_label + r'};'))
-                            v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_1 + r'.east) -- (' + v_label_name_1 + r'.west);'))
+                            v_sub_level.append(pu.NoEscape(fr'\node [residencemarker] ({v_marker_name_1}) at (0 cm,{v_date_point_1:.2f} cm) {{}};'))
+                            v_sub_level.append(pu.NoEscape(fr'\node [residencelabel, right=of {v_marker_name_1}, align=left, text width={c_text_width} cm] ({v_label_name_1}) at (+1.0 cm,{v_label_point_1:.2f} cm) {{\small {v_label}}};'))
+                            v_sub_level.append(pu.NoEscape(fr'\draw [residencelink] ({v_marker_name_1}.east) -- ({v_label_name_1}.west);'))
                             v_sub_level.append(pu.NoEscape(r'%'))
 
                         elif (v_date.get_start_date() is not None) and (v_date.get_end_date() is not None):  # Dual date events
@@ -1440,15 +1439,13 @@ class PersonChapter:
                                 v_label: str = v_place_text + r'\\' + v_date.__date_to_text__()
 
                             # Coordinates for time span
-                            v_sub_level.append(pu.NoEscape(r'\coordinate (' + v_marker_name_1 + r') at (' + str(v_hor_point) + 'cm - 0.1cm,' + str(v_date_point_1) + r' cm) {};'))
-                            v_sub_level.append(pu.NoEscape(r'\coordinate (' + v_marker_name_2 + r') at (' + str(v_hor_point) + 'cm + 0.1cm,' + str(v_date_point_2) + r' cm) {};'))
-                            v_sub_level.append(pu.NoEscape(r'\coordinate (' + v_marker_name_3 + r') at (' + str(v_hor_point) + 'cm + 0.1cm,' + str(v_date_point_3) + r' cm) {};'))
+                            v_sub_level.append(pu.NoEscape(fr'\coordinate ({v_marker_name_1}) at ({v_hor_point:.2f} cm - 0.1 cm,{v_date_point_1:.2f} cm) {{}};'))
+                            v_sub_level.append(pu.NoEscape(fr'\coordinate ({v_marker_name_2}) at ({v_hor_point:.2f} cm + 0.1 cm,{v_date_point_2:.2f} cm) {{}};'))
+                            v_sub_level.append(pu.NoEscape(fr'\coordinate ({v_marker_name_3}) at ({v_hor_point:.2f} cm + 0.1 cm,{v_date_point_3:.2f} cm) {{}};'))
 
-                            v_sub_level.append(pu.NoEscape(r'\draw [residenceperiod] (' + v_marker_name_1 + r') rectangle (' + v_marker_name_2 + r');'))
-                            # v_sub_level.append(pu.NoEscape(r'\node [residencelabel, right=of ' + v_marker_name_3 + r'align=left, text width=' + str(c_text_width) + r' cm] (' + v_label_name + r') at (+1.0 cm,' + str(v_date_point_3) + r' cm) {\small ' + v_label + r'};'))
-                            # v_sub_level.append(pu.NoEscape(r'\node [residencelabel, right=of ' + v_marker_name_3 + r'align=left, text width=' + str(c_text_width) + r' cm, anchor=west] (' + v_label_name + r') at (+1.0 cm,' + str(v_date_point_3) + r' cm) {\small ' + v_label + r'};'))
-                            v_sub_level.append(pu.NoEscape(r'\node [residencelabel, right=of ' + v_marker_name_3 + r'align=left, text width=' + str(c_text_width) + r' cm, anchor=west] (' + v_label_name + r') at (+1.0 cm,' + str(v_label_point_1) + r' cm) {\small ' + v_label + r'};'))
-                            v_sub_level.append(pu.NoEscape(r'\draw [residencelink] (' + v_marker_name_3 + r') -- (' + v_label_name + r'.west);'))
+                            v_sub_level.append(pu.NoEscape(fr'\draw [residenceperiod] ({v_marker_name_1}) rectangle ({v_marker_name_2});'))
+                            v_sub_level.append(pu.NoEscape(fr'\node [residencelabel, right=of {v_marker_name_3} align=left, text width={c_text_width} cm, anchor=west] ({v_label_name}) at (+1.0 cm,{v_label_point_1:.2f} cm) {{\small {v_label}}};'))
+                            v_sub_level.append(pu.NoEscape(fr'\draw [residencelink] ({v_marker_name_3}) -- ({v_label_name}.west);'))
 
                             v_sub_level.append(pu.NoEscape(r'%'))
 
@@ -1474,23 +1471,23 @@ class PersonChapter:
                         v_label_name_1: str = r'label_' + str(v_count)
                         v_label: str = pu.escape_latex(v_description)
 
-                        v_sub_level.append(pu.NoEscape(r'\node [eventmarker] (' + v_marker_name_1 + r') at (0 cm,' + str(v_date_point_1) + r' cm) {};'))
-                        v_sub_level.append(pu.NoEscape(r'\node [eventlabel, left=of ' + v_marker_name_1 + r', align=right, text width=' + str(c_text_width) + r' cm] (' + v_label_name_1 + r') at (-1.0 cm,' + str(v_label_point_1) + r' cm) {\small ' + v_label + r'};'))
-                        v_sub_level.append(pu.NoEscape(r'\draw (' + v_marker_name_1 + r'.west) -- (' + v_label_name_1 + r'.east);'))
+                        v_sub_level.append(pu.NoEscape(fr'\node [eventmarker] ({v_marker_name_1}) at (0 cm,{v_date_point_1:.2f} cm) {{}};'))
+                        v_sub_level.append(pu.NoEscape(fr'\node [eventlabel, left=of {v_marker_name_1}, align=right, text width={c_text_width} cm] ({v_label_name_1}) at (-1.0 cm,{v_label_point_1:.2f} cm) {{\small {v_label}}};'))
+                        v_sub_level.append(pu.NoEscape(fr'\draw ({v_marker_name_1}.west) -- ({v_label_name_1}.east);'))
                         v_sub_level.append(pu.NoEscape(r'%'))
 
             # ...then the major timeline...
-            v_sub_level.append(pu.NoEscape(r'\draw[->, very thick] (0cm, ' + str(v_start_point) + r'cm) -- (0cm, ' + str(v_end_point) + r'cm);'))
+            v_sub_level.append(pu.NoEscape(fr'\draw[->, very thick] (0cm, {v_start_point:.2f} cm) -- (0cm, {v_end_point:.2f} cm);'))
             v_sub_level.append(pu.NoEscape(r'%'))
 
             # ... and finally the decennial tick lines and the year labels
-            v_string: str = str(v_start_point) + r'/' + str(v_start_date.year)
+            v_string: str = fr'{v_start_point:.2f}/{v_start_date.year}'
             for v_year in range(v_start_date.year + 10, v_end_date.year, 10):
                 v_date: datetime.date = datetime.date(v_year, 1, 1)
                 v_date_point = __date_to_timeline(v_date, v_start_date, v_end_date, v_mean, v_std)
-                v_string = v_string + r',' + str(v_date_point) + r'/' + str(v_year)
+                v_string = v_string + fr',{v_date_point:.2f}/{v_year}'
 
-            v_sub_level.append(pu.NoEscape(r'\foreach \y/\ytext in {' + v_string + r'}'))
+            v_sub_level.append(pu.NoEscape(fr'\foreach \y/\ytext in {{ {v_string} }}'))
             v_sub_level.append(pu.NoEscape(r'\draw[thick, yshift =\y cm] (-2pt, 0pt) - - (2pt, 0pt) node[left=2pt, fill=white] {$\ytext$};'))
             v_sub_level.append(pu.NoEscape(r'%'))
 
