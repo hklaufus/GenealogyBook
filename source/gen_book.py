@@ -231,8 +231,10 @@ class Book:
                         logging.info(f"SKIPPING a chapter about: {v_person.__given_names__} {v_person.__surname__}")
                     else:
                         v_person_chapter.write_person_chapter()
-                        # v_document.append(pl.NoEscape(r'\include{' + self.__chapter_path__ + v_person.__gramps_id__ + '} % ' + v_person.__given_names__ + ' ' + v_person.__surname__))
-                        p_document.append(pl.NoEscape(r'\include{' + v_chapter_path + v_person.__gramps_id__ + '} % ' + v_person.__given_names__ + ' ' + v_person.__surname__))
+
+                    # Excluded chapters are still included; they were edited by hand
+                    # v_document.append(pl.NoEscape(r'\include{' + self.__chapter_path__ + v_person.__gramps_id__ + '} % ' + v_person.__given_names__ + ' ' + v_person.__surname__))
+                    p_document.append(pl.NoEscape(r'\include{' + v_chapter_path + v_person.__gramps_id__ + '} % ' + v_person.__given_names__ + ' ' + v_person.__surname__))
 
                 #  Create new sub list for next generation
                 v_generation_index = v_generation_index + 1

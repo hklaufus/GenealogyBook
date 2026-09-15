@@ -89,26 +89,26 @@ class PersonChapter:
         # Add note(s)
         v_note_text: str = ''
         for v_note in p_image_notes:
-            v_note_text = v_note.get_text()
+            v_text = v_note.get_text()
 
-            v_pos_1 = v_note_text.find("http")
+            v_pos_1 = v_text.find("http")
             # Check whether the note contains a web address
             if v_pos_1 >= 0:  # 202303113
                 # ...it does, first find '//'..
-                v_pos_2 = v_note_text.find('//')+2
+                v_pos_2 = v_text.find('//')+2
 
                 # ...find the end of the web address
                 v_pos_4 = v_pos_2
-                while (v_pos_4 < len(v_note_text)) and (v_note_text[v_pos_4] != ' '):
+                while (v_pos_4 < len(v_text)) and (v_text[v_pos_4] != ' '):
                     v_pos_4 = v_pos_4 + 1
 
                 # ...within the web address, find the first '/' after '//' if it exists
-                v_pos_3 = v_note_text.find('/', v_pos_2)
+                v_pos_3 = v_text.find('/', v_pos_2)
                 if (v_pos_3 < 0) or (v_pos_3 > v_pos_4):
                     v_pos_3 = v_pos_4
 
-                v_full_web_address = v_note_text[v_pos_1:v_pos_4]
-                v_short_web_address = v_note_text[v_pos_2:v_pos_3]  # "<WebLink>"
+                v_full_web_address = v_text[v_pos_1:v_pos_4]
+                v_short_web_address = v_text[v_pos_2:v_pos_3]  # "<WebLink>"
 
                 # Debug logging
                 logging.debug(f"v_full_web_address: {v_full_web_address}")
@@ -116,12 +116,16 @@ class PersonChapter:
 
                 if v_pos_1 == 0:
                     # ...and create a link to the source...
-                    v_note_text = r'Link to source: \href{' + v_full_web_address + '}{' + v_short_web_address + r'}' + r'\par '
+                    v_text = r'Link to source: \href{' + v_full_web_address + '}{' + v_short_web_address + r'}' + r'\par '
                 else:
                     # ...and create a link in the note...
-                    v_note_text = v_note_text.replace(v_full_web_address, r'\href{' + v_full_web_address + '}{' + v_short_web_address + r'}' + r'\par ')
-            else:
-                v_note_text = v_note_text + r' \par '
+                    v_text = v_text.replace(v_full_web_address, r'\href{' + v_full_web_address + '}{' + v_short_web_address + r'}' + r'\par ')
+
+            # End each note with a paragraph break, so consecutive notes do not run together
+            if not v_text.endswith(r'\par '):
+                v_text = v_text + r' \par '
+
+            v_note_text = v_note_text + v_text
 #            vTagHandleList = v_note_data[6]
 
         # Check on portrait vs landscape
@@ -226,8 +230,8 @@ class PersonChapter:
                 if not v_found:
                     # Check whether life stories already exist in the notes
                     for v_note in v_person.__note_list__:
-                        v_note_text = v_note.__note_text__
-                        v_note_type = v_note.__note_type__
+                        v_note_text = v_note.get_text()
+                        v_note_type = v_note.__note_type__.get_value()
                         if v_note_type == gramps_db.c_note_person:  # PersonChapter Note
                             v_life_sketch = v_life_sketch + pu.escape_latex(v_note_text)
                             v_found = True
@@ -627,10 +631,10 @@ class PersonChapter:
                         # v_event = event_ref.EventRef(v_family_event_ref, self.__cursor__).get_event()
                         v_event = v_family_event_ref.get_event()
 
-                        if v_event.get_type() in v_family_event_dict:
-                            v_family_event_dict[v_event.get_type()].append(v_event)
+                        if v_event.get_type().get_value() in v_family_event_dict:
+                            v_family_event_dict[v_event.get_type().get_value()].append(v_event)
                         else:
-                            v_family_event_dict[v_event.get_type()] = [v_event]
+                            v_family_event_dict[v_event.get_type().get_value()] = [v_event]
 
                     # TODO: Sort family events on date
 
@@ -737,10 +741,10 @@ class PersonChapter:
                     for v_family_event_ref in v_family.__event_ref_list__:
                         v_event = event_ref.EventRef(v_family_event_ref, self.__cursor__).get_event()
 
-                        if v_event.get_type() in v_family_event_dict:
-                            v_family_event_dict[v_event.get_type()].append(v_event)
+                        if v_event.get_type().get_value() in v_family_event_dict:
+                            v_family_event_dict[v_event.get_type().get_value()].append(v_event)
                         else:
-                            v_family_event_dict[v_event.get_type()] = [v_event]
+                            v_family_event_dict[v_event.get_type().get_value()] = [v_event]
 
                     # TODO: Sort family events on date
 
@@ -1188,20 +1192,25 @@ class PersonChapter:
 
             return v_y_value
 
-        def __calculate_start_end_dates(p_birth_date: date.Date, p_death_date: date.Date) -> tuple[datetime.date, datetime.date]:
+        def __calculate_start_end_dates(p_birth_date: date.Date, p_death_date: date.Date, p_events: list[event.Event]) -> tuple[datetime.date, datetime.date]:
             """
 
             :param p_birth_date:
             :param p_death_date:
+            :param p_events: events on the timeline; the range is widened to cover all their dates
             :return:
             """
 
             v_s_date: datetime.date # start date
             v_e_date: datetime.date # end date
 
+            # Years of all dates on the timeline, including the end dates of time spans
+            v_years: list[int] = [v_date.year for v_event in p_events for v_date in (v_event.get_date().get_start_date(), v_event.get_date().get_end_date()) if v_date is not None]
+
             if (p_birth_date is None) or (p_birth_date.get_start_date() is None):
                 if (p_death_date is None) or (p_death_date.get_start_date() is None):
-                    v_s_date = datetime.date(datetime.date.today().year, 1, 1)
+                    # Neither birth nor death is known: start at the earliest event, if any
+                    v_s_date = datetime.date(min(v_years) if len(v_years) > 0 else datetime.date.today().year, 1, 1)
                 else:
                     v_s_date = datetime.date(p_death_date.get_start_date().year - 100, 1, 1)
             else:
@@ -1215,6 +1224,11 @@ class PersonChapter:
             v_today = datetime.date.today()
             if v_e_date > v_today:
                 v_e_date = datetime.date(v_today.year + 1, 1, 1)
+
+            # Widen the range to cover every date on the timeline, e.g. a partner born before the person
+            if len(v_years) > 0:
+                v_s_date = min(v_s_date, datetime.date(min(v_years), 1, 1))
+                v_e_date = max(v_e_date, datetime.date(max(v_years) + 1, 1, 1))
 
             # Round down / up to decennia
             v_s_date = datetime.date(int(support_functions.round_down(v_s_date.year, -1)), 1, 1)
@@ -1340,7 +1354,7 @@ class PersonChapter:
                 v_std = None
 
         # Determine the start and end dates for the timeline
-        v_start_date, v_end_date = __calculate_start_end_dates(v_birth_date, v_death_date)
+        v_start_date, v_end_date = __calculate_start_end_dates(v_birth_date, v_death_date, v_timeline_events)
 
         #
         # Create the timeline section
@@ -1399,9 +1413,9 @@ class PersonChapter:
                             v_label_name_1: str = r'label_' + str(v_count)
 
                             if len(v_description) > 0:
-                                v_label: str = v_description + r'\\' + v_date.__date_to_text__()
+                                v_label: str = pu.escape_latex(v_description) + r'\\' + v_date.__date_to_text__()
                             else:
-                                v_label: str = v_place_text + r'\\' + v_date.__date_to_text__()
+                                v_label: str = pu.escape_latex(v_place_text) + r'\\' + v_date.__date_to_text__()
 
                             v_sub_level.append(pu.NoEscape(fr'\node [residencemarker] ({v_marker_name_1}) at (0 cm,{v_date_point_1:.2f} cm) {{}};'))
                             v_sub_level.append(pu.NoEscape(fr'\node [residencelabel, right=of {v_marker_name_1}, align=left, text width={c_text_width} cm] ({v_label_name_1}) at (+1.0 cm,{v_label_point_1:.2f} cm) {{\small {v_label}}};'))
@@ -1434,9 +1448,9 @@ class PersonChapter:
                             v_label_name: str = r'label_' + str(v_count)
 
                             if len(v_description) > 0:
-                                v_label: str = v_description + r'\\' + v_date.__date_to_text__()
+                                v_label: str = pu.escape_latex(v_description) + r'\\' + v_date.__date_to_text__()
                             else:
-                                v_label: str = v_place_text + r'\\' + v_date.__date_to_text__()
+                                v_label: str = pu.escape_latex(v_place_text) + r'\\' + v_date.__date_to_text__()
 
                             # Coordinates for time span
                             v_sub_level.append(pu.NoEscape(fr'\coordinate ({v_marker_name_1}) at ({v_hor_point:.2f} cm - 0.1 cm,{v_date_point_1:.2f} cm) {{}};'))
@@ -1615,7 +1629,7 @@ class PersonChapter:
                     v_left_1 = '{' + str(v_media_rect_1[0] / 100) + r'\wd1}'
                     v_right_1 = '{' + str(1 - v_media_rect_1[2] / 100) + r'\wd1}'
                     v_top_1 = '{' + str(v_media_rect_1[1] / 100) + r'\ht1}'
-                    v_bottom_1 = '{' + str(1 - v_media_rect[3] / 100) + r'\ht1}'
+                    v_bottom_1 = '{' + str(1 - v_media_rect_1[3] / 100) + r'\ht1}'
 
                     v_trim = v_left_1 + ' ' + v_bottom_1 + ' ' + v_right_1 + ' ' + v_top_1
                     v_sub_level.append(pl.NoEscape(r'\sbox1{\includegraphics{"' + v_media_path_1 + r'"}}'))

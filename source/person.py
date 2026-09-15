@@ -117,7 +117,7 @@ class Person:
             v_family = family.Family(v_family_handle, self.__cursor__)
 
             for v_event in v_family.get_events():
-                v_type = v_event.get_type()
+                v_type = v_event.get_type().get_value()
                 v_media_list = v_event.__media_list__
 
                 # 1 = Marriage, 2 = Marriage Settlement, 3 = Marriage License, 4 = Marriage Contract

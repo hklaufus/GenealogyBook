@@ -124,7 +124,7 @@ class Family:
         for v_event_ref in self.__event_ref_list__:
             # v_event_ref = event_ref.EventRef(v_reference, self.__cursor__)
 
-            if (p_role is None) or (v_event_ref.get_role() in v_use_role):
+            if (p_role is None) or (v_event_ref.get_role().get_value() in v_use_role):
                 v_event = v_event_ref.get_event()
 
                 if len(v_event.__description__) == 0:
@@ -146,7 +146,7 @@ class Family:
 
                     v_event.__description__ = language.translate(v_type_string) + ' ' + v_name_string + ' ' + v_date_place_string
 
-                if (p_type is None) or (v_event.get_type() in v_use_type):
+                if (p_type is None) or (v_event.get_type().get_value() in v_use_type):
                     yield v_event
 
     def __log__(self):
