@@ -25,6 +25,7 @@ class Book:
     __life_sketch_path__: str = '../book/life_sketches/'
     __appendix_path__: str = '../book/appendices/'
     __exclude__: list[str] = None
+    __include__: list[str] = None
     __appendix__: list[str] = None
 
     def __init__(self, p_config_file = '../config/config.xml'):
@@ -86,6 +87,7 @@ class Book:
 
         # Lists separated by ';', which may be empty
         self.__exclude__ = [v_item.strip() for v_item in self.__get_config_value(v_dom, 'Exclude').split(';') if len(v_item.strip()) > 0]
+        self.__include__ = [v_item.strip() for v_item in self.__get_config_value(v_dom, 'Include').split(';') if len(v_item.strip()) > 0]
         self.__appendix__ = [v_item.strip() for v_item in self.__get_config_value(v_dom, 'Appendix').split(';') if len(v_item.strip()) > 0]
 
         # The book cannot be written without these
@@ -219,6 +221,9 @@ class Book:
         # v_figure_path = self.__figure_path__.replace(self.__book_path__, './')
         # v_life_sketch_path = self.__life_sketch_path__.replace(self.__book_path__, './')
 
+        # Handles of all persons with a chapter in the generation parts
+        v_book_handles: set[str] = set()
+
         if v_person_handle is not None:
             # Write the Ahnentafel of this person
             v_ahnentafel = ahnentafel_chapter.Ahnentafel(v_person_handle, p_cursor, self.__chapter_path__, True)
@@ -248,26 +253,64 @@ class Book:
 
                 # Create a detailed chapter for each person in this generation
                 for v_person_handle in v_generation_list:
-                    v_person_chapter = person_chapter.PersonChapter(p_person_handle=v_person_handle,
-                                                                    p_cursor=p_cursor,
-                                                                    p_chapter_path=self.__chapter_path__,
-                                                                    p_figures_path=self.__figure_path__,
-                                                                    p_life_sketch_path=self.__life_sketch_path__,
-                                                                    p_language=self.__language__)
-                    v_person = v_person_chapter.get_person()
-
-                    if v_person.get_gramps_id() in self.__exclude__:
-                        logging.info(f"SKIPPING a chapter about: {v_person.__given_names__} {v_person.__surname__}")
-                    else:
-                        v_person_chapter.write_person_chapter()
-
-                    # Excluded chapters are still included; they were edited by hand
-                    # v_document.append(pl.NoEscape(r'\include{' + self.__chapter_path__ + v_person.__gramps_id__ + '} % ' + v_person.__given_names__ + ' ' + v_person.__surname__))
-                    p_document.append(pl.NoEscape(r'\include{' + v_chapter_path + v_person.__gramps_id__ + '} % ' + v_person.__given_names__ + ' ' + v_person.__surname__))
+                    self.__write_person_chapter(p_document, p_cursor, v_person_handle, v_chapter_path)
 
                 #  Create new sub list for next generation
                 v_generation_index = v_generation_index + 1
                 v_generation_list = [x[0] for x in v_multi_generation_list if x[1] == v_generation_index]
+
+            v_book_handles = {x[0] for x in v_multi_generation_list}
+
+        #
+        # Persons from <Include> that are not in the Ahnentafel, e.g. partners, get a chapter in a separate part.
+        # Persons that already have a chapter, or that are listed more than once, are added only once.
+        #
+        v_include_handles: list[str] = []
+        for v_gramps_id in self.__include__:
+            v_handle = gramps_db.get_person_handle_by_gramps_id(v_gramps_id, p_cursor)
+            if v_handle is None:
+                logging.warning(f'Person "{v_gramps_id}" in <Include> does not exist')
+            elif (v_handle not in v_book_handles) and (v_handle not in v_include_handles):
+                v_include_handles.append(v_handle)
+
+        if len(v_include_handles) > 0:
+            # An unnumbered part, so it is not counted as a generation
+            v_title = language.translate('other persons')
+            v_part = latex.Part(title=v_title, numbering=False, label=False)
+            v_part.append(pl.NoEscape(r'\addcontentsline{toc}{part}{' + v_title + '}'))
+            v_part.generate_tex(filepath=self.__chapter_path__ + 'Part_Include')
+            p_document.append(pl.NoEscape(r'\include{' + v_chapter_path + 'Part_Include} % Included persons'))
+
+            for v_person_handle in v_include_handles:
+                self.__write_person_chapter(p_document, p_cursor, v_person_handle, v_chapter_path)
+
+
+    def __write_person_chapter(self, p_document: pl.Document, p_cursor, p_person_handle: str, p_chapter_path: str) -> None:
+        """
+        Write the chapter of a person, unless the person is excluded, and include the chapter in the document
+
+        :param p_document:
+        :param p_cursor:
+        :param p_person_handle:
+        :param p_chapter_path: path of the chapters relative to the main document
+        :return:
+        """
+
+        v_person_chapter = person_chapter.PersonChapter(p_person_handle=p_person_handle,
+                                                        p_cursor=p_cursor,
+                                                        p_chapter_path=self.__chapter_path__,
+                                                        p_figures_path=self.__figure_path__,
+                                                        p_life_sketch_path=self.__life_sketch_path__,
+                                                        p_language=self.__language__)
+        v_person = v_person_chapter.get_person()
+
+        if v_person.get_gramps_id() in self.__exclude__:
+            logging.info(f"SKIPPING a chapter about: {v_person.__given_names__} {v_person.__surname__}")
+        else:
+            v_person_chapter.write_person_chapter()
+
+        # Excluded chapters are still included; they were edited by hand
+        p_document.append(pl.NoEscape(r'\include{' + p_chapter_path + v_person.__gramps_id__ + '} % ' + v_person.__given_names__ + ' ' + v_person.__surname__))
 
 
     def __write_appendices(self, p_document: pl.Document) -> None:

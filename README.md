@@ -52,4 +52,5 @@ The file `config.xml` allows for setting default values:
 * `<AppendixPath> ... </AppendixPath>`: Set the path to where the LaTeX files for the appendices can be found; the files are **not** created by the python routines.
 * `<LifeSketchPath> ... </LifeSketchPath>`: Set the path to where the LaTeX files for the life sketches can be found; the files are **not** created by the python routines, and will be used for the first life sketch section for a person chapter.
 * `<Exclude> ... </Exclude>`: A list of Person ID's *NOT* to (over-)write a chapter for; the main LaTeX file will however still do an `\include`. This is to prevent overwriting chapter that were manually changed.
+* `<Include> ... </Include>`: A list of Person ID's to add to the book although they are not in the *Ahnentafel*, for example a partner. Their chapters are placed in a separate part after the generations. Persons that already have a chapter, or that are listed more than once, are added only once.
 * `<Appendix> ... </Appendix>`: A list of file names to be included as an Appendix; `AppendixPath` is the location where these files are to be found.

@@ -26,6 +26,7 @@ gStrings['residences'] = {'en': "Residences", 'nl': "Verblijfplaatsen"}
 gStrings['photos'] = {'en': "Photos", 'nl': "Foto's"}
 gStrings['documents'] = {'en': "Documents", 'nl': "Documenten"}
 gStrings['timeline'] = {'en': "Timeline", 'nl': "Tijdlijn"}
+gStrings['other persons'] = {'en': "Other persons", 'nl': "Overige personen"}
 
 # Table fields
 gStrings['call name'] = {'en': "Call name", 'nl': "Roepnaam"}
