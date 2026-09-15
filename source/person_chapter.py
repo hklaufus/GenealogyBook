@@ -1155,7 +1155,7 @@ class PersonChapter:
 
             return v_value
 
-        def __date_to_timeline(p_date: datetime.date, p_timeline_start_date: datetime.date, p_timeline_end_date: datetime.date, p_mean: float=None, p_std: float=None, p_length_timeline: int=20, p_linear_share: float=0.3) -> float:
+        def __date_to_timeline(p_date: datetime.date, p_timeline_start_date: datetime.date, p_timeline_end_date: datetime.date, p_mean: float=None, p_std: float=None, p_length_timeline: int=18, p_linear_share: float=0.3) -> float:
             """
             Calculates the y-coordinate on the timeline for a given date.
             This is either equidistant, or scaled according the cumulative distribution function of the normal distribution of all dates to be plotted.
