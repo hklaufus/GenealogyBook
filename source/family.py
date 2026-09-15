@@ -146,6 +146,7 @@ class Family:
                     v_date_place_string = v_date_place_string + ']'
 
                     v_event.__description__ = language.translate(v_type_string) + ' ' + v_name_string + ' ' + v_date_place_string
+                    v_event.__description_generated__ = True
 
                 if (p_type is None) or (v_event.get_type().get_value() in v_use_type):
                     yield v_event

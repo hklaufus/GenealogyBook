@@ -86,7 +86,7 @@ def sort_person_list_by_birth(p_person_handle_list, p_cursor):
     # Sort ID of persons in pPersonIdList by birthdate
 
     # Debug
-    logging.debug('Before: '.join(map(str, p_person_handle_list)))
+    logging.debug('Before: %s', p_person_handle_list)
 
     # Retrieve person info
     v_new_person_list = []
@@ -100,7 +100,7 @@ def sort_person_list_by_birth(p_person_handle_list, p_cursor):
     p_person_handle_list = [item[1] for item in v_new_person_list]
 
     # Debug
-    logging.debug('After: '.join(map(str, p_person_handle_list)))
+    logging.debug('After: %s', p_person_handle_list)
 
     return p_person_handle_list
 
@@ -190,13 +190,11 @@ def wrap_figure(p_chapter, p_filename, p_caption=None, p_position='i', p_width=r
     # Get the height of the figure
     p_chapter.append(pl.NoEscape(r'% Store the height of the photo in imageHeightA'))
     p_chapter.append(pl.NoEscape(r'\savebox{1}[' + p_width + r'][l]{' + v_figure + '}'))
-    p_chapter.append(pl.NoEscape(r'\newdimen\imageheightA'))
     p_chapter.append(pl.NoEscape(r'\imageheightA=\ht1 \advance \imageheightA by \dp1'))
 
     # Get the height of the text block
     p_chapter.append(pl.NoEscape(r'% Store the height of the text box in textHeightA'))
     p_chapter.append(pl.NoEscape(r'\savebox{2}{\parbox{\textwidth-' + p_width + r'}{' + p_text + '}}'))
-    p_chapter.append(pl.NoEscape(r'\newdimen\textheightA'))
     p_chapter.append(pl.NoEscape(r'\textheightA=\ht2 \advance \textheightA by \dp2'))
 
     p_chapter.append(pl.NoEscape(r'\makeatletter'))
@@ -309,7 +307,7 @@ def get_country_min_max_coordinates(p_country_code):
         v_min_max_list = v_data_frame.values.tolist()[0]
 
     # Debug
-    logging.debug('get_country_min_max_coordinates: '.join(map(str, v_min_max_list)))
+    logging.debug('get_country_min_max_coordinates: %s', v_min_max_list)
 
     return v_min_max_list
 
@@ -324,7 +322,7 @@ def get_country_continent_subregion(p_country_code):
     v_region_list = v_data_frame.values.tolist()[0]
 
     # Debug
-    logging.debug('get_country_continent_subregion: '.join(map(str, v_region_list)))
+    logging.debug('get_country_continent_subregion: %s', v_region_list)
 
     return v_region_list
 

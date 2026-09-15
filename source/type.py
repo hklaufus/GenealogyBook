@@ -6,7 +6,7 @@ class Type:
     __value__: int = None
 
     def __init__(self, p_type: dict):
-        self.__string = p_type['string']
+        self.__string__ = p_type['string']
         self.__value__ = p_type['value']
 
     def __log__(self):

@@ -352,6 +352,6 @@ def get_tag_list(p_tag_list: list[tag.Tag], p_tag_dictionary: dict):
         v_tag_list.append(p_tag_dictionary[v_tag.__handle__])
 
     # Debug
-    logging.debug("v_tag_list: ".join(map(str, v_tag_list)))
+    logging.debug('v_tag_list: %s', v_tag_list)
 
     return v_tag_list

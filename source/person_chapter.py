@@ -3,6 +3,7 @@ import logging
 import numpy
 import math
 import os
+import re
 
 import date
 import event
@@ -134,8 +135,8 @@ class PersonChapter:
 #            vTagHandleList = v_note_data[6]
 
         # Check on portrait vs landscape
-        v_image = Image.open(p_image_path, mode='r')
-        v_width, v_height = v_image.size
+        with Image.open(p_image_path, mode='r') as v_image:
+            v_width, v_height = v_image.size
         if p_image_rect is not None:
             v_width = v_width * (p_image_rect[2] - p_image_rect[0]) / 100
             v_height = v_height * (p_image_rect[3] - p_image_rect[1]) / 100
@@ -202,11 +203,10 @@ class PersonChapter:
 
         v_note_list: list[note.Note] = []
 
-        v_person = self.__person__
         for v_note in p_note_list:
             v_type = v_note.__note_type__.get_value()
 
-            if not (c_source in gramps_db.get_tag_list(v_note.__note_tag_list__, v_person.__tag_dictionary__)) and not (v_type == gramps_db.c_note_citation):
+            if not (c_source in [v_tag.__tag_name__ for v_tag in v_note.__note_tag_list__]) and not (v_type == gramps_db.c_note_citation):
                 v_note_list.append(v_note)
 
         return v_note_list
@@ -257,7 +257,8 @@ class PersonChapter:
                         v_note_text = v_note.get_text()
                         v_note_type = v_note.__note_type__.get_value()
                         if v_note_type == gramps_db.c_note_person:  # PersonChapter Note
-                            v_life_sketch = v_life_sketch + pu.escape_latex(v_note_text)
+                            # Blank lines in the note start a new paragraph
+                            v_life_sketch = v_life_sketch + re.sub(r'(\\newline%\n){2,}', r'\\par ', pu.escape_latex(v_note_text))
                             v_found = True
 
                 if not v_found:
@@ -447,9 +448,6 @@ class PersonChapter:
                                     v_life_sketch = v_life_sketch + ' ' + v_string + ' '
                                 else:
                                     v_life_sketch = v_life_sketch + ". "
-
-                    v_life_sketch = v_life_sketch.replace(r"\n\n", r"\par")  # Replace double newline characters with \par
-                    v_life_sketch = v_life_sketch.replace(r"\newline\newline", r"par")  # Replace double newline characters with \par
 
                 v_portrait_found = False
                 for v_media_ref in v_person.__media_list__:
@@ -750,9 +748,9 @@ class PersonChapter:
         for v_family_handle in v_person.__family_list__:
             v_family = family.Family(v_family_handle, self.__cursor__)
 
-            v_partner_handle = v_family.get_mother()
+            v_partner_handle = v_family.get_mother_handle()
             if v_person.__gender__ == gramps_db.c_gender_female:
-                v_partner_handle = v_family.get_father()
+                v_partner_handle = v_family.get_father_handle()
 
             if v_partner_handle is not None:  # TODO: Also handle families with unknown partners
                 v_partner = person.Person(v_partner_handle, self.__cursor__)
@@ -764,7 +762,7 @@ class PersonChapter:
 
                     # Create a family event dictionary
                     for v_family_event_ref in v_family.__event_ref_list__:
-                        v_event = event_ref.EventRef(v_family_event_ref, self.__cursor__).get_event()
+                        v_event = v_family_event_ref.get_event()
 
                         if v_event.get_type().get_value() in v_family_event_dict:
                             v_family_event_dict[v_event.get_type().get_value()].append(v_event)
@@ -802,8 +800,7 @@ class PersonChapter:
                         with latex.create_sub_level(p_level=vSubLevel, p_title=language.translate('children', self.__language__), p_label=False) as v_sub_sub_level:
                             with v_sub_sub_level.create(pl.LongTabu(pl.NoEscape(r"p{\dimexpr.4\textwidth} p{\dimexpr.6\textwidth}"), row_height=1.5)) as v_table:
                                 for v_reference in v_family.__child_ref_list__:
-                                    v_child_ref = person_ref.PersonRef(v_reference, self.__cursor__)
-                                    v_child = v_child_ref.get_person()
+                                    v_child = v_reference.get_child()
 
                                     if v_child.__gender__ == gramps_db.c_gender_female:
                                         v_child_type = language.translate('daughter', self.__language__) + ":"
@@ -1437,7 +1434,8 @@ class PersonChapter:
                             v_marker_name_1: str = r'marker_' + str(v_count)
                             v_label_name_1: str = r'label_' + str(v_count)
 
-                            if len(v_description) > 0:
+                            # A generated description repeats the name, place and date; show the place instead
+                            if (len(v_description) > 0) and (not v_event.__description_generated__):
                                 v_label: str = pu.escape_latex(v_description) + r'\\' + v_date.__date_to_text__()
                             else:
                                 v_label: str = pu.escape_latex(v_place_text) + r'\\' + v_date.__date_to_text__()
@@ -1472,7 +1470,8 @@ class PersonChapter:
                             v_count = v_count + 1
                             v_label_name: str = r'label_' + str(v_count)
 
-                            if len(v_description) > 0:
+                            # A generated description repeats the name, place and date; show the place instead
+                            if (len(v_description) > 0) and (not v_event.__description_generated__):
                                 v_label: str = pu.escape_latex(v_description) + r'\\' + v_date.__date_to_text__()
                             else:
                                 v_label: str = pu.escape_latex(v_place_text) + r'\\' + v_date.__date_to_text__()
@@ -1483,7 +1482,7 @@ class PersonChapter:
                             v_sub_level.append(pu.NoEscape(fr'\coordinate ({v_marker_name_3}) at ({v_hor_point:.2f} cm + 0.1 cm,{v_date_point_3:.2f} cm) {{}};'))
 
                             v_sub_level.append(pu.NoEscape(fr'\draw [residenceperiod] ({v_marker_name_1}) rectangle ({v_marker_name_2});'))
-                            v_sub_level.append(pu.NoEscape(fr'\node [residencelabel, right=of {v_marker_name_3} align=left, text width={c_text_width} cm, anchor=west] ({v_label_name}) at (+1.0 cm,{v_label_point_1:.2f} cm) {{\small {v_label}}};'))
+                            v_sub_level.append(pu.NoEscape(fr'\node [residencelabel, right=of {v_marker_name_3}, align=left, text width={c_text_width} cm, anchor=west] ({v_label_name}) at (+1.0 cm,{v_label_point_1:.2f} cm) {{\small {v_label}}};'))
                             v_sub_level.append(pu.NoEscape(fr'\draw [residencelink] ({v_marker_name_3}) -- ({v_label_name}.west);'))
 
                             v_sub_level.append(pu.NoEscape(r'%'))
@@ -1576,7 +1575,7 @@ class PersonChapter:
         v_media_rect_2 = None
 
         # Debug
-        logging.debug("p_filtered_list: ".join(map(str, p_filtered_list)))
+        logging.debug('p_filtered_list: %s', p_filtered_list)
 
         p_level.append(pl.NoEscape(r"\needspace{\minspace}"))
         with latex.create_sub_level(p_level=p_level, p_title=language.translate(p_title, self.__language__), p_label=False) as v_sub_level:

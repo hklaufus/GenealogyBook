@@ -82,9 +82,6 @@ class Person:
                 self.__private__ = v_person_data['private']
                 self.__person_ref_list__ = [person_ref.PersonRef(p_person_ref=v_person_ref, p_cursor=p_cursor) for v_person_ref in v_person_data['person_ref_list']]
 
-        # TODO: This is a tag list NOT related to one person; this does not belong here
-        self.__tag_dictionary__ = gramps_db.get_tag_dictionary(self.__cursor__)
-
     def get_gramps_id(self):
         """
         Returns the Gramps ID of self
@@ -164,7 +161,7 @@ class Person:
 
         if self.__death_ref_index__ >= 0:
             v_event_ref = self.__event_ref_list__[self.__death_ref_index__]
-            v_event = event_ref.EventRef(v_event_ref, self.__cursor__).get_event()
+            v_event = v_event_ref.get_event()
             v_date = v_event.get_date().get_start_date()
 
         return v_date
@@ -317,6 +314,7 @@ class Person:
                     v_date_place_string = v_date_place_string + ']'
 
                     v_event.__description__ = language.translate(v_type_string) + ' ' + v_name_string + ' ' + v_date_place_string
+                    v_event.__description_generated__ = True
 
                 if (p_type is None) or (v_event.get_type().get_value() in v_use_type):
                     yield v_event

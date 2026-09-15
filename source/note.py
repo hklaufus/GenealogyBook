@@ -29,7 +29,7 @@ class Note:
                 v_note_data = v_decoder.decode(v_json_data)
 
                 # Debug
-                logging.debug('v_note_data: '.join(map(str, v_note_data)))
+                logging.debug('v_note_data: %s', v_note_data)
 
                 self.__note_handle__ = v_note_data['handle']
                 self.__note_gramps_id__ = v_note_data['gramps_id']

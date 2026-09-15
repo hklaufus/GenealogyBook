@@ -47,6 +47,22 @@ class Book:
                 v_path.mkdir()
 
 
+    def __get_config_value(self, p_dom, p_tag_name: str, p_default: str = '') -> str:
+        """
+        Returns the text of the first element with the given tag name, or the default when the element is missing or empty
+
+        :param p_dom:
+        :param p_tag_name:
+        :param p_default:
+        :return:
+        """
+
+        v_elements = p_dom.getElementsByTagName(p_tag_name)
+        if (len(v_elements) == 0) or (len(v_elements[0].childNodes) == 0):
+            return p_default
+
+        return v_elements[0].childNodes[0].nodeValue.strip()
+
     def read_config_xml(self, p_file_name):
         """
         Reads a config file with default parameters
@@ -57,18 +73,26 @@ class Book:
 
         v_dom = mdm.parse(p_file_name)
 
-        self.__writer__ = v_dom.getElementsByTagName('Author')[0].childNodes[0].nodeValue
-        self.__title__ = v_dom.getElementsByTagName('Title')[0].childNodes[0].nodeValue
-        self.__file_name__ = v_dom.getElementsByTagName('Filename')[0].childNodes[0].nodeValue
-        self.__start_person_id__ = v_dom.getElementsByTagName('StartPersonId')[0].childNodes[0].nodeValue
-        self.__language__ = v_dom.getElementsByTagName('Language')[0].childNodes[0].nodeValue
-        self.__book_path__ = v_dom.getElementsByTagName('BookPath')[0].childNodes[0].nodeValue
-        self.__chapter_path__ = v_dom.getElementsByTagName('ChapterPath')[0].childNodes[0].nodeValue
-        self.__figure_path__ = v_dom.getElementsByTagName('FiguresPath')[0].childNodes[0].nodeValue
-        self.__life_sketch_path__ = v_dom.getElementsByTagName('LifeSketchPath')[0].childNodes[0].nodeValue
-        self.__appendix_path__ = v_dom.getElementsByTagName('AppendixPath')[0].childNodes[0].nodeValue
-        self.__exclude__ = v_dom.getElementsByTagName('Exclude')[0].childNodes[0].nodeValue.split(';')
-        self.__appendix__ = v_dom.getElementsByTagName('Appendix')[0].childNodes[0].nodeValue.split(';')
+        self.__writer__ = self.__get_config_value(v_dom, 'Author', self.__writer__)
+        self.__title__ = self.__get_config_value(v_dom, 'Title', self.__title__)
+        self.__file_name__ = self.__get_config_value(v_dom, 'Filename', self.__file_name__)
+        self.__start_person_id__ = self.__get_config_value(v_dom, 'StartPersonId', self.__start_person_id__)
+        self.__language__ = self.__get_config_value(v_dom, 'Language', self.__language__)
+        self.__book_path__ = self.__get_config_value(v_dom, 'BookPath', self.__book_path__)
+        self.__chapter_path__ = self.__get_config_value(v_dom, 'ChapterPath', self.__chapter_path__)
+        self.__figure_path__ = self.__get_config_value(v_dom, 'FiguresPath', self.__figure_path__)
+        self.__life_sketch_path__ = self.__get_config_value(v_dom, 'LifeSketchPath', self.__life_sketch_path__)
+        self.__appendix_path__ = self.__get_config_value(v_dom, 'AppendixPath', self.__appendix_path__)
+
+        # Lists separated by ';', which may be empty
+        self.__exclude__ = [v_item.strip() for v_item in self.__get_config_value(v_dom, 'Exclude').split(';') if len(v_item.strip()) > 0]
+        self.__appendix__ = [v_item.strip() for v_item in self.__get_config_value(v_dom, 'Appendix').split(';') if len(v_item.strip()) > 0]
+
+        # The book cannot be written without these
+        for v_tag_name, v_value in [('Filename', self.__file_name__), ('StartPersonId', self.__start_person_id__)]:
+            if not v_value:
+                logging.warning(f'Configuration file "{p_file_name}" has no value for <{v_tag_name}>')
+                sys.exit('Aborting programme')
 
 
     def __write_preamble(self, p_document: pl.Document) -> None:
@@ -144,6 +168,10 @@ class Book:
         # Counters for filling up wrapfigure in hkPersonChapter
         p_document.preamble.append(pl.NoEscape(r'\newcounter{maxlines}'))
         p_document.preamble.append(pl.NoEscape(r'\newcounter{mycounter}'))
+
+        # Dimensions to measure image and text heights in support_functions.wrap_figure; declared once instead of for every figure
+        p_document.preamble.append(pl.NoEscape(r'\newdimen\imageheightA'))
+        p_document.preamble.append(pl.NoEscape(r'\newdimen\textheightA'))
 
         # Redefine labels fo chapters
         p_document.preamble.append(pl.NoEscape(r'\renewcommand{\contentsname}{' + language.translate('table of contents') + '}'))
