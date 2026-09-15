@@ -1155,7 +1155,7 @@ class PersonChapter:
 
             return v_value
 
-        def __date_to_timeline(p_date: datetime.date, p_timeline_start_date: datetime.date, p_timeline_end_date: datetime.date, p_mean: float=None, p_std: float=None, p_length_timeline: int=20) -> float:
+        def __date_to_timeline(p_date: datetime.date, p_timeline_start_date: datetime.date, p_timeline_end_date: datetime.date, p_mean: float=None, p_std: float=None, p_length_timeline: int=20, p_linear_share: float=0.3) -> float:
             """
             Calculates the y-coordinate on the timeline for a given date.
             This is either equidistant, or scaled according the cumulative distribution function of the normal distribution of all dates to be plotted.
@@ -1166,23 +1166,29 @@ class PersonChapter:
             :param p_mean: average value for the events on the timeline; in case a normal distribution was calculated
             :param p_std: standard deviation of the events on the timeline; in case a normal distribution was calculated
             :param p_length_timeline: length of the timeline, in cm.
+            :param p_linear_share: share of equidistant scaling mixed into the normal distribution scaling, so that dates never coincide
             """
 
             if (p_date is not None) and (p_timeline_start_date is not None) and (p_timeline_end_date is not None):
                 v_x_value = __date_to_serial(p_date)
                 v_value_1 = __date_to_serial(p_timeline_start_date)
                 v_value_2 = __date_to_serial(p_timeline_end_date)
-                v_y_value = (v_x_value - v_value_1) * p_length_timeline / (v_value_2 - v_value_1)
+                # Fraction of the timeline for equidistant dates
+                v_fraction = (v_x_value - v_value_1) / (v_value_2 - v_value_1)
 
                 if (p_mean is not None) and (p_std is not None) and (p_std != 0):
-                    # 'Cumulative distribution function for the standard normal distribution'
-                    v_erf_x_value = (v_x_value - p_mean) / (p_std * math.sqrt(2.0))
-                    v_cdf =  (1.0 + math.erf(v_erf_x_value)) / 2.0
+                    # 'Cumulative distribution function for the normal distribution' of the events, scaled between the start and end of the timeline
+                    def __cdf(p_value: float) -> float:
+                        return (1.0 + math.erf((p_value - p_mean) / (p_std * math.sqrt(2.0)))) / 2.0
 
-                    if v_cdf > 0:
-                        v_y_value = p_length_timeline * v_cdf  # + v_translate_mean
-                    else:
-                        logging.warning(f"Division by zero: v_cdf = {v_cdf}")
+                    v_cdf_1 = __cdf(v_value_1)
+                    v_cdf_2 = __cdf(v_value_2)
+
+                    # Far from the mean the cdf is flat at 0 or 1, which would stack dates on top of each other; the linear share keeps them apart and in order
+                    if v_cdf_2 > v_cdf_1:
+                        v_fraction = p_linear_share * v_fraction + (1.0 - p_linear_share) * (__cdf(v_x_value) - v_cdf_1) / (v_cdf_2 - v_cdf_1)
+
+                v_y_value = v_fraction * p_length_timeline
 
                 if (v_y_value < 0) or (v_y_value > p_length_timeline):
                     logging.warning(f"Error in calculation: p_date, p_timeline_start_date, p_timeline_end_date, v_y_value = {p_date}, {p_timeline_start_date}, {p_timeline_end_date}, {v_y_value} for person {self.__person__.__gramps_id__}")
