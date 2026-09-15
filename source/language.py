@@ -2,7 +2,7 @@
 
 import logging as log
 
-# gLanguage = 'nl'
+gLanguage = 'nl'  # Language used when translate() is called without a language; see set_language()
 gStrings = {}
 
 # Constants for chapter labels
@@ -65,7 +65,7 @@ gStrings['sister'] = {'en': "Sister", 'nl': "Zus"}
 gStrings['son'] = {'en': "Son", 'nl': "Zoon"}
 gStrings['daughter'] = {'en': "Daughter", 'nl': "Dochter"}
 gStrings['male'] = {'en': "Male", 'nl': "Man"}
-gStrings['female'] = {'en': "Daughter", 'nl': "Vrouw"}
+gStrings['female'] = {'en': "Female", 'nl': "Vrouw"}
 gStrings['unknown'] = {'en': "Unknown", 'nl': "Onbekend"}
 
 gStrings['date'] = {'en': "Date", 'nl': "Datum"}
@@ -145,7 +145,7 @@ gStrings['about'] = {'en': 'about', 'nl': 'omstreeks'}
 gStrings['before'] = {'en': 'before', 'nl': 'voor'}
 gStrings['after'] = {'en': 'after', 'nl': 'na'}
 gStrings['between'] = {'en': 'between', 'nl': 'tussen'}
-gStrings['and'] = {'en': 'en', 'nl': 'en'}
+gStrings['and'] = {'en': 'and', 'nl': 'en'}
 gStrings['from'] = {'en': 'from', 'nl': 'van'}
 gStrings['until'] = {'en': 'until', 'nl': 'tot'}
 
@@ -165,11 +165,58 @@ gStrings['cremation'] = {'en': 'cremation', 'nl': 'crematie'}
 gStrings['medical information'] = {'en': 'medical information', 'nl': 'medische informatie'}
 gStrings['census'] = {'en': 'census', 'nl': 'volkstelling'}
 gStrings['confirmation'] = {'en': 'confirmation', 'nl': 'vormsel'}
+gStrings['adopted'] = {'en': 'adoption', 'nl': 'adoptie'}
+gStrings['adult christening'] = {'en': 'adult christening', 'nl': 'volwassenendoop'}
+gStrings['alternate marriage'] = {'en': 'alternate marriage', 'nl': 'alternatief huwelijk'}
+gStrings['annulment'] = {'en': 'annulment', 'nl': 'nietigverklaring'}
+gStrings['bar mitzvah'] = {'en': 'bar mitzvah', 'nl': 'bar mitswa'}
+gStrings['bas mitzvah'] = {'en': 'bas mitzvah', 'nl': 'bat mitswa'}
+gStrings['blessing'] = {'en': 'blessing', 'nl': 'zegening'}
+gStrings['cause of death'] = {'en': 'cause of death', 'nl': 'doodsoorzaak'}
+gStrings['custom'] = {'en': 'custom', 'nl': 'aangepast'}
+gStrings['degree'] = {'en': 'degree', 'nl': 'academische graad'}
+gStrings['divorce'] = {'en': 'divorce', 'nl': 'echtscheiding'}
+gStrings['divorce filing'] = {'en': 'divorce filing', 'nl': 'aanvraag echtscheiding'}
+gStrings['elected'] = {'en': 'election', 'nl': 'verkiezing'}
+gStrings['emigration'] = {'en': 'emigration', 'nl': 'emigratie'}
+gStrings['first communion'] = {'en': 'first communion', 'nl': 'eerste communie'}
+gStrings['immigration'] = {'en': 'immigration', 'nl': 'immigratie'}
+gStrings['marriage banns'] = {'en': 'marriage banns', 'nl': 'huwelijksafkondiging'}
+gStrings['marriage contract'] = {'en': 'marriage contract', 'nl': 'huwelijkscontract'}
+gStrings['marriage license'] = {'en': 'marriage license', 'nl': 'huwelijksvergunning'}
+gStrings['marriage settlement'] = {'en': 'marriage settlement', 'nl': 'huwelijkse voorwaarden'}
+gStrings['naturalization'] = {'en': 'naturalization', 'nl': 'naturalisatie'}
+gStrings['nobility title'] = {'en': 'nobility title', 'nl': 'adellijke titel'}
+gStrings['number of marriages'] = {'en': 'number of marriages', 'nl': 'aantal huwelijken'}
+gStrings['ordination'] = {'en': 'ordination', 'nl': 'wijding'}
+gStrings['probate'] = {'en': 'probate', 'nl': 'verificatie testament'}
+gStrings['religion'] = {'en': 'religion', 'nl': 'religie'}
+gStrings['will'] = {'en': 'will', 'nl': 'testament'}
+
+# Generic labels for events without a specific 'date of ...' or 'place of ...' translation
+gStrings['date of {0}'] = {'en': "Date of {0}", 'nl': "Datum van {0}"}
+gStrings['place of {0}'] = {'en': "Place of {0}", 'nl': "Plaats van {0}"}
 
 
 
-def translate(p_string, p_language='nl'):
+def set_language(p_language: str) -> None:
+    """
+    Sets the language used when translate() is called without a language
+    """
+
+    global gLanguage
+    gLanguage = p_language
+
+
+def has_translation(p_string: str) -> bool:
+    return p_string.strip().lower() in gStrings
+
+
+def translate(p_string, p_language=None):
     v_return_string = ''
+
+    if p_language is None:
+        p_language = gLanguage
 
     if len(p_string) > 0:
         try:

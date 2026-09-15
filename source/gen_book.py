@@ -36,6 +36,7 @@ class Book:
 
         else:
             self.read_config_xml(p_config_file)
+            language.set_language(self.__language__)
 
         # Check if folders exist
         for v_item in [self.__book_path__, self.__chapter_path__, self.__figure_path__, self.__life_sketch_path__, self.__appendix_path__]:

@@ -82,8 +82,16 @@ class WrapFigure(pl.base_classes.Environment):
     content_separator = "\n"
 
 
+def escape_text(p_text: str) -> str:
+    """
+    Escapes LaTeX special characters, but keeps line breaks as they are (pylatex's escape_latex turns them into newline commands)
+    """
+
+    return '\n'.join(pu.escape_latex(v_line) for v_line in p_text.split('\n'))
+
+
 def get_person_name_with_reference(p_given_names, p_surname, p_gramps_id):
-    return r'\personref[chap:' + p_gramps_id + ']{' + p_given_names + " " + p_surname + '}'
+    return r'\personref[chap:' + p_gramps_id + ']{' + escape_text(p_given_names + " " + p_surname) + '}'
 
 
 def create_sub_level(p_level=Chapter, p_title="Title", p_label=False):

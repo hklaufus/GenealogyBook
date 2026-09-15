@@ -34,7 +34,7 @@ cd source && python main.py
 
 **`latex.py`**: PyLaTeX `Section` subclasses for Part/Chapter/…/Subparagraph, a `WrapFigure` environment, and `create_sub_level()`, which returns the next heading level down from the given one.
 
-**`language.py`**: `gStrings` dict of `{key: {'en': ..., 'nl': ...}}`. `translate()` looks up by lowercased key, capitalizes the result if the input started uppercase, and defaults to `'nl'`. Many call sites (e.g. in `gen_book.py`, `ahnentafel_chapter.py`) omit the language argument, so the `<Language>` config setting is only partly respected. New UI strings must be added to `gStrings` or they render empty with a warning.
+**`language.py`**: `gStrings` dict of `{key: {'en': ..., 'nl': ...}}`. `translate()` looks up by lowercased key and capitalizes the result if the input started uppercase. Without a language argument it uses the book language, which `Book` sets from `<Language>` via `language.set_language()`. New UI strings must be added to `gStrings` or they render empty with a warning.
 
 **Excluded persons:** IDs in `<Exclude>` are not regenerated, which protects manually edited chapter files; they are still `\include`d in the main document.
 

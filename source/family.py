@@ -130,9 +130,8 @@ class Family:
                 if len(v_event.__description__) == 0:
                     v_type_string = gramps_db.c_event_type_dict[v_event.get_type().get_value()]
 
-                    v_father = self.get_father()
-                    v_mother = self.get_mother()
-                    v_name_string = v_father.__given_names__ + ' ' + v_father.__surname__ + " & " + v_mother.__given_names__ + ' ' + v_mother.__surname__
+                    # The father or mother of a family can be unknown
+                    v_name_string = ' & '.join(v_parent.__given_names__ + ' ' + v_parent.__surname__ for v_parent in (self.get_father(), self.get_mother()) if v_parent is not None)
 
                     # v_date_place_string = '[' + v_event.get_place().__place_to_text__() + ', ' + v_event.get_date().__date_to_text__() + ']'
                     v_date_place_string = '['
@@ -142,7 +141,9 @@ class Family:
                             v_date_place_string = v_date_place_string + v_place_string + ', '
 
                     if v_event.get_date() is not None:
-                        v_date_place_string = v_date_place_string + v_event.get_date().__date_to_text__() + ']'
+                        v_date_place_string = v_date_place_string + v_event.get_date().__date_to_text__()
+
+                    v_date_place_string = v_date_place_string + ']'
 
                     v_event.__description__ = language.translate(v_type_string) + ' ' + v_name_string + ' ' + v_date_place_string
 

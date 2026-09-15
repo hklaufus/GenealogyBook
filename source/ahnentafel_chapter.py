@@ -26,6 +26,12 @@ class Ahnentafel:
         self.__generation_list__ = []
         self.__create_generation_list__(p_person_handle=self.__person_handle__, p_generation_index=1)
 
+        # A person can appear more than once, e.g. with pedigree collapse; keep one entry, in the generation closest to the subject
+        v_generation_dict: dict[str, int] = {}
+        for (v_handle, v_generation_index) in self.__generation_list__:
+            v_generation_dict[v_handle] = min(v_generation_index, v_generation_dict.get(v_handle, v_generation_index))
+        self.__generation_list__ = list(v_generation_dict.items())
+
     def __add_person(self, p_person_handle: str, p_binary_tree_string: str):
         v_person = person.Person(p_person_handle, self.__cursor__)
 

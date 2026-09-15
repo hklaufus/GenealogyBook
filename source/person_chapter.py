@@ -99,7 +99,7 @@ class PersonChapter:
 
                 # ...find the end of the web address
                 v_pos_4 = v_pos_2
-                while (v_pos_4 < len(v_text)) and (v_text[v_pos_4] != ' '):
+                while (v_pos_4 < len(v_text)) and (not v_text[v_pos_4].isspace()):
                     v_pos_4 = v_pos_4 + 1
 
                 # ...within the web address, find the first '/' after '//' if it exists
@@ -114,12 +114,17 @@ class PersonChapter:
                 logging.debug(f"v_full_web_address: {v_full_web_address}")
                 logging.debug(f"v_short_web_address: {v_short_web_address}")
 
+                # Within the argument of another command, % and # must be escaped in the web address
+                v_link = r'\href{' + v_full_web_address.replace('%', r'\%').replace('#', r'\#') + '}{' + latex.escape_text(v_short_web_address) + r'}' + r'\par '
+
                 if v_pos_1 == 0:
                     # ...and create a link to the source...
-                    v_text = r'Link to source: \href{' + v_full_web_address + '}{' + v_short_web_address + r'}' + r'\par '
+                    v_text = r'Link to source: ' + v_link
                 else:
                     # ...and create a link in the note...
-                    v_text = v_text.replace(v_full_web_address, r'\href{' + v_full_web_address + '}{' + v_short_web_address + r'}' + r'\par ')
+                    v_text = latex.escape_text(v_text[:v_pos_1]) + v_link + latex.escape_text(v_text[v_pos_4:])
+            else:
+                v_text = latex.escape_text(v_text)
 
             # End each note with a paragraph break, so consecutive notes do not run together
             if not v_text.endswith(r'\par '):
@@ -206,6 +211,25 @@ class PersonChapter:
 
         return v_note_list
 
+    def __get_event_label(self, p_label: str, p_type: int) -> str:
+        """
+        Returns the translated label for the date or place of an event, e.g. 'Date of birth'
+
+        @param p_label: 'date' or 'place'
+        @param p_type: event type
+        @return: v_label: str
+        """
+
+        v_type_string: str = gramps_db.c_event_type_dict[p_type]
+
+        # Prefer a specific translation, e.g. 'Geboortedatum' instead of 'Datum van geboorte'
+        if language.has_translation(p_label + ' of ' + v_type_string):
+            v_label = language.translate(p_label.capitalize() + ' of ' + v_type_string, self.__language__)
+        else:
+            v_label = language.translate(p_label.capitalize() + ' of {0}', self.__language__).format(language.translate(v_type_string, self.__language__).lower())
+
+        return v_label
+
     def __write_life_sketch_section(self, p_level):
         """
         Create a section with Life Sketch
@@ -262,7 +286,7 @@ class PersonChapter:
                             v_life_sketch = v_life_sketch + v_string
 
                             if v_place is not None:
-                                v_string = language.translate("in {0}", self.__language__).format(v_place.__city_to_text__(False))
+                                v_string = language.translate("in {0}", self.__language__).format(pu.escape_latex(v_place.__city_to_text__(False)))
                                 v_life_sketch = v_life_sketch + ' ' + v_string
 
                             v_life_sketch = v_life_sketch + r". "
@@ -278,7 +302,7 @@ class PersonChapter:
                                 v_life_sketch = v_life_sketch + v_string
 
                                 if v_place is not None:
-                                    v_string = language.translate("in {0}", self.__language__).format(v_place.__city_to_text__(False))
+                                    v_string = language.translate("in {0}", self.__language__).format(pu.escape_latex(v_place.__city_to_text__(False)))
                                     v_life_sketch = v_life_sketch + ' ' + v_string
 
                                 v_life_sketch = v_life_sketch + r". "
@@ -310,19 +334,19 @@ class PersonChapter:
                     if v_number_sisters + v_number_brothers > 0:
                         v_string = ''
                         if v_number_sisters == 1 and v_number_brothers == 0:
-                            v_string = language.translate("{0} had one sister:", self.__language__).format(v_use_name)
+                            v_string = language.translate("{0} had one sister:", self.__language__).format(pu.escape_latex(v_use_name))
 
                         if v_number_sisters > 1 and v_number_brothers == 0:
-                            v_string = language.translate("{0} had {1} sisters:", self.__language__).format(v_use_name, v_number_sisters)
+                            v_string = language.translate("{0} had {1} sisters:", self.__language__).format(pu.escape_latex(v_use_name), v_number_sisters)
 
                         if v_number_sisters == 0 and v_number_brothers == 1:
-                            v_string = language.translate("{0} had one brother:", self.__language__).format(v_use_name)
+                            v_string = language.translate("{0} had one brother:", self.__language__).format(pu.escape_latex(v_use_name))
 
                         if v_number_sisters == 0 and v_number_brothers > 1:
-                            v_string = language.translate("{0} had {1} brothers:", self.__language__).format(v_use_name, v_number_brothers)
+                            v_string = language.translate("{0} had {1} brothers:", self.__language__).format(pu.escape_latex(v_use_name), v_number_brothers)
 
                         if v_number_sisters > 0 and v_number_brothers > 0:
-                            v_string = language.translate("{0} was {1} of", self.__language__).format(v_use_name, v_brother_sister.lower())
+                            v_string = language.translate("{0} was {1} of", self.__language__).format(pu.escape_latex(v_use_name), v_brother_sister.lower())
 
                         v_life_sketch = v_life_sketch + v_string + ' '
 
@@ -354,29 +378,29 @@ class PersonChapter:
                         v_string: str = ''
 
                         if v_number_daughters == 1 and v_number_sons == 0:
-                            v_string = language.translate("{0} had one daughter:", self.__language__).format(v_full_name)
+                            v_string = language.translate("{0} had one daughter:", self.__language__).format(pu.escape_latex(v_full_name))
                             if len(v_life_sketch) > 0:
-                                v_string = language.translate("Furthermore, {0} had one daughter:", self.__language__).format(v_use_name)
+                                v_string = language.translate("Furthermore, {0} had one daughter:", self.__language__).format(pu.escape_latex(v_use_name))
 
                         if v_number_daughters > 1 and v_number_sons == 0:
-                            v_string = language.translate("{0} had {1} daughters:", self.__language__).format(v_full_name, v_number_daughters)
+                            v_string = language.translate("{0} had {1} daughters:", self.__language__).format(pu.escape_latex(v_full_name), v_number_daughters)
                             if len(v_life_sketch) > 0:
-                                v_string = language.translate("Furthermore, {0} had {1} daughters:", self.__language__).format(v_use_name, v_number_daughters)
+                                v_string = language.translate("Furthermore, {0} had {1} daughters:", self.__language__).format(pu.escape_latex(v_use_name), v_number_daughters)
 
                         if v_number_daughters == 0 and v_number_sons == 1:
-                            v_string = language.translate("{0} had one son:", self.__language__).format(v_full_name)
+                            v_string = language.translate("{0} had one son:", self.__language__).format(pu.escape_latex(v_full_name))
                             if len(v_life_sketch) > 0:
-                                v_string = language.translate("Furthermore, {0} had one son:", self.__language__).format(v_use_name)
+                                v_string = language.translate("Furthermore, {0} had one son:", self.__language__).format(pu.escape_latex(v_use_name))
 
                         if v_number_daughters == 0 and v_number_sons > 1:
-                            v_string = language.translate("{0} had {1} sons:", self.__language__).format(v_full_name, v_number_sons)
+                            v_string = language.translate("{0} had {1} sons:", self.__language__).format(pu.escape_latex(v_full_name), v_number_sons)
                             if len(v_life_sketch) > 0:
-                                v_string = language.translate("Furthermore, {0} had {1} sons:", self.__language__).format(v_use_name, v_number_sons)
+                                v_string = language.translate("Furthermore, {0} had {1} sons:", self.__language__).format(pu.escape_latex(v_use_name), v_number_sons)
 
                         if v_number_daughters > 0 and v_number_sons > 0:
-                            v_string = language.translate("{0} was {1} of", self.__language__).format(v_full_name, v_father_mother.lower())
+                            v_string = language.translate("{0} was {1} of", self.__language__).format(pu.escape_latex(v_full_name), v_father_mother.lower())
                             if len(v_life_sketch) > 0:
-                                v_string = language.translate("Furthermore, {0} was {1} of", self.__language__).format(v_use_name, v_father_mother.lower())
+                                v_string = language.translate("Furthermore, {0} was {1} of", self.__language__).format(pu.escape_latex(v_use_name), v_father_mother.lower())
 
                         v_life_sketch = v_life_sketch + v_string + ' '
 
@@ -403,7 +427,7 @@ class PersonChapter:
                             v_life_sketch = v_life_sketch + v_string
 
                             if v_place is not None:
-                                v_string = language.translate("in {0}.", self.__language__).format(v_place.__city_to_text__(False))
+                                v_string = language.translate("in {0}.", self.__language__).format(pu.escape_latex(v_place.__city_to_text__(False)))
                                 v_life_sketch = v_life_sketch + ' ' + v_string
                             else:
                                 v_life_sketch = v_life_sketch + ". "
@@ -419,7 +443,7 @@ class PersonChapter:
                                 v_life_sketch = v_life_sketch + v_string
 
                                 if v_place is not None:
-                                    v_string = language.translate("and was buried in {0}.", self.__language__).format(v_place.__city_to_text__(False))
+                                    v_string = language.translate("and was buried in {0}.", self.__language__).format(pu.escape_latex(v_place.__city_to_text__(False)))
                                     v_life_sketch = v_life_sketch + ' ' + v_string + ' '
                                 else:
                                     v_life_sketch = v_life_sketch + ". "
@@ -433,6 +457,7 @@ class PersonChapter:
                     if v_media.tag_name_in_media_tag_names('Portrait'):
                         v_portrait_found = True
                         support_functions.wrap_figure(v_sub_level, p_filename=v_media.__media_path__, p_width=r'0.35\textwidth', p_text=v_life_sketch)
+                        break  # Only one portrait, otherwise the life sketch is repeated
 
                 if not v_portrait_found:
                     v_sub_level.append(pl.NoEscape(v_life_sketch))
@@ -463,18 +488,18 @@ class PersonChapter:
                     v_date = v_event.get_date()
                     v_place = v_event.get_place()
 
-                    v_string_1 = "Date of " + gramps_db.c_event_type_dict[v_type]
-                    v_string_2 = "Place of " + gramps_db.c_event_type_dict[v_type]
+                    v_string_1 = self.__get_event_label('date', v_type)
+                    v_string_2 = self.__get_event_label('place', v_type)
 
                     if v_date is not None:
                         v_string3 = v_date.__date_to_text__(False)
                         if len(v_string3) > 0:
-                            v_table.add_row([language.translate(v_string_1, self.__language__) + ":", v_string3])
+                            v_table.add_row([v_string_1 + ":", v_string3])
 
                     if v_place is not None:
                         v_string4 = v_place.__place_to_text__(True)
                         if len(v_string4) > 0:
-                            v_table.add_row([language.translate(v_string_2, self.__language__) + ":", v_string4])
+                            v_table.add_row([v_string_2 + ":", v_string4])
 
             v_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
@@ -527,7 +552,7 @@ class PersonChapter:
                 v_sibling = person.Person(v_sibling_handle, self.__cursor__)
 
                 if v_sibling.__gramps_id__ == v_person.__gramps_id__:
-                    v_sibling_name = v_person.__given_names__ + ' ' + v_person.__surname__
+                    v_sibling_name = latex.escape_text(v_person.__given_names__ + ' ' + v_person.__surname__)
                 else:
                     v_sibling_name = pl.NoEscape(latex.get_person_name_with_reference(v_sibling.__given_names__, v_sibling.__surname__, v_sibling.__gramps_id__))
 
@@ -647,17 +672,17 @@ class PersonChapter:
                                         v_date = v_event.get_date()
                                         v_place = v_event.get_place()
 
-                                        v_string_1 = "Date of " + gramps_db.c_event_type_dict[v_event_key]
-                                        v_string_2 = "Place of " + gramps_db.c_event_type_dict[v_event_key]
+                                        v_string_1 = self.__get_event_label('date', v_event_key)
+                                        v_string_2 = self.__get_event_label('place', v_event_key)
 
                                         if v_date is not None:
                                             v_string_3 = v_date.get_start_date_text(False)
                                             if len(v_string_3) > 0:
-                                                v_table.add_row([language.translate(v_string_1, self.__language__) + ":", v_string_3])
+                                                v_table.add_row([v_string_1 + ":", v_string_3])
                                         if v_place is not None:
                                             v_string_4 = v_place.__place_to_text__(True)
                                             if len(v_string_4) > 0:
-                                                v_table.add_row([language.translate(v_string_2, self.__language__) + ":", v_string_4])
+                                                v_table.add_row([v_string_2 + ":", v_string_4])
 
                             v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
@@ -668,11 +693,11 @@ class PersonChapter:
                             v_sub_sub_level.append(pu.NoEscape(r'\begin{tikzpicture}'))
                             v_sub_sub_level.append(pu.NoEscape(r'\matrix[row sep=5mm, column sep=2mm]{'))
 
-                            v_father_string = r'\node (father) [left, man, self] {\small ' + pl.NoEscape(v_person.__given_names__ + ' ' + v_person.__surname__) + r'};'
+                            v_father_string = r'\node (father) [left, man, self] {\small ' + latex.escape_text(v_person.__given_names__ + ' ' + v_person.__surname__) + r'};'
                             v_mother_string = r'\node (mother) [right, woman] {\small ' + pl.NoEscape(latex.get_person_name_with_reference(v_partner.__given_names__, v_partner.__surname__, v_partner.__gramps_id__)) + r'};'
                             if v_person.__gender__ == gramps_db.c_gender_female:
                                 v_father_string = r'\node (father) [left, man] {\small ' + pl.NoEscape(latex.get_person_name_with_reference(v_partner.__given_names__, v_partner.__surname__, v_partner.__gramps_id__)) + r'};'
-                                v_mother_string = r'\node (mother) [right, woman, self] {\small ' + pl.NoEscape(v_person.__given_names__ + ' ' + v_person.__surname__) + r'};'
+                                v_mother_string = r'\node (mother) [right, woman, self] {\small ' + latex.escape_text(v_person.__given_names__ + ' ' + v_person.__surname__) + r'};'
 
                             # First row
                             v_sub_sub_level.append(pu.NoEscape(v_father_string + r' &'))
@@ -757,17 +782,17 @@ class PersonChapter:
                                         v_date: date.Date = v_event.get_date()
                                         v_place: place.Place = v_event.get_place()
 
-                                        v_string_1 = "Date of " + gramps_db.c_event_type_dict[v_event_key]
-                                        v_string_2 = "Place of " + gramps_db.c_event_type_dict[v_event_key]
+                                        v_string_1 = self.__get_event_label('date', v_event_key)
+                                        v_string_2 = self.__get_event_label('place', v_event_key)
 
                                         if v_date is not None:
                                             v_string_3 = v_date.get_start_date_text(False)
                                             if len(v_string_3) > 0:
-                                                v_table.add_row([language.translate(v_string_1, self.__language__) + ":", v_string_3])
+                                                v_table.add_row([v_string_1 + ":", v_string_3])
                                         if v_place is not None:
                                             v_string_4 = v_place.__place_to_text__(True)
                                             if len(v_string_4) > 0:
-                                                v_table.add_row([language.translate(v_string_2, self.__language__) + ":", v_string_4])
+                                                v_table.add_row([v_string_2 + ":", v_string_4])
 
                             v_sub_sub_level.append(pl.NoEscape(r'\FloatBarrier'))
 
@@ -1312,11 +1337,8 @@ class PersonChapter:
                         v_start_date = v_event.get_date().get_start_date()
 
                         if v_start_date is not None:
-                            if v_death_date is not None:
-                                if v_start_date < v_death_date.get_start_date():
-                                    v_timeline_events.append(v_event)
-                                    v_number_left_events = v_number_left_events + 1
-                            else:
+                            # Only events before the death of the person, when the date of death is known
+                            if (v_death_date is None) or (v_death_date.get_start_date() is None) or (v_start_date < v_death_date.get_start_date()):
                                 v_timeline_events.append(v_event)
                                 v_number_left_events = v_number_left_events + 1
 
@@ -1330,11 +1352,8 @@ class PersonChapter:
                         v_start_date = v_event.get_date().get_start_date()
 
                         if v_start_date is not None:
-                            if v_death_date is not None:
-                                if v_start_date < v_death_date.get_start_date():
-                                    v_timeline_events.append(v_event)
-                                    v_number_left_events = v_number_left_events + 1
-                            else:
+                            # Only events before the death of the person, when the date of death is known
+                            if (v_death_date is None) or (v_death_date.get_start_date() is None) or (v_start_date < v_death_date.get_start_date()):
                                 v_timeline_events.append(v_event)
                                 v_number_left_events = v_number_left_events + 1
 

@@ -114,7 +114,7 @@ class Date:
             if p_abbreviated:
                 v_month_string1 = calendar.month_abbr[v_month1]
 
-            v_month_string1 = language.translate(v_month_string1)
+            v_month_string1 = language.translate(v_month_string1.lower())
 
             v_date_string = ((str(v_day1) + ' ') if v_day1 != 0 else '') + v_month_string1 + ' ' + str(v_year1)
 
@@ -140,7 +140,7 @@ class Date:
             if p_abbreviated:
                 v_month_string_1 = calendar.month_abbr[v_month_1]
 
-            v_month_string_1 = language.translate(v_month_string_1)
+            v_month_string_1 = language.translate(v_month_string_1.lower())
 
             if self.__date_2__ is not None:
                 v_day_2: int = self.__date_2__.day
@@ -151,7 +151,7 @@ class Date:
                 if p_abbreviated:
                     v_month_string_2 = calendar.month_abbr[v_month_2]
 
-                v_month_string_2 = language.translate(v_month_string_2)
+                v_month_string_2 = language.translate(v_month_string_2.lower())
 
                 if self.__modifier__ == 4:
                     # Range
