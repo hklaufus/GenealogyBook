@@ -15,3 +15,4 @@ source/__pycache__/
 source/*.xml
 source/query_*
 source/*.log
+.claude/settings.local.json
