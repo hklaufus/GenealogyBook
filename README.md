@@ -20,7 +20,7 @@ To start, open a terminal window, `cd` to the project folder `...\GenealogyBook\
 From there, execute `python main.py`.
 
 ### Book
-The python scripts will create a LaTeX book, for which the file name of the main document can be set in `cconfig.xml`, and is by default set to `MyBook.tex`.
+The python scripts will create a LaTeX book, for which the file name of the main document can be set in `config.xml`, and is by default set to `MyBook.tex`.
 
 Additionally, the document title and the author can be set in `config.xml`.
 
